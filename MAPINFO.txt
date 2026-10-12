@@ -1,10 +1,11 @@
-// TLH custom editor numbers for the three vanilla-sprite weapons.
-// Merge these entries into the project's existing MAPINFO DoomEdNums block,
-// or add this block to a MAPINFO lump loaded alongside ZSCRIPT.zs.
+// The Last Hope weapon/editor definitions.
+// Add this block to the MAPINFO lump in Textures.wad (or another loaded WAD/PK3).
 
 DoomEdNums
 {
     30001 = ServiceRevolver
     30002 = StreetSweeperShotgun
     30003 = MicroMissileLauncher
+    30004 = TLHGrenadeLauncher
+    30005 = TacticalRocketLauncher
 }
