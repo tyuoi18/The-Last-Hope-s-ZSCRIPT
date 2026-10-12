@@ -3002,7 +3002,7 @@ class TLHChaingun : Chaingun replaces Chaingun
 /* HEAVY CHAINGUN
    Standalone class: do not inherit from a nonexistent HeavyChaingun base.
    Use Doom II's vanilla weapon, flash, and world-pickup sprite families:
-   CHGG, CHGF, and MGUN. The TLH Chaingun and M4A1 keep separate sprite names.
+   CHGG, CHGF, and MGUN. The redesigned TLH Chaingun keeps its separate TCHG/TCHF/TCHD family.
 */
 class HeavyChaingun : Weapon
 {
@@ -3176,7 +3176,7 @@ class TacticalM4A1 : DoomWeapon
     States
     {
     Ready:
-        ZHGG A 0
+        CHGG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("ReadyDual");
@@ -3188,7 +3188,7 @@ class TacticalM4A1 : DoomWeapon
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        ZHGG A 1
+        CHGG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -3197,7 +3197,7 @@ class TacticalM4A1 : DoomWeapon
         Loop;
 
     ReadyDual:
-        ZHGG A 0
+        CHGG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
@@ -3207,7 +3207,7 @@ class TacticalM4A1 : DoomWeapon
             A_Overlay(TLH_AKIMBO_LAYER, "M4LeftIdle");
             return ResolveState(null);
         }
-        ZHGG A 1
+        CHGG A 1
         {
             double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
             A_OverlayOffset(PSP_WEAPON, 30 + sway, 34 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.18, 0);
@@ -3217,7 +3217,7 @@ class TacticalM4A1 : DoomWeapon
         Loop;
 
     M4LeftIdle:
-        ZHGG A 1
+        CHGG A 1
         {
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.92, 1.02);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
@@ -3229,29 +3229,29 @@ class TacticalM4A1 : DoomWeapon
         Loop;
 
     M4LeftFire:
-        ZHGG B 1;
-        ZHGG A 1;
+        CHGG B 1;
+        CHGG A 1;
         Goto M4LeftIdle;
     Deselect:
-        ZHGG A 0
+        CHGG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
-        ZHGG A 1 A_Lower;
+        CHGG A 1 A_Lower;
         Loop;
     Select:
-        ZHGG A 0
+        CHGG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
         }
-        ZHGG A 1 A_Raise;
+        CHGG A 1 A_Raise;
         Loop;
 
     Reload:
-        ZHGG A 0
+        CHGG A 0
         {
             // Single R keeps the original mode-toggle behavior.
             // Double R is handled centrally by TacticalPlayer.
@@ -3261,7 +3261,7 @@ class TacticalM4A1 : DoomWeapon
         }
 
     ReloadDecision:
-        ZHGG A 1
+        CHGG A 1
         {
             int buttons = player.cmd.buttons;
 
@@ -3282,7 +3282,7 @@ class TacticalM4A1 : DoomWeapon
         }
 
     SetAuto:
-        ZHGG A 8
+        CHGG A 8
         {
             invoker.burstMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -3290,8 +3290,8 @@ class TacticalM4A1 : DoomWeapon
         }
         Goto FinishReload;
     FinishReload:
-        ZHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
@@ -3299,7 +3299,7 @@ class TacticalM4A1 : DoomWeapon
         // CHGGA0 = normal frame, CHGGB0 = muzzle-flash frame.
         // Fast gameplay cadence: 1 tic base + 1 tic flash = 2 tics/shot.
         // This is actual gameplay cadence, not only visual animation.
-        ZHGG A 0
+        CHGG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualLeft");
@@ -3307,40 +3307,40 @@ class TacticalM4A1 : DoomWeapon
                 return ResolveState("FireBurst");
             return ResolveState(null);
         }
-        ZHGG A 1
+        CHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
-        ZHGG B 1;
-        ZHGG A 0 A_ReFire;
+        CHGG B 1;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireBurst:
         // Three-round burst. Each shot keeps the same readable A0/B0 animation.
-        ZHGG A 1
+        CHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        ZHGG B 1;
-        ZHGG A 1
+        CHGG B 1;
+        CHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        ZHGG B 1;
-        ZHGG A 1
+        CHGG B 1;
+        CHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        ZHGG B 1;
-        ZHGG A 15;
+        CHGG B 1;
+        CHGG A 15;
         Goto Ready;
 
     AltFire:
-        ZHGG A 0
+        CHGG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualRight");
@@ -3349,19 +3349,19 @@ class TacticalM4A1 : DoomWeapon
             return ResolveState("Ready");
         }
     FireM203:
-        ZHGG A 4
+        CHGG A 4
         {
             A_FireProjectile("M203Grenade");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
             A_Recoil(2);
         }
-        ZHGG B 10;
-        ZHGG A 15 A_StartSound("weapons/sshotl", CHAN_WEAPON);
+        CHGG B 10;
+        CHGG A 15 A_StartSound("weapons/sshotl", CHAN_WEAPON);
         Goto Ready;
 
     FireDualLeft:
-        ZHGG A 0
+        CHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -3380,9 +3380,9 @@ class TacticalM4A1 : DoomWeapon
             A_Recoil(2.0);
             return ResolveState(null);
         }
-        ZHGG B 1;
-        ZHGG A 1;
-        ZHGG A 0
+        CHGG B 1;
+        CHGG A 1;
+        CHGG A 0
         {
             if (player.cmd.buttons & BT_ATTACK)
                 return ResolveState("FireDualLeft");
@@ -3390,7 +3390,7 @@ class TacticalM4A1 : DoomWeapon
         }
 
     FireDualRight:
-        ZHGG A 0
+        CHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -3408,9 +3408,9 @@ class TacticalM4A1 : DoomWeapon
             A_Recoil(2.0);
             return ResolveState(null);
         }
-        ZHGG B 1;
-        ZHGG A 1;
-        ZHGG A 0
+        CHGG B 1;
+        CHGG A 1;
+        CHGG A 0
         {
             if (player.cmd.buttons & BT_ALTATTACK)
                 return ResolveState("FireDualRight");
@@ -3418,17 +3418,17 @@ class TacticalM4A1 : DoomWeapon
         }
 
     DualOnStart:
-        ZHGG A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 30, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.6);
         }
-        ZHGG A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 30, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 2.2);
         }
-        ZHGG A 0
+        CHGG A 0
         {
             invoker.dualWield = true;
             A_Overlay(TLH_AKIMBO_LAYER, "M4LeftIdle");
@@ -3436,7 +3436,7 @@ class TacticalM4A1 : DoomWeapon
             A_Print("M4A1: DUAL WIELD ACTIVE | M1 LEFT / M2 RIGHT");
             return ResolveState(null);
         }
-        ZHGG A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 30, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.8);
@@ -3444,17 +3444,17 @@ class TacticalM4A1 : DoomWeapon
         Goto ReadyDual;
 
     DualOffStart:
-        ZHGG A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 24, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.0);
         }
-        ZHGG A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.2);
         }
-        ZHGG A 0
+        CHGG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
@@ -3462,7 +3462,7 @@ class TacticalM4A1 : DoomWeapon
             A_Print("M4A1: SINGLE WIELD");
             return ResolveState(null);
         }
-        ZHGG A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -3470,24 +3470,24 @@ class TacticalM4A1 : DoomWeapon
         Goto Ready;
 
     Zoom:
-        ZHGG A 1 A_WeaponOffset(-15, 45, WOF_INTERPOLATE);
-        ZHGG A 1 A_WeaponOffset(-32, 65, WOF_INTERPOLATE);
-        ZHGG A 1 A_WeaponOffset(-45, 85, WOF_INTERPOLATE);
-        ZHGG A 2
+        CHGG A 1 A_WeaponOffset(-15, 45, WOF_INTERPOLATE);
+        CHGG A 1 A_WeaponOffset(-32, 65, WOF_INTERPOLATE);
+        CHGG A 1 A_WeaponOffset(-45, 85, WOF_INTERPOLATE);
+        CHGG A 2
         {
             A_CustomPunch(40, TRUE, CPF_PULLIN, "BulletPuff", 72, 0, 0, "ArmorBonus", "skeleton/swing");
             A_RadiusThrust(500, 96, RTF_NOIMPACTDAMAGE);
             A_SetPitch(pitch + 2.0, SPF_INTERPOLATE);
         }
-        ZHGG A 2 A_WeaponOffset(0, 80, WOF_INTERPOLATE);
-        ZHGG A 2 A_WeaponOffset(0, 50, WOF_INTERPOLATE);
-        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 80, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 50, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     // Short, immediately visible muzzle flash.
     // Keep it shorter than the full-auto firing cycle so every shot can refresh it.
     Spawn:
-        ZGUN A -1;
+        MGUN A -1;
         Stop;
     }
 
