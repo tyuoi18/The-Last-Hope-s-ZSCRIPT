@@ -4743,82 +4743,6 @@ class StreetSweeperShotgun : Weapon
     }
 }
 
-class MicroMissileLauncher : Weapon
-{
-    Default
-    {
-        Weapon.SlotNumber 5;
-        Weapon.SlotPriority 5.15;
-        Weapon.SelectionOrder 515;
-        Weapon.Kickback 85;
-        Weapon.AmmoType1 "RocketAmmo";
-        Weapon.AmmoGive1 8;
-        Weapon.AmmoUse1 1;
-        Weapon.AmmoType2 "RocketAmmo";
-        Weapon.AmmoUse2 2;
-        Inventory.PickupMessage "Picked up the Micro-Missile Launcher.";
-    }
-
-    States
-    {
-    Ready:
-        MISG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.92, 0.96);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-        }
-        MISG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
-        Loop;
-
-    Deselect:
-        MISG A 1 A_Lower;
-        Loop;
-
-    Select:
-        MISG A 1
-        {
-            A_OverlayScale(PSP_WEAPON, 0.92, 0.96);
-            A_Raise();
-        }
-        Loop;
-
-    Fire:
-        MISG B 0 A_GunFlash;
-        MISG B 6
-        {
-            A_FireProjectile("MicroMissile");
-            A_StartSound("weapons/rocklf", CHAN_WEAPON);
-            A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
-            A_Recoil(3.5);
-        }
-        MISG A 4 A_ReFire;
-        Goto Ready;
-
-    AltFire:
-        MISG B 0 A_GunFlash;
-        MISG B 8
-        {
-            A_FireProjectile("TrackingMicroMissile");
-            A_StartSound("weapons/rocklf", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
-            A_Recoil(5.0);
-        }
-        MISG A 6;
-        Goto Ready;
-
-    Flash:
-        MISF A 3 Bright A_Light1;
-        MISF B 3 Bright A_Light2;
-        Goto LightDone;
-
-    Spawn:
-        LAUN A -1;
-        Stop;
-    }
-}
-
-
-
 class TLHGrenadeLauncher : Weapon
 {
     Default
@@ -8048,20 +7972,18 @@ class TacticalHUDHandler : EventHandler
 
     ui double GetHUDResolutionScale()
     {
-        double sx = double(Screen.GetWidth()) / 640.0;
-        double sy = double(Screen.GetHeight()) / 360.0;
-        return max(0.25, min(sx, sy));
+        // The HUD is authored on a 640x360 design grid, but must occupy the
+        // entire active viewport. Use independent X/Y factors instead of
+        // preserving 16:9 and leaving pillarbox/letterbox gaps.
+        return max(0.01, min(double(Screen.GetWidth()) / 640.0,
+                             double(Screen.GetHeight()) / 360.0));
     }
 
     ui Vector2 V(double x, double y)
     {
-        return Screen.VirtualToRealCoords(
-            (x, y),
-            (Screen.GetWidth(), Screen.GetHeight()),
-            (640.0, 360.0),
-            false,
-            true
-        );
+        double sx = double(Screen.GetWidth()) / 640.0;
+        double sy = double(Screen.GetHeight()) / 360.0;
+        return (x * sx, y * sy);
     }
 
     ui void Line(double x0, double y0, double x1, double y1, Color c, int a = 220, double w = 0.8)
@@ -8074,16 +7996,17 @@ class TacticalHUDHandler : EventHandler
 
     ui void Text(String s, double x, double y, int c = Font.CR_WHITE, double scale = 0.40)
     {
+        double sx = double(Screen.GetWidth()) / 640.0;
+        double sy = double(Screen.GetHeight()) / 360.0;
+        Vector2 p = V(x, y);
         Screen.DrawText(
             SmallFont,
             c,
-            int(x), int(y), s,
-            DTA_VirtualWidth, 640,
-            DTA_VirtualHeight, 360,
-            // Coordinates already use the 640x360 virtual canvas. Let GZDoom
-            // scale that canvas to the actual output resolution exactly once.
-            DTA_ScaleX, scale,
-            DTA_ScaleY, scale,
+            int(p.X), int(p.Y), s,
+            DTA_VirtualWidth, Screen.GetWidth(),
+            DTA_VirtualHeight, Screen.GetHeight(),
+            DTA_ScaleX, scale * sx,
+            DTA_ScaleY, scale * sy,
             DTA_Shadow, false
         );
     }
@@ -8217,11 +8140,11 @@ class TacticalHUDHandler : EventHandler
 
     ui void DrawFaceNode()
     {
-        Color frame = 0x355B54;
-        Color main = 0x66CDB8;
-        Color dim = 0x203C38;
-        Color steel = 0x46665F;
-        Color warn = 0xD4B45A;
+        Color frame = 0x586267;
+        Color main = 0xB8C0C2;
+        Color dim = 0x303639;
+        Color steel = 0x737D80;
+        Color warn = 0xB9A875;
 
         // Compact chin-camera housing. The portrait is intentionally tiny and
         // bottom-centred so it feels like a helmet sensor feed, not a status bar.
@@ -8267,11 +8190,11 @@ class TacticalHUDHandler : EventHandler
 
     ui void DrawPerimeter()
     {
-        Color shell = 0x1E3835;
-        Color gasket = 0x294E48;
-        Color main = 0x5DBFAE;
-        Color dim = 0x17302D;
-        Color steel = 0x466A64;
+        Color shell = 0x353B3E;
+        Color gasket = 0x454D51;
+        Color main = 0xAEB7BA;
+        Color dim = 0x272D30;
+        Color steel = 0x737D80;
 
         // Top brow of the helmet. Broken segments imitate the inner edge of a
         // visor rather than a rectangular game HUD.
@@ -8338,10 +8261,10 @@ class TacticalHUDHandler : EventHandler
 
     ui void DrawHeader()
     {
-        Color main = 0x62C6B3;
-        Color dim = 0x264843;
-        Color steel = 0x4C6C65;
-        Color warn = 0xD1B25B;
+        Color main = 0xB8C0C2;
+        Color dim = 0x3C4448;
+        Color steel = 0x778185;
+        Color warn = 0xB9A875;
 
         Text("YARBIS", 25, 17, main, 0.43);
         Text("HELMET // INTERNAL", 25, 29, dim, 0.24);
@@ -8400,10 +8323,10 @@ class TacticalHUDHandler : EventHandler
 
     ui void DrawTelemetry()
     {
-        Color main = 0x55B6A5;
-        Color dim = 0x23423E;
-        Color steel = 0x46665F;
-        Color warn = 0xD0B25A;
+        Color main = 0xAEB7BA;
+        Color dim = 0x353D40;
+        Color steel = 0x737D80;
+        Color warn = 0xB9A875;
 
         // Left temple: suit telemetry.
         Panel(24, 70, 116, 60, dim, 90);
@@ -8454,9 +8377,9 @@ class TacticalHUDHandler : EventHandler
 
     ui void DrawOpticalNode()
     {
-        Color main = 0x6FD3BE;
+        Color main = 0xC1C7C8;
         Color dim = 0x294D48;
-        Color warn = 0xD2B35C;
+        Color warn = 0xB9A875;
         double t = double(tlhVisorTime);
         double pulse = 0.5 + 0.5 * sin(t * 0.12 * TLH_RAD_TO_DEG);
 
@@ -8498,8 +8421,8 @@ class TacticalHUDHandler : EventHandler
 
     ui void DrawVitals()
     {
-        Color main = 0x5EC4AE;
-        Color dim = 0x23433F;
+        Color main = 0xB8C0C2;
+        Color dim = 0x353D40;
         Color warn = 0xD0B25B;
         Color hp = hudPlayerHealth < 40 ? 0xC65B55 : main;
 
@@ -8530,8 +8453,8 @@ class TacticalHUDHandler : EventHandler
     ui void GetHUDWeaponDesign(Weapon weapon, out Color primary, out Color secondary,
         out double profileX, out double profileY, out double accentStrength)
     {
-        primary = 0x5EC4AE;
-        secondary = 0x31504B;
+        primary = 0xB8C0C2;
+        secondary = 0x596164;
         profileX = 1.0;
         profileY = 1.0;
         accentStrength = 1.0;
@@ -8642,8 +8565,8 @@ class TacticalHUDHandler : EventHandler
         if (!weapon) return;
 
         String cls = weapon.GetClassName();
-        Color primary = 0x5EC4AE;
-        Color secondary = 0x31504B;
+        Color primary = 0xB8C0C2;
+        Color secondary = 0x596164;
         double profileX = 1.0;
         double profileY = 1.0;
         double accentStrength = 1.0;
@@ -8950,8 +8873,8 @@ class TacticalHUDHandler : EventHandler
         if (!tlhVisorActive) return;
 
         Color red = 0xD45B55;
-        Color yellow = 0xD3BD65;
-        Color cyan = 0x65C7D0;
+        Color yellow = 0xB9A875;
+        Color cyan = 0x9AAEB3;
 
         int enemyLimit = min(10, tlhVisorEnemies.Size());
         for (int i = 0; i < enemyLimit; i++)
