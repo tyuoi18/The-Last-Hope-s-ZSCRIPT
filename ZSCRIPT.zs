@@ -7822,15 +7822,27 @@ class TacticalHUDHandler : EventHandler
         // --------------------------------------------------------------------
         // The actual PSprite frame was sampled in WorldTick() and cached for
         // this UI pass. No play-scoped Weapon state function is called here.
-        if (!hudWeaponTextureValid)
-            return;
+        TextureID tex;
+        bool flip = false;
+        Vector2 stateScale = (1.0, 1.0);
 
-        if (hudWeaponTextureClass != cls)
+        // The tactical chaingun uses Doom II's original CHGG sprite family.
+        // Keep a vanilla HUD preview available even when the transient PSprite
+        // cache is empty during weapon changes or on engines that skip sampling.
+        if (hudWeaponTextureValid && hudWeaponTextureClass == cls)
+        {
+            tex = hudWeaponTexture;
+            flip = hudWeaponFlip;
+            stateScale = hudWeaponStateScale;
+        }
+        else if (cls == "TLHChaingun")
+        {
+            tex = TexMan.CheckForTexture("CHGGA0", TexMan.Type_MiscPatch);
+        }
+        else
+        {
             return;
-
-        TextureID tex = hudWeaponTexture;
-        bool flip = hudWeaponFlip;
-        Vector2 stateScale = hudWeaponStateScale;
+        }
 
         if (!tex.IsValid())
             return;
