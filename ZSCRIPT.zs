@@ -4555,7 +4555,7 @@ class ServiceRevolver : Weapon
             A_OverlayScale(PSP_WEAPON, 0.90, 0.96);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
         }
-        PISG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
+        PISG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
@@ -4571,6 +4571,7 @@ class ServiceRevolver : Weapon
         Loop;
 
     Fire:
+        PISG B 0 A_GunFlash;
         PISG B 5
         {
             A_FireBullets(0.7, 0.4, 1, 32, "BulletPuff");
@@ -4582,6 +4583,7 @@ class ServiceRevolver : Weapon
         Goto Ready;
 
     AltFire:
+        PISG B 0 A_GunFlash;
         PISG B 7
         {
             A_FireBullets(0.0, 0.0, 1, 56, "BulletPuff");
@@ -4643,6 +4645,7 @@ class StreetSweeperShotgun : Weapon
         Loop;
 
     Fire:
+        SHTG B 0 A_GunFlash;
         SHTG B 5
         {
             A_FireBullets(7.0, 5.5, 12, 6, "BulletPuff");
@@ -4654,6 +4657,7 @@ class StreetSweeperShotgun : Weapon
         Goto Ready;
 
     AltFire:
+        SHTG B 0 A_GunFlash;
         SHTG B 8
         {
             A_FireBullets(4.5, 3.5, 18, 5, "BulletPuff");
@@ -4715,6 +4719,7 @@ class MicroMissileLauncher : Weapon
         Loop;
 
     Fire:
+        MISG B 0 A_GunFlash;
         MISG B 6
         {
             A_FireProjectile("MicroMissile");
@@ -4726,6 +4731,7 @@ class MicroMissileLauncher : Weapon
         Goto Ready;
 
     AltFire:
+        MISG B 0 A_GunFlash;
         MISG B 8
         {
             A_FireProjectile("TrackingMicroMissile");
@@ -6366,7 +6372,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
         if (selected == "" && FindInventory("StreetSweeperShotgun"))
         {
-            if (pick == 1) selected = "RecoilShotgun";
+            if (pick == 1) selected = "StreetSweeperShotgun";
             else pick--;
         }
         if (selected == "" && FindInventory("FastRecoilSSG"))
@@ -6389,14 +6395,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (pick == 1) selected = "M60MachineGun";
             else pick--;
         }
-        if (selected == "" && FindInventory("MicroMissileLauncher"))
-        {
-            if (pick == 1) selected = "MicroMissileLauncher";
-            else pick--;
-        }
         if (selected == "" && FindInventory("RecoilRocketLauncher"))
         {
             if (pick == 1) selected = "RecoilRocketLauncher";
+            else pick--;
+        }
+        if (selected == "" && FindInventory("MicroMissileLauncher"))
+        {
+            if (pick == 1) selected = "MicroMissileLauncher";
             else pick--;
         }
         if (selected == "" && FindInventory("RecoilPlasmaRifle"))
