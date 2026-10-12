@@ -3874,13 +3874,13 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
     States
     {
     Ready:
-        ZISG A 0
+        MISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        ZISG A 1
+        MISG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -3888,22 +3888,22 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Loop;
     Deselect:
-        ZISG A 1 A_Lower;
+        MISG A 1 A_Lower;
         Loop;
     Select:
-        ZISG A 1 A_Raise;
+        MISG A 1 A_Raise;
         Loop;
 
     Reload:
-        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        ZISG A 0
+        MISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        MISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        MISG A 0
         {
             if (invoker.nukeMode) return ResolveState("SetNormal");
             return ResolveState("SetNuke");
         }
     SetNuke:
-        ZISG A 8
+        MISG A 8
         {
             invoker.nukeMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -3911,7 +3911,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     SetNormal:
-        ZISG A 8
+        MISG A 8
         {
             invoker.nukeMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -3919,34 +3919,34 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     FinishReload:
-        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        MISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        MISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        ZISG A 0
+        MISG A 0
         {
             if (invoker.nukeMode) return ResolveState("FireNuke");
             return ResolveState(null);
         }
-        ZISG B 8
+        MISG B 8
         {
             A_GunFlash();
             A_FireMissile();
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
-        ZISG B 12;
-        ZISG A 0 A_ReFire;
+        MISG B 12;
+        MISG A 0 A_ReFire;
         Goto Ready;
 
     FireNuke:
-        ZISG A 0
+        MISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("RocketAmmo") >= 10) return ResolveState("DoFireNuke");
             return ResolveState("Ready");
         }
     DoFireNuke:
-        ZISG B 10
+        MISG B 10
         {
             A_TakeInventory("RocketAmmo", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("NukeMissile", useammo: false);
@@ -3955,59 +3955,59 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             A_Quake(3, 8, 0, 200);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
         }
-        ZISG B 20;
+        MISG B 20;
         Goto Ready;
 
     AltFire:
-        ZISG B 2
+        MISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        MISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        MISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZISG B 15;
+        MISG B 15;
         Goto Ready;
 
     Zoom:
-        ZISG A 0
+        MISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Clip") >= 3) return ResolveState(null);
             return ResolveState("Ready");
         }
-        ZISG B 2
+        MISG B 2
         {
             A_TakeInventory("Clip", 3, TIF_NOTAKEINFINITE);
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        MISG B 2
         {
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        MISG B 2
         {
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        ZISG B 10;
+        MISG B 10;
         Goto Ready;
 
     Flash:
-        ZISF A 3 Bright A_Light1;
-        ZISF B 3 Bright A_Light2;
+        MISF A 3 Bright A_Light1;
+        MISF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
