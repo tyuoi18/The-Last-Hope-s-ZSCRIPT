@@ -3040,7 +3040,8 @@ class TLHChaingun : Chaingun replaces Chaingun
 // ============================================================================
 /* HEAVY CHAINGUN
    Standalone class: do not inherit from a nonexistent HeavyChaingun base.
-   Uses Doom II's vanilla CHGG/CHGF/MGUN sprites. The redesigned TLH Chaingun keeps TCHG/TCHF/TCHD, and the M4A1 retains ZHGG/ZGUN.
+   HUD: CHGG/CHGF (vanilla family), recolored to darker gunmetal and stretched vertically.
+   Pickup: TCHD, the dedicated TLH chaingun drop sprite. M4A1 keeps ZHGG/ZGUN.
 */
 class HeavyChaingun : Weapon
 {
