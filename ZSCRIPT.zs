@@ -4945,9 +4945,22 @@ class TacticalRocketLauncher : Weapon
         Goto ReadyPistol;
 
     SwitchToPistol:
-        ZISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 40, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
-        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -34, 49, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
-        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -54, 61, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -8.0); }
+        // SSG-style transition: lower and park the launcher before raising the sidearm.
+        ZISG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, -8, 44, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.0);
+        }
+        ZISG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, -28, 52, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
+        }
+        ZISG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, -52, 62, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -7.0);
+        }
         ZISG A 0
         {
             A_Overlay(TLH_STOWED_LAYER, "LauncherStowed");
@@ -4955,7 +4968,7 @@ class TacticalRocketLauncher : Weapon
             A_OverlayPivotAlign(TLH_STOWED_LAYER, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(TLH_STOWED_LAYER, PSPF_PLAYERTRANSLATED, true);
             A_OverlayOffset(TLH_STOWED_LAYER, -66, 70);
-            A_OverlayRotate(TLH_STOWED_LAYER, -8.0);
+            A_OverlayRotate(TLH_STOWED_LAYER, -7.0);
             A_OverlayOffset(PSP_WEAPON, 0, 70);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftDraw");
@@ -5975,10 +5988,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else if (cls == "RecoilRocketLauncher")
         {
             scaleX = 1.03; scaleY = 1.10; offsetY = 1.3; sway = 0.66;
-        }
-        else if (cls == "MicroMissileLauncher")
-        {
-            scaleX = 0.94; scaleY = 1.00; offsetY = 1.2; sway = 0.72;
         }
         else if (cls == "TLHGrenadeLauncher")
         {
