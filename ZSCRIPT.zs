@@ -3430,6 +3430,7 @@ class TacticalM4A1 : DoomWeapon
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
             A_Recoil(2);
+            return ResolveState(null);
         }
         ZHGG B 10;
         ZHGG A 15 A_StartSound("weapons/sshotl", CHAN_WEAPON);
