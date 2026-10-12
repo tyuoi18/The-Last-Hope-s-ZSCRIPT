@@ -2691,20 +2691,19 @@ class TLHChaingun : Chaingun replaces Chaingun
 
         Inventory.PickupMessage "I found the Tactical Chaingun!";
 
-        // Palette remap in ZScript. All major color families are pushed into
-        // a dark gunmetal range. Doom red/light-red ramps are remapped to a
-        // slightly stronger red instead of being washed into gray.
+        // Muted charcoal remap: remove the bright red cast and push neutral
+        // midtones slightly darker, keeping the gunmetal look rather than blacking out details.
         Translation
-            "0:31=64:79",             // black/dark -> graphite
-            "32:47=176:191",          // red -> slightly stronger red
-            "48:79=64:79",             // warm/brown -> graphite
-            "80:95=80:95",            // dark neutral -> dark gray
-            "96:111=80:95",           // gray -> darker gray
-            "112:127=80:95",          // green -> dark gray
+            "0:31=64:79",             // shadows -> graphite
+            "32:47=80:95",            // red -> muted gray
+            "48:79=64:79",            // warm/brown -> graphite
+            "80:95=64:79",            // dark neutral -> darker charcoal
+            "96:111=64:79",           // gray -> darker gunmetal
+            "112:127=64:79",          // green -> graphite
             "128:167=64:79",          // colored midtones -> graphite
-            "168:175=176:191",         // deep red -> stronger red
-            "176:191=176:191",         // light red -> stronger red
-            "192:255=64:79";           // remaining colors -> graphite
+            "168:175=80:95",          // deep red -> muted gray
+            "176:191=80:95",          // light red -> muted gray
+            "192:255=64:79";          // remaining colors -> graphite
     }
 
     // ------------------------------------------------------------------------
@@ -2753,6 +2752,13 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
+        TCHG A 0
+        {
+            // Match the semi-auto shotgun's taller first-person proportions.
+            A_OverlayScale(PSP_WEAPON, 0.96, 1.32);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
+        }
         TCHG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         Loop;
 
@@ -2761,6 +2767,12 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Select:
+        TCHG A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 0.96, 1.32);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
+        }
         TCHG A 1 A_Raise;
         Loop;
 
@@ -3029,7 +3041,8 @@ class TLHChaingun : Chaingun replaces Chaingun
         Goto LightDone;
 
     Spawn:
-        TCHD A -1;
+        // Use the custom TLH pickup sprite instead of vanilla MGUN.
+        ZGUN A -1;
         Stop;
     }
 
@@ -3040,7 +3053,7 @@ class TLHChaingun : Chaingun replaces Chaingun
 // ============================================================================
 /* HEAVY CHAINGUN
    Standalone class: do not inherit from a nonexistent HeavyChaingun base.
-   Uses Doom II's vanilla CHGG/CHGF/MGUN sprites. The redesigned TLH Chaingun keeps TCHG/TCHF/TCHD, and the M4A1 retains ZHGG/ZGUN.
+   Uses Doom II's vanilla CHGG/CHGF/MGUN sprites. TLHChaingun keeps its TCHG/TCHF HUD family and uses the TLH ZGUN pickup sprite.
 */
 class HeavyChaingun : Weapon
 {
