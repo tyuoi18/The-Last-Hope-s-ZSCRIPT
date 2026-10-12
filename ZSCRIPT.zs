@@ -2624,8 +2624,8 @@ class SemiAutoShotgun : Weapon
 
 // ==========================================
 // CHAINGUN TACTICA - OVERHEAT SYSTEM
-// Replaces the vanilla Chaingun. Uses Rocket Launcher
-// sprites deliberately, with a dark monochrome-gray translation.
+// Replaces the vanilla Chaingun. Uses DOOM II's native CHGG chaingun
+// sprites with a dark tactical translation.
 // ==========================================
 
 class TLHChaingun : Chaingun replaces Chaingun
@@ -2714,7 +2714,7 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
-        MISG A 0
+        CHGG A 0
         {
             if (invoker.overheated)
                 return ResolveState("Overheated");
@@ -2728,7 +2728,7 @@ class TLHChaingun : Chaingun replaces Chaingun
             return ResolveState(null);
         }
 
-        MISG A 1
+        CHGG A 1
         {
             double heatFactor = double(invoker.heat) / double(MaxHeat);
 
@@ -2750,7 +2750,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Deselect:
-        MISG A 1
+        CHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -2760,7 +2760,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Select:
-        MISG A 1
+        CHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -2770,7 +2770,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Fire:
-        MISG A 0
+        CHGG A 0
         {
             if (invoker.overheated)
                 return ResolveState("Overheated");
@@ -2799,7 +2799,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         }
 
     FireNormal:
-        MISG A 2
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2808,8 +2808,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.65);
         }
-        MISG B 1;
-        MISG A 0
+        CHGG B 1;
+        CHGG A 0
         {
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.25);
@@ -2831,11 +2831,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        MISG A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireWarm:
-        MISG A 3
+        CHGG A 3
         {
             A_FireCGun();
             invoker.heat += 3;
@@ -2851,8 +2851,8 @@ class TLHChaingun : Chaingun replaces Chaingun
                 A_Print("CHAINGUN: CRITICAL HEAT");
             }
         }
-        MISG B 1;
-        MISG A 0
+        CHGG B 1;
+        CHGG A 0
         {
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.30);
@@ -2867,11 +2867,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        MISG A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireHot:
-        MISG A 4
+        CHGG A 4
         {
             A_FireCGun();
             invoker.heat += 4;
@@ -2888,8 +2888,8 @@ class TLHChaingun : Chaingun replaces Chaingun
                 A_Print("CHAINGUN: CRITICAL HEAT");
             }
         }
-        MISG B 1;
-        MISG A 0
+        CHGG B 1;
+        CHGG A 0
         {
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
@@ -2905,11 +2905,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        MISG A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireBurst:
-        MISG A 2
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2917,8 +2917,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        MISG B 1;
-        MISG A 2
+        CHGG B 1;
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2926,8 +2926,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        MISG B 1;
-        MISG A 2
+        CHGG B 1;
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2935,12 +2935,12 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        MISG B 1;
-        MISG A 8;
+        CHGG B 1;
+        CHGG A 8;
         Goto Ready;
 
     Overheated:
-        MISG A 2
+        CHGG A 2
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
 
@@ -2969,7 +2969,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Reload:
-        MISG A 0
+        CHGG A 0
         {
             // R while overheated = emergency vent.
             if (invoker.overheated)
@@ -2982,29 +2982,29 @@ class TLHChaingun : Chaingun replaces Chaingun
         }
 
     SetBurst:
-        MISG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        MISG A 6
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 6
         {
             invoker.burstMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("CHAINGUN: CONTROLLED BURST");
         }
-        MISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetAuto:
-        MISG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        MISG A 6
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 6
         {
             invoker.burstMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("CHAINGUN: FULL AUTO");
         }
-        MISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     ManualVent:
-        MISG A 4
+        CHGG A 4
         {
             int oldHeat = invoker.heat;
             invoker.heat -= 55;
@@ -3013,13 +3013,13 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_StartSound("weapons/sawidle", CHAN_WEAPON);
             A_Print(String.Format("CHAINGUN: VENTING %d%% → %d%%", oldHeat, invoker.heat));
         }
-        MISG A 5
+        CHGG A 5
         {
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_OverlayOffset(PSP_WEAPON, FRandom(-0.5, 0.5), 33.0, 0);
             A_OverlayRotate(PSP_WEAPON, FRandom(-0.8, 0.8));
         }
-        MISG A 5
+        CHGG A 5
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -4515,7 +4515,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 2, "RecoilPistol", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun";
         // Automatic weapons: M4A1, Tactical Chaingun, M60. No HeavyMinigun alias.
-        Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "M60MachineGun";
+        Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
         Player.WeaponSlot 6, "RecoilPlasmaRifle";
         Player.WeaponSlot 7, "RecoilBFG9000";
@@ -6205,39 +6205,106 @@ class JuggernautPerk : PowerupGiver
 }
 
 // ============================================================================
-// TLH PURPLE INFINITE-AMMO POWERUP
-// Native PowerInfiniteAmmo effect. 30 seconds = 1050 tics.
+// TLH M12 COMPACT SMG
+// New weapon built from DOOM II's native chaingun sprites (CHGG/CHGF/MGUN).
+// Controlled automatic fire plus a three-round burst on alternate fire.
 // ============================================================================
-
-class TLHInfiniteAmmoPowerup : PowerupGiver
+class TLHCompactSMG : Weapon
 {
     Default
     {
-        Inventory.PickupMessage "POWERUP ACQUIRED: INFINITE AMMO // 30 SEC";
-        Powerup.Type "PowerInfiniteAmmo";
-        +INVENTORY.AUTOACTIVATE;
-        +COUNTITEM;
-        RenderStyle "Stencil";
-        StencilColor "B820FF";
-        +BRIGHT;
-    }
+        Weapon.SlotNumber 4;
+        Weapon.SlotPriority 4.15;
+        Weapon.SelectionOrder 415;
+        Weapon.Kickback 55;
+        Weapon.AmmoType1 "Clip";
+        Weapon.AmmoGive1 30;
+        Weapon.AmmoUse1 1;
+        Inventory.PickupMessage "I found the M12 Compact SMG!";
 
-    override bool Use(bool pickup)
-    {
-        EffectTics = 30 * 35;
-        return Super.Use(pickup);
+        Translation
+            "0:31=64:79",
+            "32:47=112:127",
+            "48:79=64:79",
+            "80:111=80:95",
+            "112:167=64:79",
+            "168:191=112:127",
+            "192:255=64:79";
     }
 
     States
     {
-    Spawn:
-        SOUL ABCDCB 5 Bright;
+    Ready:
+        CHGG A 1 A_WeaponReady;
         Loop;
-    }
-}
 
-class TLHInfiniteAmmoOrb : TLHInfiniteAmmoPowerup
-{
+    Deselect:
+        CHGG A 1 A_Lower;
+        Loop;
+
+    Select:
+        CHGG A 1 A_Raise;
+        Loop;
+
+    Fire:
+        CHGG A 0
+        {
+            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) &&
+                player.mo.CountInv("Clip") < 1)
+                return ResolveState("Ready");
+        }
+        CHGG A 2
+        {
+            A_GunFlash();
+            A_FireBullets(3.5, 2.0, 1, 5, "BulletPuff");
+            A_StartSound("weapons/pistol", CHAN_WEAPON);
+            A_Recoil(1.2);
+        }
+        CHGG B 2;
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    AltFire:
+        CHGG A 0
+        {
+            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) &&
+                player.mo.CountInv("Clip") < 3)
+                return ResolveState("Ready");
+        }
+        CHGG A 1
+        {
+            A_GunFlash();
+            A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Recoil(2.0);
+        }
+        CHGG B 1;
+        CHGG A 1
+        {
+            A_GunFlash();
+            A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Recoil(2.0);
+        }
+        CHGG B 1;
+        CHGG A 1
+        {
+            A_GunFlash();
+            A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Recoil(2.0);
+        }
+        Goto Ready;
+
+    Flash:
+        CHGF A 2 Bright A_Light1;
+        CHGF B 2 Bright A_Light2;
+        Goto LightDone;
+
+    Spawn:
+        MGUN A -1;
+        Stop;
+    }
 }
 
 class BerserkerPerk : CustomInventory replaces Berserk
@@ -6299,6 +6366,14 @@ class TacticalHUDHandler : EventHandler
     double hudVerticalSpeed;
     double hudAltitude;
     bool hudOnGround;
+
+    // Target-under-crosshair cache. Sampled in WorldTick, drawn in UI context.
+    Actor tlhAimTarget;
+    String tlhAimTargetName;
+    int tlhAimTargetHealth;
+    int tlhAimTargetMaxHealth;
+    double tlhAimTargetDistance;
+    bool tlhAimTargetVisible;
 
     // ------------------------------------------------------------------------
     // INPUT OBSERVER
@@ -6478,6 +6553,25 @@ class TacticalHUDHandler : EventHandler
                 {
                     wep.SpawnFlags = spawnFlags;
                     wep.Vel = (FRandom(-2, 2), FRandom(-2, 2), FRandom(2, 4));
+                }
+            }
+        }
+
+        // M12 Compact SMG: uncommon alternate pickup from a spawned Tactical Chaingun.
+        if (e.Thing is "TLHChaingun")
+        {
+            let inv = Inventory(e.Thing);
+            if (inv && !inv.Owner && random(1, 100) <= 8)
+            {
+                Vector3 spawnPos = e.Thing.Pos;
+                uint spawnFlags = e.Thing.SpawnFlags;
+                e.Thing.Destroy();
+
+                let smgPickup = Actor.Spawn("TLHCompactSMG", spawnPos);
+                if (smgPickup)
+                {
+                    smgPickup.SpawnFlags = spawnFlags;
+                    smgPickup.Vel = (FRandom(-2, 2), FRandom(-2, 2), FRandom(2, 4));
                 }
             }
         }
@@ -6930,6 +7024,7 @@ class TacticalHUDHandler : EventHandler
         hudAltitude = max(0.0, p.Pos.Z - p.floorz);
         hudOnGround = (p.Pos.Z <= p.floorz + 0.5);
         hudModeName = GetGameModeName(clamp(CVar.FindCVar("tlh_gamemode") ? CVar.FindCVar("tlh_gamemode").GetInt() : 0, 0, 33));
+        UpdateAimTarget(p);
 
         let armor = BasicArmor(p.FindInventory("BasicArmor"));
         if (armor)
@@ -6986,6 +7081,7 @@ class TacticalHUDHandler : EventHandler
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
             else if (hudWeaponName == "TLHChaingun") hudWeaponName = "TACTICAL CHAINGUN";
+            else if (hudWeaponName == "TLHCompactSMG") hudWeaponName = "M12 COMPACT SMG";
             else if (hudWeaponName == "M60MachineGun") hudWeaponName = "M60 MACHINE GUN";
             else if (hudWeaponName == "RecoilRocketLauncher") hudWeaponName = "ROCKET LAUNCHER";
             else if (hudWeaponName == "RecoilPlasmaRifle") hudWeaponName = "PLASMA RIFLE";
@@ -7052,6 +7148,91 @@ class TacticalHUDHandler : EventHandler
         }
     }
 
+
+    // =========================================================================
+    // AIM TARGET DATA
+    // AimLineAttack follows GZDoom's 3D aim and current view height. This avoids
+    // the old LineTrace path that was disabled after a native access violation.
+    // =========================================================================
+    String GetAimTargetName(Actor a)
+    {
+        if (!a) return "UNKNOWN";
+        String cls = a.GetClassName();
+        if (cls == "DoomImp" || cls == "TLH_AssaultImp" || cls == "TLH_BrutalImp" || cls == "TLH_StalkerImp") return "DOOM IMP";
+        if (cls == "ZombieMan" || cls == "TacticalZombieMan") return "ZOMBIEMAN";
+        if (cls == "ShotgunGuy" || cls == "TacticalShotgunGuy" || cls == "TLH_BreacherShotgunner") return "SHOTGUN GUY";
+        if (cls == "ChaingunGuy" || cls == "TacticalChaingunGuy") return "CHAINGUNNER";
+        if (cls == "Demon" || cls == "TLH_BerserkerDemon" || cls == "TLH_HeavyDemon" || cls == "TLH_RazorDemon") return "DEMON";
+        if (cls == "HellKnight" || cls == "TLH_ArmoredHellKnight") return "HELL KNIGHT";
+        if (cls == "BaronOfHell" || cls == "TLH_CombatBaron" || cls == "TLH_HellfireBaron" || cls == "TLH_ExecutionerBaron" || cls == "TLH_AssaultBaron") return "BARON OF HELL";
+        if (cls == "Revenant" || cls == "TLH_RavagerRevenant" || cls == "TLH_SiegeRevenant" || cls == "TLH_DevastatorRevenant" || cls == "TLH_HunterRevenant") return "REVENANT";
+        if (cls == "Fatso" || cls == "TLH_HeavyMancubus" || cls == "TLH_TacticalMancubus") return "MANCUBUS";
+        if (cls == "Arachnotron" || cls == "TLH_AssaultArachnotron" || cls == "TLH_SiegeArachnotron") return "ARACHNOTRON";
+        if (cls == "Cacodemon" || cls == "TLH_VanguardCacodemon" || cls == "TLH_BloodCacodemon" || cls == "TLH_VoidCacodemon") return "CACODEMON";
+        return cls;
+    }
+
+    void UpdateAimTarget(Actor p)
+    {
+        tlhAimTarget = null;
+        tlhAimTargetName = "";
+        tlhAimTargetHealth = 0;
+        tlhAimTargetMaxHealth = 0;
+        tlhAimTargetDistance = 0.0;
+        tlhAimTargetVisible = false;
+
+        if (!p || !p.player || p.player.playerstate == PST_DEAD) return;
+
+        FTranslatedLineTarget aim;
+        p.AimLineAttack(p.Angle, 1024.0, aim, 0.0, ALF_CHECK3D);
+        Actor target = aim.linetarget;
+        if (!target || !target.bIsMonster || target.Health <= 0) return;
+        if (!p.CheckSight(target)) return;
+
+        tlhAimTarget = target;
+        tlhAimTargetName = GetAimTargetName(target);
+        tlhAimTargetHealth = max(0, target.Health);
+        tlhAimTargetMaxHealth = max(1, target.GetSpawnHealth());
+        tlhAimTargetDistance = p.Distance3D(target);
+        tlhAimTargetVisible = true;
+    }
+
+    ui void DrawAimTargetLabel(Actor p)
+    {
+        Actor target = tlhAimTarget;
+        if (!tlhAimTargetVisible || !target || target.Health <= 0) return;
+        if (!p || !p.player) return;
+
+        double dx = target.Pos.X - p.Pos.X;
+        double dy = target.Pos.Y - p.Pos.Y;
+        double horizontalDistance = sqrt(dx * dx + dy * dy);
+        if (horizontalDistance < 1.0 || horizontalDistance > 1024.0) return;
+
+        // Project the live head position into the 640x360 UI canvas. Player
+        // viewz and target Pos.Z/Height account for jumping, crouching and pitch.
+        double targetYaw = atan2(dy, dx);
+        double relativeYaw = deltaangle(p.Angle, targetYaw);
+        double fov = clamp(double(p.player.FOV), 20.0, 160.0);
+        if (abs(relativeYaw) > fov * 0.48) return;
+
+        double targetElevation = atan2((target.Pos.Z + target.Height + 5.0) - p.player.viewz, horizontalDistance);
+        double relativeElevation = targetElevation + p.Pitch;
+        double aspect = double(Screen.GetWidth()) / max(1.0, double(Screen.GetHeight()));
+        double verticalHalfFov = atan(tan(fov * 0.5) / max(0.1, aspect));
+        if (verticalHalfFov < 1.0) return;
+
+        double screenX = 320.0 + (relativeYaw / (fov * 0.5)) * 320.0;
+        double screenY = 180.0 - (relativeElevation / verticalHalfFov) * 180.0;
+        if (screenX < 12.0 || screenX > 628.0 || screenY < 18.0 || screenY > 330.0) return;
+
+        String hp = String.Format("%d / %d HP", tlhAimTargetHealth, tlhAimTargetMaxHealth);
+        double width = max(double(SmallFont.StringWidth(tlhAimTargetName)), double(SmallFont.StringWidth(hp))) * 0.36;
+        double left = clamp(screenX - width * 0.5, 6.0, 634.0 - width);
+        double top = clamp(screenY - 21.0, 8.0, 320.0);
+        Line(left - 4.0, top - 3.0, left + width + 4.0, top - 3.0, 0xAAB7B0, 180, 0.65);
+        Text(tlhAimTargetName, left, top, Font.CR_WHITE, 0.36);
+        Text(hp, left, top + 9.0, tlhAimTargetHealth <= tlhAimTargetMaxHealth * 0.25 ? Font.CR_RED : Font.CR_GREEN, 0.34);
+    }
 
     // ========================================================================
     // PROCEDURAL DRAWING PRIMITIVES // YARBIS v2
@@ -8006,6 +8187,7 @@ class TacticalHUDHandler : EventHandler
         DrawFaceNode();
         DrawPeripheralAnalyzer(e);
         DrawSSGChainCompact();
+        DrawAimTargetLabel(p);
     }
 
 }
@@ -8016,312 +8198,10 @@ class TLHYarbisHelmetVisor : EventHandler
 {
 }
 
+// Retained as an inert compatibility class. Target identification is handled
+// by TacticalHUDHandler using AimLineAttack.
 class DeveloperAdvancedHUD : EventHandler
 {
-    Actor currentTarget;
-    String currentSpawnName;
-    String currentTargetMap;
-    int currentTargetMapNum;
-    int currentHealth;
-    double currentDistance;
-    bool currentIsEnemy;
-    bool currentIsItem;
-
-    override void WorldTick()
-    {
-        // Disabled as a stability workaround: the old target HUD performed a
-        // 3D LineTrace every world tic, including immediately after map start.
-        // Keep this handler inert until the native access violation is isolated.
-        return;
-
-        currentTarget = null;
-        currentSpawnName = "";
-        currentTargetMap = level.MapName;
-        currentTargetMapNum = level.levelnum;
-        currentHealth = 0;
-        currentDistance = 0;
-        currentIsEnemy = false;
-        currentIsItem = false;
-
-        // Do not perform a world trace when this optional HUD is disabled.
-        // This also avoids tracing during the first map-start ticks before the
-        // player's view has been fully established.
-        let devCvar = CVar.FindCVar("tlh_developer_hud");
-        if (!devCvar || !devCvar.GetBool()) return;
-
-        if (consoleplayer < 0 || consoleplayer >= MAXPLAYERS) return;
-        let p = players[consoleplayer].mo;
-        if (!p || !p.player || p.player.playerstate == PST_DEAD) return;
-
-        FLineTraceData trace;
-        double eyeZ = p.player.viewz - p.Pos.Z;
-
-        // Gameplay targeting still comes from GZDoom's actual 3D player view,
-        // including pitch. This is deliberately not a simple XY angle check.
-        p.LineTrace(p.Angle, 512, p.Pitch, 0, eyeZ, data: trace);
-
-        if (trace.HitType == TRACE_HitActor && trace.HitActor)
-        {
-            Actor foundActor = trace.HitActor;
-            Inventory inv = Inventory(foundActor);
-
-            // Monsters: show their HP and name.
-            if (foundActor.bIsMonster && foundActor.Health > 0)
-            {
-                currentTarget = foundActor;
-                currentSpawnName = GetFriendlyName(foundActor);
-                currentHealth = foundActor.Health;
-                currentDistance = trace.Distance;
-                currentIsEnemy = true;
-                return;
-            }
-
-            // World pickups/weapons: show only their name.
-            if (inv && inv.Owner == null)
-            {
-                currentTarget = foundActor;
-                currentSpawnName = GetFriendlyName(foundActor);
-                currentDistance = trace.Distance;
-                currentIsItem = true;
-            }
-        }
-    }
-
-    String GetFriendlyName(Actor a)
-    {
-        String cls = a.GetClassName();
-
-        // ENEMIGOS
-        if (cls == "ZombieMan" || cls == "TacticalZombieMan") return "[ZM] ZOMBIEMAN";
-        if (cls == "ShotgunGuy" || cls == "TacticalShotgunGuy") return "[SG] SHOTGUN GUY";
-        if (cls == "ChaingunGuy" || cls == "TacticalChaingunGuy") return "[CG] CHAINGUNNER";
-        if (cls == "DoomImp") return "[IMP] DOOM IMP";
-        if (cls == "TLH_AssaultImp") return "[IMP+] ASSAULT IMP";
-        if (cls == "TLH_BrutalImp") return "[IMP++] BRUTAL IMP";
-        if (cls == "Demon") return "[DEM] DEMON (PINKY)";
-        if (cls == "TLH_BerserkerDemon") return "[DEM+] BERSERKER DEMON";
-        if (cls == "TLH_HeavyDemon") return "[DEM++] HEAVY DEMON";
-        if (cls == "HellKnight") return "[HK] HELL KNIGHT";
-        if (cls == "TLH_ArmoredHellKnight") return "[HK+] ARMORED HELL KNIGHT";
-        if (cls == "BaronOfHell") return "[BOH] BARON OF HELL";
-        if (cls == "TLH_CombatBaron") return "[BOH+] COMBAT BARON";
-        if (cls == "TLH_HellfireBaron") return "[BOH++] HELLFIRE BARON";
-        if (cls == "TLH_ExecutionerBaron") return "[BOH+++] EXECUTIONER BARON";
-        if (cls == "TLH_StalkerImp") return "[IMP-X] STALKER IMP";
-        if (cls == "TLH_BreacherShotgunner") return "[SG-X] BREACHER";
-        if (cls == "TLH_RazorDemon") return "[DEM-X] RAZOR DEMON";
-        if (cls == "TLH_HunterRevenant") return "[REV-X] HUNTER REVENANT";
-        if (cls == "TLH_AssaultBaron") return "[BOH-X] ASSAULT BARON";
-        if (cls == "Revenant") return "[REV] REVENANT";
-        if (cls == "TLH_RavagerRevenant") return "[REV+] RAVAGER REVENANT";
-        if (cls == "TLH_SiegeRevenant") return "[REV++] SIEGE REVENANT";
-        if (cls == "TLH_DevastatorRevenant") return "[REV+++] DEVASTATOR REVENANT";
-        if (cls == "Fatso") return "[MAN] MANCUBUS";
-        if (cls == "TLH_HeavyMancubus") return "[MAN+] HEAVY MANCUBUS";
-        if (cls == "TLH_TacticalMancubus") return "[MAN++] TACTICAL MANCUBUS";
-        if (cls == "Arachnotron") return "[ARA] ARACHNOTRON";
-        if (cls == "TLH_AssaultArachnotron") return "[ARA+] ASSAULT ARACHNOTRON";
-        if (cls == "TLH_SiegeArachnotron") return "[ARA++] SIEGE ARACHNOTRON";
-        if (cls == "Cacodemon") return "[CAC] CACODEMON";
-        if (cls == "TLH_VanguardCacodemon") return "[CAC+] VANGUARD CACODEMON";
-        if (cls == "TLH_BloodCacodemon") return "[CAC++] BLOOD CACODEMON";
-        if (cls == "TLH_VoidCacodemon") return "[CAC+++] VOID CACODEMON";
-        if (cls == "Archvile") return "[AV] ARCH-VILE";
-
-        // ARMAS / ITEMS
-        if (cls == "OfficerVulkanPistol") return "OFFICER'S VULKAN";
-        if (cls == "RecoilPistol") return "RECOIL PISTOL";
-        if (cls == "RecoilShotgun") return "COMBAT SHOTGUN";
-        if (cls == "FastRecoilSSG") return "TACTICAL SSG";
-        if (cls == "SemiAutoShotgun") return "SEMI-AUTO SHOTGUN";
-        if (cls == "TacticalM4A1") return "TACTICAL M4A1";
-        if (cls == "TLHChaingun") return "TACTICAL CHAINGUN";
-        if (cls == "M60MachineGun") return "M60 MACHINE GUN";
-        if (cls == "RecoilRocketLauncher") return "ROCKET LAUNCHER";
-        if (cls == "RecoilPlasmaRifle") return "PLASMA RIFLE";
-        if (cls == "RecoilBFG9000") return "BFG 9000";
-        if (cls == "AMR99RailRifle") return "AMR-99 GAUSS RIFLE";
-        if (cls == "HellfireProjector") return "HELLFIRE PROJECTOR";
-        if (cls == "AirstrikeDesignator") return "AIRSTRIKE DESIGNATOR";
-        if (cls == "DashFist") return "DASH FIST";
-        if (cls == "HookChainsaw") return "HOOK CHAINSAW";
-        if (cls == "Clip") return "BULLET AMMO";
-        if (cls == "Shell") return "SHELLS";
-        if (cls == "RocketAmmo") return "ROCKETS";
-        if (cls == "Cell") return "CELLS";
-        if (cls == "Backpack") return "BACKPACK";
-        if (cls == "MilitaryBackpack") return "MILITARY BACKPACK";
-        if (cls == "LoadoutBackpack") return "LOADOUT BACKPACK";
-        if (cls == "Megasphere") return "MEGASPHERE";
-        if (cls == "Berserk") return "BERSERK PACK";
-        if (cls == "TacticalMedikit") return "TRAUMA KIT";
-        if (cls == "TacticalStimpack") return "TACTICAL STIMPACK";
-        if (cls == "KevlarArmor") return "KEVLAR ARMOR";
-        if (cls == "HeavyAssaultArmor") return "HEAVY ASSAULT ARMOR";
-
-        return cls;
-    }
-
-    // Projects a world-space point into the same perspective used by the
-    // GZDoom render camera. The calculation uses yaw, pitch, roll, camera
-    // position, horizontal FOV and display aspect ratio, so looking up/down,
-    // jumping, crouching and camera roll all affect the final screen position.
-    ui bool ProjectWorldToHUD(Vector3 worldPos, RenderEvent e, double fov,
-        out double screenX, out double screenY, out double depth)
-    {
-        screenX = 0;
-        screenY = 0;
-        depth = 0;
-
-        Vector3 relative = worldPos - e.ViewPos;
-
-        double yaw = e.ViewAngle;
-        double pitch = e.ViewPitch;
-        double roll = e.ViewRoll;
-
-        double cp = cos(pitch);
-        double sp = sin(pitch);
-        double cy = cos(yaw);
-        double sy = sin(yaw);
-
-        // GZDoom pitch is positive when looking downward, hence -sin(pitch)
-        // for the camera's forward Z component.
-        Vector3 forward = (cp * cy, cp * sy, -sp);
-
-        // Camera-right is the forward vector crossed with world-up. This keeps
-        // the horizontal basis correct for every yaw and remains stable when
-        // the player looks almost straight up or down.
-        Vector3 right = (sy, -cy, 0);
-        Vector3 up = right cross forward;
-
-        // Apply actual camera roll around the forward axis.
-        double cr = cos(roll);
-        double sr = sin(roll);
-        Vector3 rolledRight = right * cr + up * sr;
-        Vector3 rolledUp = up * cr - right * sr;
-
-        double cameraX = relative dot rolledRight;
-        double cameraY = relative dot rolledUp;
-        depth = relative dot forward;
-
-        // Behind-camera points cannot be projected meaningfully.
-        if (depth <= 0.01) return false;
-
-        double safeFOV = clamp(fov, 20.0, 160.0);
-        double halfHFOVTangent = tan(safeFOV * 0.5);
-        if (abs(halfHFOVTangent) < 0.0001) return false;
-
-        // GZDoom's FOV is used as the horizontal field of view here.
-        // Vertical FOV is derived from the current render aspect ratio.
-        double aspect = Screen.GetAspectRatio();
-        if (aspect < 0.1) aspect = 16.0 / 9.0;
-
-        double halfVFOVTangent = halfHFOVTangent / aspect;
-        if (abs(halfVFOVTangent) < 0.0001) return false;
-
-        double ndcX = cameraX / (depth * halfHFOVTangent);
-        double ndcY = cameraY / (depth * halfVFOVTangent);
-
-        // A little margin prevents labels from being drawn when they are only
-        // barely outside the actual render viewport.
-        if (ndcX < -1.15 || ndcX > 1.15 || ndcY < -1.15 || ndcY > 1.15)
-            return false;
-
-        screenX = 320.0 + ndcX * 320.0;
-        screenY = 180.0 - ndcY * 180.0;
-
-        return screenX >= -48.0 && screenX <= 688.0 &&
-               screenY >= -24.0 && screenY <= 384.0;
-    }
-
-    override void RenderOverlay(RenderEvent e)
-    {
-        // This overlay consumes the target cached by WorldTick(); keep it off
-        // together with the trace above to avoid stale render-time references.
-        return;
-
-        let devCvar = CVar.FindCVar("tlh_developer_hud");
-        if (!devCvar || !devCvar.GetBool()) return;
-        if (!currentTarget || currentSpawnName == "") return;
-        if (currentTargetMapNum != level.levelnum || currentTargetMap != level.MapName) return;
-
-        // RenderEvent contains the actual interpolated render camera. Use the
-        // target's previous/current origin and FracTic so moving actors don't
-        // jitter one world tick behind a high-FPS view.
-        Vector3 targetPos = currentTarget.Prev +
-            (currentTarget.Pos - currentTarget.Prev) * e.FracTic;
-
-        double anchorZ;
-        if (currentIsEnemy)
-            anchorZ = targetPos.Z + currentTarget.Height + 6.0;
-        else
-            anchorZ = targetPos.Z + max(8.0, currentTarget.Height + 2.0);
-
-        Vector3 anchor = (targetPos.X, targetPos.Y, anchorZ);
-
-        if (consoleplayer < 0 || consoleplayer >= MAXPLAYERS) return;
-        let p = players[consoleplayer].mo;
-        if (!p || !p.player) return;
-
-        double fov = clamp(double(p.player.FOV), 20.0, 160.0);
-        double x, y, depth;
-        if (!ProjectWorldToHUD(anchor, e, fov, x, y, depth)) return;
-
-        // Perspective-based text scale using the actual 3D camera-to-entity
-        // distance. The square-root falloff is smoother than a simple inverse
-        // distance scale: close entities remain readable without becoming huge,
-        // while distant entities shrink progressively.
-        Vector3 cameraDelta = anchor - e.ViewPos;
-        double markerDistance = sqrt(
-            cameraDelta.X * cameraDelta.X +
-            cameraDelta.Y * cameraDelta.Y +
-            cameraDelta.Z * cameraDelta.Z
-        );
-
-        double markerScale = clamp(
-            1.15 * sqrt(128.0 / max(16.0, markerDistance + 16.0)),
-            0.50,
-            1.35
-        );
-
-        double scaledNameWidth = double(BigFont.StringWidth(currentSpawnName)) * markerScale;
-        int nameX = int(x - scaledNameWidth * 0.5);
-
-        if (currentIsEnemy)
-        {
-            String hpText = String.Format("HP %d", currentHealth);
-            double scaledHPWidth = double(SmallFont.StringWidth(hpText)) * markerScale;
-
-            Screen.DrawText(BigFont, Font.CR_RED,
-                nameX, y - int(16.0 * markerScale),
-                currentSpawnName,
-                DTA_ScaleX, markerScale,
-                DTA_ScaleY, markerScale,
-                DTA_VirtualWidth, 640,
-                DTA_VirtualHeight, 360,
-                DTA_Shadow, true);
-
-            Screen.DrawText(SmallFont, Font.CR_WHITE,
-                int(x - scaledHPWidth * 0.5), y,
-                hpText,
-                DTA_ScaleX, markerScale,
-                DTA_ScaleY, markerScale,
-                DTA_VirtualWidth, 640,
-                DTA_VirtualHeight, 360,
-                DTA_Shadow, true);
-        }
-        else if (currentIsItem)
-        {
-            Screen.DrawText(BigFont, Font.CR_GREEN,
-                nameX, y - int(8.0 * markerScale),
-                currentSpawnName,
-                DTA_ScaleX, markerScale,
-                DTA_ScaleY, markerScale,
-                DTA_VirtualWidth, 640,
-                DTA_VirtualHeight, 360,
-                DTA_Shadow, true);
-        }
-    }
 }
 
 class RemoveStartingPistol : EventHandler
