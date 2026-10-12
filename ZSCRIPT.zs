@@ -3029,12 +3029,12 @@ class TLHChaingun : Chaingun replaces Chaingun
         Goto Ready;
 
     Flash:
-        MISF A 2 Bright A_Light1;
-        MISF B 2 Bright A_Light2;
+        CHGF A 2 Bright A_Light1;
+        CHGF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        LAUN A -1;
+        MGUN A -1;
         Stop;
     }
 
