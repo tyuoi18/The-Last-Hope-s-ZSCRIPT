@@ -1464,7 +1464,7 @@ class RecoilPistol : Pistol replaces Pistol
         Goto LightDone;
 
     Spawn:
-        ZIST A -1;
+        PISG A -1;
         Stop;
     }
 
@@ -7837,7 +7837,7 @@ class TacticalHUDHandler : EventHandler
         }
         else if (cls == "TLHChaingun")
         {
-            tex = TexMan.CheckForTexture("CHGGA0", TexMan.Type_Sprite);
+            tex = TexMan.CheckForTexture("ZHGGA0", TexMan.Type_Sprite);
         }
         else
         {
