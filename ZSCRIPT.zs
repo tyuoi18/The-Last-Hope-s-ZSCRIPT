@@ -4919,6 +4919,29 @@ class TacticalRocketLauncher : Weapon
     }
     States
     {
+    Deselect:
+        MISG A 0
+        {
+            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_STOWED_LAYER, TLH_STOWED_LAYER);
+            invoker.pistolMode = false;
+            A_OverlayRotate(PSP_WEAPON, 0);
+            A_OverlayAlpha(PSP_WEAPON, 1.0);
+        }
+        MISG A 1 A_Lower;
+        Loop;
+
+    Select:
+        MISG A 0
+        {
+            invoker.pistolMode = false;
+            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_STOWED_LAYER, TLH_STOWED_LAYER);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
+        MISG A 1 A_Raise;
+        Loop;
+
     Ready:
         MISG A 0
         {
