@@ -1464,7 +1464,7 @@ class RecoilPistol : Pistol replaces Pistol
         Goto LightDone;
 
     Spawn:
-        PISG A -1;
+        PIST A -1;
         Stop;
     }
 
@@ -2714,59 +2714,15 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
-        ZHGG A 0
-        {
-            if (invoker.overheated)
-                return ResolveState("Overheated");
-
-            A_OverlayScale(PSP_WEAPON, 0.88, 0.88);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-
-            return ResolveState(null);
-        }
-
-        ZHGG A 1
-        {
-            double heatFactor = double(invoker.heat) / double(MaxHeat);
-
-            double swayX = sin(level.time * 0.035 * TLH_RAD_TO_DEG) * (0.28 + heatFactor * 0.60);
-            double swayY = 32.0 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * (0.10 + heatFactor * 0.25);
-            double swayR = sin(level.time * 0.023 * TLH_RAD_TO_DEG) * (0.25 + heatFactor * 0.85);
-
-            A_OverlayOffset(PSP_WEAPON, swayX, swayY, 0);
-            A_OverlayRotate(PSP_WEAPON, swayR);
-
-            if (invoker.heat >= CriticalHeat)
-            {
-                double pulse = 0.93 + 0.07 * abs(sin(level.time * 11.4591559));
-                A_OverlayAlpha(PSP_WEAPON, 1.0);
-            }
-
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
-        }
+        ZHGG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
-        ZHGG A 1
-        {
-            A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-            A_OverlayRotate(PSP_WEAPON, 0);
-            A_Lower();
-        }
+        ZHGG A 1 A_Lower;
         Loop;
 
     Select:
-        ZHGG A 1
-        {
-            A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-            A_OverlayRotate(PSP_WEAPON, 0);
-            A_Raise();
-        }
+        ZHGG A 1 A_Raise;
         Loop;
 
     Fire:
