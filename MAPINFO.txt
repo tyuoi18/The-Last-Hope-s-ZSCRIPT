@@ -1,10 +1,9 @@
 // The Last Hope weapon/editor definitions.
-// Add this block to the MAPINFO lump in Textures.wad (or another loaded WAD/PK3).
+// Slot 5 uses the existing Rocket Launcher (RecoilRocketLauncher).
+// Obsolete TLHGrenadeLauncher and TacticalRocketLauncher editor numbers were removed.
 
 DoomEdNums
 {
     30001 = ServiceRevolver
     30002 = StreetSweeperShotgun
-    30004 = TLHGrenadeLauncher
-    30005 = TacticalRocketLauncher
 }
