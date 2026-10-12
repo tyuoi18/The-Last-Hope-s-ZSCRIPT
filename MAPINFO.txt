@@ -1,0 +1,10 @@
+// TLH custom editor numbers for the three vanilla-sprite weapons.
+// Merge these entries into the project's existing MAPINFO DoomEdNums block,
+// or add this block to a MAPINFO lump loaded alongside ZSCRIPT.zs.
+
+DoomEdNums
+{
+    30001 = ServiceRevolver
+    30002 = StreetSweeperShotgun
+    30003 = MicroMissileLauncher
+}
