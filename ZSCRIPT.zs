@@ -2996,6 +2996,124 @@ class TLHChaingun : Chaingun replaces Chaingun
 
 }
 
+
+// ============================================================================
+// HEAVY CHAINGUN SPRITE FIX
+// Keep HeavyChaingun on Doom II's vanilla CHGG/CHGF/MGUN sprites.
+// TLH's redesigned chaingun uses TCHG/TCHF/TCHD, and the M4A1 uses ZHGG.
+// This replacement inherits HeavyChaingun's properties and custom gameplay,
+// overriding its visual state references so they cannot resolve to M4A1 art.
+// ============================================================================
+class TLHHeavyChaingunVanillaSprites : HeavyChaingun replaces HeavyChaingun
+{
+    States
+    {
+    Ready:
+        CHGG A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 0.82, 0.82);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+        }
+        CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
+        Loop;
+
+    Deselect:
+        CHGG A 1
+        {
+            invoker.burstMode = false;
+            A_Lower();
+        }
+        Loop;
+
+    Select:
+        CHGG A 1
+        {
+            A_OverlayScale(PSP_WEAPON, 0.82, 0.82);
+            A_Raise();
+        }
+        Loop;
+
+    Reload:
+        CHGG A 3 A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+        CHGG A 4
+        {
+            invoker.burstMode = !invoker.burstMode;
+            A_StartSound("weapons/shotgr", CHAN_WEAPON);
+            A_Print(invoker.burstMode ? "HEAVY CHAINGUN: CONTROLLED BURST" : "HEAVY CHAINGUN: FULL AUTO");
+        }
+        CHGG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    Fire:
+        CHGG A 0
+        {
+            if (invoker.burstMode)
+                return ResolveState("BurstFire");
+            return ResolveState(null);
+        }
+        CHGG A 1
+        {
+            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - 1.25, SPF_INTERPOLATE);
+            A_Recoil(7.0);
+            A_Quake(1, 2, 0, 60);
+        }
+        CHGG B 1
+        {
+            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
+            A_SetPitch(pitch - 1.25, SPF_INTERPOLATE);
+            A_Recoil(7.0);
+        }
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    BurstFire:
+        CHGG A 1
+        {
+            A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
+            A_Recoil(8.0);
+        }
+        CHGG B 1;
+        CHGG A 1
+        {
+            A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
+            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
+            A_Recoil(8.0);
+        }
+        CHGG B 1;
+        CHGG A 1
+        {
+            A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
+            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
+            A_Recoil(8.0);
+        }
+        CHGG B 4;
+        Goto Ready;
+
+    AltFire:
+        CHGG B 3
+        {
+            A_FireProjectile("M203Grenade");
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_Recoil(-6);
+        }
+        CHGG A 8;
+        Goto Ready;
+
+    Flash:
+        CHGF A 2 Bright A_Light1;
+        CHGF B 2 Bright A_Light2;
+        Goto LightDone;
+
+    Spawn:
+        MGUN A -1 NoDelay;
+        Stop;
+    }
+}
+
 class TacticalM4A1 : DoomWeapon
 {
     bool burstMode;
