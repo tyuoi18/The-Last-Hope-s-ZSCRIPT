@@ -963,13 +963,13 @@ class DashFist : Fist replaces Fist
     States
     {
     Ready:
-        TLHG A 0
+        ZUNG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        TLHG A 1
+        ZUNG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -977,57 +977,57 @@ class DashFist : Fist replaces Fist
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZUNG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZUNG A 1 A_Raise;
         Loop;
     Fire:
-        TLHG B 3;
-        TLHG C 3
+        ZUNG B 3;
+        ZUNG C 3
         {
             A_CustomPunch(20, TRUE, CPF_PULLIN, "BulletPuff", 64, 0, 0, "ArmorBonus", "weapons/melee");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        TLHG D 4;
-        TLHG C 3;
-        TLHG B 4 A_ReFire;
+        ZUNG D 4;
+        ZUNG C 3;
+        ZUNG B 4 A_ReFire;
         Goto Ready;
     AltFire:
-        TLHG B 4
+        ZUNG B 4
         {
             A_Recoil(-25);
             A_StartSound("skeleton/swing", CHAN_WEAPON);
         }
-        TLHG C 3
+        ZUNG C 3
         {
             A_CustomPunch(90, TRUE, CPF_PULLIN, "BulletPuff", 80, 0, 0, "ArmorBonus", "weapons/melee");
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 5, 0, 100);
         }
-        TLHG D 8;
-        TLHG C 4;
-        TLHG B 5;
+        ZUNG D 8;
+        ZUNG C 4;
+        ZUNG B 5;
         Goto Ready;
     Zoom:
-        TLHG B 5;
-        TLHG C 5
+        ZUNG B 5;
+        ZUNG C 5
         {
             A_Explode(80, 128, XF_NOTMISSILE);
             A_StartSound("cyber/hoof", CHAN_BODY);
             A_SetPitch(pitch + 4.0, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 200);
         }
-        TLHG D 10;
+        ZUNG D 10;
         Goto Ready;
     Reload:
-        TLHG B 2 A_StartSound("vile/sight", CHAN_BODY);
-        TLHG C 8
+        ZUNG B 2 A_StartSound("vile/sight", CHAN_BODY);
+        ZUNG C 8
         {
             A_RadiusThrust(800, 192, RTF_NOIMPACTDAMAGE);
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
-        TLHG D 8;
+        ZUNG D 8;
         Goto Ready;
     }
 
@@ -1045,13 +1045,13 @@ class HookChainsaw : Chainsaw replaces Chainsaw
     States
     {
     Ready:
-        TLHG C 0
+        SAWG C 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        TLHG C 1
+        SAWG C 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -1059,60 +1059,60 @@ class HookChainsaw : Chainsaw replaces Chainsaw
         }
         Loop;
     Deselect:
-        TLHG C 1 A_Lower;
+        SAWG C 1 A_Lower;
         Loop;
     Select:
-        TLHG C 1 A_Raise;
+        SAWG C 1 A_Raise;
         Loop;
     Fire:
-        TLHG A 0 A_StartSound("*xdeath", CHAN_VOICE);
+        SAWG A 0 A_StartSound("*xdeath", CHAN_VOICE);
     Hold:
-        TLHG A 4
+        SAWG A 4
         {
             A_Saw();
             A_Recoil(-4);
             A_SetPitch(pitch - 0.5, SPF_INTERPOLATE);
         }
-        TLHG B 4
+        SAWG B 4
         {
             A_Saw();
             A_Recoil(-4);
             A_SetPitch(pitch + 0.5, SPF_INTERPOLATE);
         }
-        TLHG B 0 A_ReFire;
+        SAWG B 0 A_ReFire;
         Goto Ready;
     AltFire:
-        TLHG C 4;
-        TLHG C 10
+        SAWG C 4;
+        SAWG C 10
         {
             A_FireProjectile("FlyingSaw");
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
-        TLHG C 20;
+        SAWG C 20;
         Goto Ready;
     Zoom:
-        TLHG C 2;
-        TLHG C 5
+        SAWG C 2;
+        SAWG C 5
         {
             A_FireProjectile("GrapplePullProj");
             A_StartSound("spider/walk", CHAN_WEAPON);
         }
-        TLHG C 10;
+        SAWG C 10;
         Goto Ready;
     Reload:
-        TLHG C 5
+        SAWG C 5
         {
             A_DamageSelf(5);
             A_StartSound("weapons/sawup", CHAN_WEAPON);
         }
-        TLHG A 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
-        TLHG B 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
-        TLHG A 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
-        TLHG B 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
-        TLHG C 15;
+        SAWG A 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
+        SAWG B 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
+        SAWG A 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
+        SAWG B 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
+        SAWG C 15;
         Goto Ready;
     Spawn:
-        TLHW A -1;
+        CSAW A -1;
         Stop;
     }
 
@@ -1141,7 +1141,7 @@ class RecoilPistol : Pistol replaces Pistol
     States
     {
     Ready:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("ReadyDual");
@@ -1153,7 +1153,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLHG A 1
+        ZISG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -1162,7 +1162,7 @@ class RecoilPistol : Pistol replaces Pistol
         Loop;
 
     ReadyDual:
-        TLHG A 0
+        ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.90, 0.90);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
@@ -1172,7 +1172,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftIdle");
             return ResolveState(null);
         }
-        TLHG A 1
+        ZISG A 1
         {
             double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
             A_OverlayOffset(PSP_WEAPON, sway, 33 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.16, 0);
@@ -1182,7 +1182,7 @@ class RecoilPistol : Pistol replaces Pistol
         Loop;
 
     PistolLeftIdle:
-        TLHG A 1
+        ZISG A 1
         {
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
@@ -1194,17 +1194,17 @@ class RecoilPistol : Pistol replaces Pistol
         Loop;
 
     PistolLeftFire:
-        TLHG B 1;
-        TLHF A 1 Bright;
-        TLHG A 1;
+        ZISG B 1;
+        ZISF A 1 Bright;
+        ZISG A 1;
         Goto PistolLeftIdle;
 
     DualPistolFlash:
-        TLHF A 1 Bright A_Light1;
+        ZISF A 1 Bright A_Light1;
         Goto LightDone;
 
     Deselect:
-        TLHG A 0
+        ZISG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
@@ -1215,7 +1215,7 @@ class RecoilPistol : Pistol replaces Pistol
         Loop;
 
     Select:
-        TLHG A 0
+        ZISG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
@@ -1224,7 +1224,7 @@ class RecoilPistol : Pistol replaces Pistol
         Loop;
 
     Reload:
-        TLHG A 0
+        ZISG A 0
         {
             // Single R keeps the original mode-toggle behavior.
             // Double R is handled centrally by TacticalPlayer.
@@ -1234,7 +1234,7 @@ class RecoilPistol : Pistol replaces Pistol
         }
 
     ReloadDecision:
-        TLHG A 1
+        ZISG A 1
         {
             int buttons = player.cmd.buttons;
 
@@ -1255,7 +1255,7 @@ class RecoilPistol : Pistol replaces Pistol
         }
 
     SetAuto:
-        TLHG A 4
+        ZISG A 4
         {
             invoker.fullAuto = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -1264,7 +1264,7 @@ class RecoilPistol : Pistol replaces Pistol
         Goto FinishReload;
 
     SetSemi:
-        TLHG A 4
+        ZISG A 4
         {
             invoker.fullAuto = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -1273,22 +1273,22 @@ class RecoilPistol : Pistol replaces Pistol
         Goto FinishReload;
 
     FinishReload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     DualOnStart:
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 42, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.8);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 42, 51, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.6);
         }
-        TLHG A 0
+        ZISG A 0
         {
             invoker.dualWield = true;
             A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftIdle");
@@ -1296,7 +1296,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_Print("PISTOL: DUAL WIELD");
             return ResolveState(null);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 42, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -1304,17 +1304,17 @@ class RecoilPistol : Pistol replaces Pistol
         Goto ReadyDual;
 
     DualOffStart:
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.8);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.5);
         }
-        TLHG A 0
+        ZISG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
@@ -1322,7 +1322,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_Print("PISTOL: SINGLE WIELD");
             return ResolveState(null);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 42, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -1330,7 +1330,7 @@ class RecoilPistol : Pistol replaces Pistol
         Goto Ready;
 
     Fire:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualLeft");
@@ -1340,30 +1340,30 @@ class RecoilPistol : Pistol replaces Pistol
 
             return ResolveState(null);
         }
-        TLHG A 3;
-        TLHG B 4
+        ZISG A 3;
+        ZISG B 4
         {
             A_GunFlash();
             A_FirePistol();
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        TLHG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        TLHG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        ZISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     FireAuto:
-        TLHG B 2
+        ZISG B 2
         {
             A_GunFlash();
             A_FirePistol();
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
-        TLHG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        TLHG A 0 A_ReFire;
+        ZISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        ZISG A 0 A_ReFire;
         Goto Ready;
 
     FireDualLeft:
-        TLHG A 0
+        ZISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -1382,8 +1382,8 @@ class RecoilPistol : Pistol replaces Pistol
             A_Recoil(2);
             return ResolveState(null);
         }
-        TLHG B 2;
-        TLHG A 0
+        ZISG B 2;
+        ZISG A 0
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ATTACK))
                 return ResolveState("FireDualLeft");
@@ -1391,7 +1391,7 @@ class RecoilPistol : Pistol replaces Pistol
         }
 
     FireDualRight:
-        TLHG A 0
+        ZISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -1410,8 +1410,8 @@ class RecoilPistol : Pistol replaces Pistol
             A_Recoil(2);
             return ResolveState(null);
         }
-        TLHG B 2;
-        TLHG A 0
+        ZISG B 2;
+        ZISG A 0
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ALTATTACK))
                 return ResolveState("FireDualRight");
@@ -1419,27 +1419,27 @@ class RecoilPistol : Pistol replaces Pistol
         }
 
     AltFire:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualRight");
 
             return ResolveState(null);
         }
-        TLHG A 2 A_StartSound("weapons/sshotl", CHAN_WEAPON);
-        TLHG A 15;
-        TLHG B 5
+        ZISG A 2 A_StartSound("weapons/sshotl", CHAN_WEAPON);
+        ZISG A 15;
+        ZISG B 5
         {
             A_FireProjectile("ChargeBeam");
             A_StartSound("fatbso", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(1, 5, 0, 100);
         }
-        TLHG C 10;
+        ZISG C 10;
         Goto Ready;
 
     Zoom:
-        TLHG A 0
+        ZISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("RocketAmmo") >= 1)
                 return ResolveState("FireMicroMissile");
@@ -1447,24 +1447,24 @@ class RecoilPistol : Pistol replaces Pistol
             return ResolveState("Ready");
         }
     FireMicroMissile:
-        TLHG B 5
+        ZISG B 5
         {
             A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
             A_FireProjectile("MicroMissile", useammo: false);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
-        TLHG C 4;
-        TLHG B 5;
+        ZISG C 4;
+        ZISG B 5;
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZISF A 3 Bright A_Light1;
+        ZISF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHT A -1;
+        ZIST A -1;
         Stop;
     }
 
@@ -1513,7 +1513,7 @@ class OfficerVulkanPistol : Weapon
     States
     {
     Ready:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("ReadyDual");
@@ -1528,7 +1528,7 @@ class OfficerVulkanPistol : Weapon
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLHG A 1
+        ZISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -1538,7 +1538,7 @@ class OfficerVulkanPistol : Weapon
         Loop;
 
     ReadyDual:
-        TLHG A 0
+        ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.76, 0.86);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
@@ -1548,7 +1548,7 @@ class OfficerVulkanPistol : Weapon
             A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftIdle");
             return ResolveState(null);
         }
-        TLHG A 1
+        ZISG A 1
         {
             double sway = sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.42;
             A_OverlayOffset(PSP_WEAPON, sway, 33 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.15, 0);
@@ -1558,7 +1558,7 @@ class OfficerVulkanPistol : Weapon
         Loop;
 
     OfficerPistolLeftIdle:
-        TLHG A 1
+        ZISG A 1
         {
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.76, 0.86);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
@@ -1570,23 +1570,23 @@ class OfficerVulkanPistol : Weapon
         Loop;
 
     OfficerPistolLeftFire:
-        TLHG B 1;
-        TLHF A 1 Bright;
-        TLHG A 1;
+        ZISG B 1;
+        ZISF A 1 Bright;
+        ZISG A 1;
         Goto OfficerPistolLeftIdle;
 
     DualPistolFlash:
-        TLHF A 1 Bright A_Light1;
+        ZISF A 1 Bright A_Light1;
         Goto LightDone;
 
     ReadyLauncher:
-        TLHG A 0
+        ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.68, 0.88);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        TLHG A 1
+        ZISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -1596,7 +1596,7 @@ class OfficerVulkanPistol : Weapon
         Loop;
 
     Deselect:
-        TLHG A 0
+        ZISG A 0
         {
             invoker.weaponMode = 0;
             invoker.dualWield = false;
@@ -1604,21 +1604,21 @@ class OfficerVulkanPistol : Weapon
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
-        TLHG A 1 A_Lower;
+        ZISG A 1 A_Lower;
         Loop;
 
     Select:
-        TLHG A 0
+        ZISG A 0
         {
             invoker.weaponMode = 0;
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
         }
-        TLHG A 1 A_Raise;
+        ZISG A 1 A_Raise;
         Loop;
 
     Fire:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualLeft");
@@ -1631,8 +1631,8 @@ class OfficerVulkanPistol : Weapon
 
             return ResolveState(null);
         }
-        TLHG A 3;
-        TLHG B 4
+        ZISG A 3;
+        ZISG B 4
         {
             A_GunFlash();
             A_WeaponOffset(0, 37, WOF_INTERPOLATE);
@@ -1642,12 +1642,12 @@ class OfficerVulkanPistol : Weapon
             A_Quake(4, 6, 0, 100);
             A_Recoil(2);
         }
-        TLHG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        TLHG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        ZISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     FireAuto:
-        TLHG B 3
+        ZISG B 3
         {
             A_GunFlash();
             A_WeaponOffset(0, 38, WOF_INTERPOLATE);
@@ -1657,12 +1657,12 @@ class OfficerVulkanPistol : Weapon
             A_Quake(5, 8, 0, 100);
             A_Recoil(3);
         }
-        TLHG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        TLHG A 0 A_ReFire;
+        ZISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        ZISG A 0 A_ReFire;
         Goto Ready;
 
     FireDualLeft:
-        TLHG A 0
+        ZISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -1682,8 +1682,8 @@ class OfficerVulkanPistol : Weapon
             A_Recoil(2.5);
             return ResolveState(null);
         }
-        TLHG B 2;
-        TLHG A 0
+        ZISG B 2;
+        ZISG A 0
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ATTACK))
                 return ResolveState("FireDualLeft");
@@ -1691,7 +1691,7 @@ class OfficerVulkanPistol : Weapon
         }
 
     FireDualRight:
-        TLHG A 0
+        ZISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -1711,8 +1711,8 @@ class OfficerVulkanPistol : Weapon
             A_Recoil(2.5);
             return ResolveState(null);
         }
-        TLHG B 2;
-        TLHG A 0
+        ZISG B 2;
+        ZISG A 0
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ALTATTACK))
                 return ResolveState("FireDualRight");
@@ -1720,14 +1720,14 @@ class OfficerVulkanPistol : Weapon
         }
 
     FireLauncher:
-        TLHG A 0
+        ZISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Shell") < 1)
                 return ResolveState("ReadyLauncher");
 
             return ResolveState(null);
         }
-        TLHG B 5
+        ZISG B 5
         {
             A_TakeInventory("Shell", 1, TIF_NOTAKEINFINITE);
             A_FireProjectile("OfficerHeavyGrenade", useammo: false);
@@ -1736,31 +1736,31 @@ class OfficerVulkanPistol : Weapon
             A_Quake(6, 10, 0, 200);
             A_Recoil(5);
         }
-        TLHG C 5;
-        TLHG A 5 A_ReFire;
+        ZISG C 5;
+        ZISG A 5 A_ReFire;
         Goto ReadyLauncher;
 
     AltFire:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualRight");
 
             return ResolveState(null);
         }
-        TLHG A 2;
-        TLHG B 4
+        ZISG A 2;
+        ZISG B 4
         {
             A_FireProjectile("TrackingMicroMissile");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 6, 0, 100);
         }
-        TLHG C 4;
+        ZISG C 4;
         Goto Ready;
 
     Reload:
-        TLHG A 0
+        ZISG A 0
         {
             // Single R keeps the original mode-toggle behavior.
             // Double R is handled centrally by TacticalPlayer.
@@ -1770,7 +1770,7 @@ class OfficerVulkanPistol : Weapon
         }
 
     ReloadDecision:
-        TLHG A 1
+        ZISG A 1
         {
             int buttons = player.cmd.buttons;
 
@@ -1791,7 +1791,7 @@ class OfficerVulkanPistol : Weapon
         }
 
     SetAuto:
-        TLHG A 4
+        ZISG A 4
         {
             invoker.fullAuto = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -1800,7 +1800,7 @@ class OfficerVulkanPistol : Weapon
         Goto FinishReload;
 
     SetSemi:
-        TLHG A 4
+        ZISG A 4
         {
             invoker.fullAuto = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -1809,22 +1809,22 @@ class OfficerVulkanPistol : Weapon
         Goto FinishReload;
 
     FinishReload:
-        TLHG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
         Goto Ready;
 
     DualOnStart:
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 40, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.8);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 40, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.5);
         }
-        TLHG A 0
+        ZISG A 0
         {
             invoker.dualWield = true;
             A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftIdle");
@@ -1832,7 +1832,7 @@ class OfficerVulkanPistol : Weapon
             A_Print("OFFICER VULKAN: DUAL WIELD");
             return ResolveState(null);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 40, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -1840,17 +1840,17 @@ class OfficerVulkanPistol : Weapon
         Goto ReadyDual;
 
     DualOffStart:
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.8);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.5);
         }
-        TLHG A 0
+        ZISG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
@@ -1858,7 +1858,7 @@ class OfficerVulkanPistol : Weapon
             A_Print("OFFICER VULKAN: SINGLE WIELD");
             return ResolveState(null);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -1866,7 +1866,7 @@ class OfficerVulkanPistol : Weapon
         Goto Ready;
 
     Zoom:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("ReadyDual");
@@ -1878,7 +1878,7 @@ class OfficerVulkanPistol : Weapon
         }
 
     SwitchToLauncher:
-        TLHG A 0
+        ZISG A 0
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && !tp.TryAkimboToggle())
@@ -1889,31 +1889,31 @@ class OfficerVulkanPistol : Weapon
         }
 
     SwitchLauncherLower:
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -2.0);
         }
-        TLHG A 0
+        ZISG A 0
         {
             invoker.weaponMode = 1;
             A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto ReadyLauncher;
 
     SwitchToPistol:
-        TLHG A 0
+        ZISG A 0
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && !tp.TryAkimboToggle())
@@ -1924,36 +1924,36 @@ class OfficerVulkanPistol : Weapon
         }
 
     SwitchPistolLower:
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.0);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 2.0);
         }
-        TLHG A 0
+        ZISG A 0
         {
             invoker.weaponMode = 0;
             A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLHG A 3
+        ZISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZISF A 3 Bright A_Light1;
+        ZISF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHT A -1;
+        ZIST A -1;
         Stop;
     }
 
@@ -1978,13 +1978,13 @@ class RecoilShotgun : Shotgun replaces Shotgun
     States
     {
     Ready:
-        TLHG A 0
+        ZHTG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        TLHG A 1
+        ZHTG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -1992,21 +1992,21 @@ class RecoilShotgun : Shotgun replaces Shotgun
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZHTG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZHTG A 1 A_Raise;
         Loop;
     Reload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        TLHG A 0
+        ZHTG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZHTG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        ZHTG A 0
         {
             if (invoker.overdrive) return ResolveState("SetNormal");
             return ResolveState("SetOverdrive");
         }
     SetOverdrive:
-        TLHG A 8
+        ZHTG A 8
         {
             invoker.overdrive = true;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
@@ -2014,7 +2014,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
         }
         Goto FinishReload;
     SetNormal:
-        TLHG A 8
+        ZHTG A 8
         {
             invoker.overdrive = false;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
@@ -2022,40 +2022,40 @@ class RecoilShotgun : Shotgun replaces Shotgun
         }
         Goto FinishReload;
     FinishReload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZHTG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZHTG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        TLHG A 0
+        ZHTG A 0
         {
             if (invoker.overdrive) return ResolveState("FireOverdrive");
             return ResolveState(null);
         }
-        TLHG A 3;
-        TLHG A 7
+        ZHTG A 3;
+        ZHTG A 7
         {
             A_GunFlash();
             A_WeaponOffset(0, 39, WOF_INTERPOLATE);
             A_FireShotgun();
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
-        SHTG BC 5;
-        TLHG D 4;
-        SHTG CB 5;
-        TLHG A 3;
-        TLHG A 7 { A_WeaponOffset(0, 34, WOF_INTERPOLATE); A_ReFire(); }
+        ZHTG BC 5;
+        ZHTG D 4;
+        ZHTG CB 5;
+        ZHTG A 3;
+        ZHTG A 7 { A_WeaponOffset(0, 34, WOF_INTERPOLATE); A_ReFire(); }
         Goto Ready;
 
     FireOverdrive:
-        TLHG A 0
+        ZHTG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Shell") >= 4) return ResolveState("DoOverdrive");
             return ResolveState("Ready");
         }
     DoOverdrive:
-        TLHG A 3;
-        TLHG A 7
+        ZHTG A 3;
+        ZHTG A 7
         {
             // A_FireBullets ya consume AmmoUse1 (1). Tomamos 3 adicionales
             // para que Overdrive cueste exactamente 4 shells.
@@ -2067,15 +2067,15 @@ class RecoilShotgun : Shotgun replaces Shotgun
             A_Recoil(5);
             A_Quake(4, 8, 0, 200);
         }
-        SHTG BC 6;
-        TLHG D 10;
-        SHTG CB 6;
-        TLHG A 4;
+        ZHTG BC 6;
+        ZHTG D 10;
+        ZHTG CB 6;
+        ZHTG A 4;
         Goto Ready;
 
     AltFire:
-        TLHG A 3;
-        TLHG A 5
+        ZHTG A 3;
+        ZHTG A 5
         {
             A_FireProjectile("FlakGrenade", -5);
             A_FireProjectile("FlakGrenade", 0);
@@ -2084,34 +2084,34 @@ class RecoilShotgun : Shotgun replaces Shotgun
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Quake(2, 6, 0, 200);
         }
-        SHTG BC 6;
-        TLHG D 8;
-        SHTG CB 6;
-        TLHG A 4;
+        ZHTG BC 6;
+        ZHTG D 8;
+        ZHTG CB 6;
+        ZHTG A 4;
         Goto Ready;
 
     Zoom:
-        TLHG A 3;
-        TLHG A 5
+        ZHTG A 3;
+        ZHTG A 5
         {
             A_FireProjectile("ShotgunSlug");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Recoil(3);
         }
-        SHTG BC 6;
-        TLHG D 8;
-        SHTG CB 6;
-        TLHG A 4;
+        ZHTG BC 6;
+        ZHTG D 8;
+        ZHTG CB 6;
+        ZHTG A 4;
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZHTF A 3 Bright A_Light1;
+        ZHTF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHT A -1;
+        ZHOT A -1;
         Stop;
     }
 
@@ -2137,7 +2137,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     States
     {
     Ready:
-        TLH2 A 0
+        SHT2 A 0
         {
             if (invoker.akimboState == 1)
                 return ResolveState("ReadyAkimbo");
@@ -2150,7 +2150,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLH2 A 1
+        SHT2 A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -2159,7 +2159,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Loop;
 
     ReadyAkimbo:
-        TLHG A 0
+        PISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.84, 0.92);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
@@ -2169,14 +2169,14 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftIdle");
             return ResolveState(null);
         }
-        TLHG A 1
+        PISG A 1
         {
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
 
     SSGPistolLeftIdle:
-        TLHG A 1
+        PISG A 1
         {
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.84, 0.92);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
@@ -2187,17 +2187,17 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Loop;
 
     SSGPistolLeftFire:
-        TLHG B 1;
-        TLHF A 1 Bright;
-        TLHG A 1;
+        PISG B 1;
+        PISF A 1 Bright;
+        PISG A 1;
         Goto SSGPistolLeftIdle;
 
     PistolAkimboFlash:
-        TLHF A 1 Bright A_Light1;
+        PISF A 1 Bright A_Light1;
         Goto LightDone;
 
     Reload:
-        TLH2 A 0
+        SHT2 A 0
         {
             if (invoker.akimboState == 1)
                 return ResolveState("ReadyAkimbo");
@@ -2207,12 +2207,12 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
 
             return ResolveState("SetDragon");
         }
-        TLH2 A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLH2 A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        SHT2 A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        SHT2 A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
         Goto SetDragon;
 
     SetDragon:
-        TLH2 A 8
+        SHT2 A 8
         {
             invoker.dragonBreath = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -2221,7 +2221,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto FinishReload;
 
     SetBuckshot:
-        TLH2 A 8
+        SHT2 A 8
         {
             invoker.dragonBreath = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -2230,12 +2230,12 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto FinishReload;
 
     FinishReload:
-        TLH2 A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLH2 A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        SHT2 A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        SHT2 A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     FireAkimbo:
-        TLHG A 0
+        PISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Clip") >= 1)
                 return ResolveState("DoFireAkimbo");
@@ -2244,8 +2244,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
 
     DoFireAkimbo:
-        TLHG A 3;
-        TLHG B 4
+        PISG A 3;
+        PISG B 4
         {
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             A_GunFlash("PistolAkimboFlash");
@@ -2254,12 +2254,12 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftFire");
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        TLHG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        TLHG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto ReadyAkimbo;
 
     Fire:
-        TLH2 A 0
+        SHT2 A 0
         {
             if (invoker.akimboState == 1)
                 return ResolveState("FireAkimbo");
@@ -2274,8 +2274,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
 
     DoFireSSG:
-        TLH2 A 3;
-        TLH2 A 7
+        SHT2 A 3;
+        SHT2 A 7
         {
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
             A_GunFlash();
@@ -2285,17 +2285,17 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(3, 5, 0, 100);
         }
-        TLH2 B 3;
-        TLH2 C 3 A_CheckReload;
-        TLH2 D 3 A_OpenShotgun2;
-        TLH2 E 3 A_LoadShotgun2;
-        TLH2 F 3 A_LoadShotgun2;
-        TLH2 G 3 A_CloseShotgun2;
-        TLH2 H 3 A_ReFire;
+        SHT2 B 3;
+        SHT2 C 3 A_CheckReload;
+        SHT2 D 3 A_OpenShotgun2;
+        SHT2 E 3 A_LoadShotgun2;
+        SHT2 F 3 A_LoadShotgun2;
+        SHT2 G 3 A_CloseShotgun2;
+        SHT2 H 3 A_ReFire;
         Goto Ready;
 
     FireDragon:
-        TLH2 A 0
+        SHT2 A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Shell") >= 2)
                 return ResolveState("DoFireDragon");
@@ -2303,8 +2303,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             return ResolveState("Ready");
         }
     DoFireDragon:
-        TLH2 A 3;
-        TLH2 A 7
+        SHT2 A 3;
+        SHT2 A 7
         {
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
             for (int i = -6; i <= 6; i++)
@@ -2315,35 +2315,35 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Quake(3, 5, 0, 100);
         }
-        TLH2 B 3;
-        TLH2 C 3 A_CheckReload;
-        TLH2 D 3 A_OpenShotgun2;
-        TLH2 E 3 A_LoadShotgun2;
-        TLH2 F 3 A_LoadShotgun2;
-        TLH2 G 3 A_CloseShotgun2;
-        TLH2 H 3 A_ReFire;
+        SHT2 B 3;
+        SHT2 C 3 A_CheckReload;
+        SHT2 D 3 A_OpenShotgun2;
+        SHT2 E 3 A_LoadShotgun2;
+        SHT2 F 3 A_LoadShotgun2;
+        SHT2 G 3 A_CloseShotgun2;
+        SHT2 H 3 A_ReFire;
         Goto Ready;
 
     AltFire:
-        TLH2 A 0
+        SHT2 A 0
         {
             if (invoker.akimboState == 1)
                 return ResolveState("ReadyAkimbo");
 
             return ResolveState(null);
         }
-        TLH2 A 2;
-        TLH2 A 5
+        SHT2 A 2;
+        SHT2 A 5
         {
             A_FireProjectile("MeatHookProj");
             A_StartSound("weapons/sshoto", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        TLH2 A 10;
+        SHT2 A 10;
         Goto Ready;
 
     Zoom:
-        TLH2 A 0
+        SHT2 A 0
         {
             if (invoker.akimboState == 1)
                 return ResolveState("SwitchToSSG");
@@ -2352,7 +2352,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
 
     SwitchToAkimbo:
-        TLH2 A 0
+        SHT2 A 0
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && !tp.TryAkimboToggle())
@@ -2363,24 +2363,24 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
 
     AkimboLower:
-        TLH2 A 3
+        SHT2 A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
-        TLH2 A 3
+        SHT2 A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -2.0);
         }
-        TLH2 A 0
+        SHT2 A 0
         {
             invoker.akimboState = 1;
             A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftIdle");
             A_Print("SSG: AKIMBO PISTOLS");
             return ResolveState(null);
         }
-        TLHG A 3
+        PISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -2388,7 +2388,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto ReadyAkimbo;
 
     SwitchToSSG:
-        TLHG A 0
+        PISG A 0
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && !tp.TryAkimboToggle())
@@ -2399,23 +2399,23 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
 
     SSGLower:
-        TLHG A 3
+        PISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.0);
         }
-        TLHG A 3
+        PISG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 2.0);
         }
-        TLHG A 0
+        PISG A 0
         {
             invoker.akimboState = 0;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             return ResolveState(null);
         }
-        TLH2 A 3
+        SHT2 A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -2423,30 +2423,30 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto Ready;
 
     Deselect:
-        TLH2 A 0
+        SHT2 A 0
         {
             invoker.akimboState = 0;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
         }
-        TLH2 A 1 A_Lower;
+        SHT2 A 1 A_Lower;
         Loop;
 
     Select:
-        TLH2 A 0
+        SHT2 A 0
         {
             invoker.akimboState = 0;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
         }
-        TLH2 A 1 A_Raise;
+        SHT2 A 1 A_Raise;
         Loop;
 
     Flash:
-        TLH2 I 4 Bright A_Light1;
-        TLH2 J 3 Bright A_Light2;
+        SHT2 I 4 Bright A_Light1;
+        SHT2 J 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLH2 A -1;
+        SGN2 A -1;
         Stop;
     }
 
@@ -2479,13 +2479,13 @@ class SemiAutoShotgun : Weapon
     States
     {
     Ready:
-        TLHG A 0
+        ZHTG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.32);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        TLHG A 1
+        ZHTG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -2494,22 +2494,22 @@ class SemiAutoShotgun : Weapon
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZHTG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZHTG A 1 A_Raise;
         Loop;
 
     Reload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        TLHG A 0
+        ZHTG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZHTG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        ZHTG A 0
         {
             if (invoker.burstMode) return ResolveState("SetSemi");
             return ResolveState("SetBurst");
         }
     SetBurst:
-        TLHG A 8
+        ZHTG A 8
         {
             invoker.burstMode = true;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
@@ -2517,7 +2517,7 @@ class SemiAutoShotgun : Weapon
         }
         Goto FinishReload;
     SetSemi:
-        TLHG A 8
+        ZHTG A 8
         {
             invoker.burstMode = false;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
@@ -2525,18 +2525,18 @@ class SemiAutoShotgun : Weapon
         }
         Goto FinishReload;
     FinishReload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZHTG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZHTG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        TLHG A 0
+        ZHTG A 0
         {
             if (invoker.burstMode) return ResolveState("FireBurst");
             return ResolveState(null);
         }
-        TLHG A 2;
-        TLHG B 2
+        ZHTG A 2;
+        ZHTG B 2
         {
             A_GunFlash();
             A_FireBullets(7.0, 4.0, 8, 7, "BulletPuff");
@@ -2545,17 +2545,17 @@ class SemiAutoShotgun : Weapon
             A_Recoil(3);
             A_Quake(2, 5, 0, 100);
         }
-        TLHG C 2;
+        ZHTG C 2;
         Goto Ready;
 
     FireBurst:
-        TLHG A 0
+        ZHTG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Shell") >= 3) return ResolveState("DoBurst");
             return ResolveState("Ready");
         }
     DoBurst:
-        TLHG B 2
+        ZHTG B 2
         {
             A_TakeInventory("Shell", 3, TIF_NOTAKEINFINITE);
             A_GunFlash();
@@ -2564,25 +2564,25 @@ class SemiAutoShotgun : Weapon
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Recoil(3);
         }
-        TLHG B 2
+        ZHTG B 2
         {
             A_GunFlash();
             A_FireBullets(8.0, 4.0, 7, 7, "BulletPuff", 0);
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
-        TLHG B 2
+        ZHTG B 2
         {
             A_GunFlash();
             A_FireBullets(8.0, 4.0, 7, 7, "BulletPuff", 0);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        TLHG C 5;
-        TLHG A 5;
+        ZHTG C 5;
+        ZHTG A 5;
         Goto Ready;
 
     AltFire:
-        TLHG A 2;
-        TLHG B 4
+        ZHTG A 2;
+        ZHTG B 4
         {
             A_FireProjectile("FlakGrenade");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
@@ -2590,14 +2590,14 @@ class SemiAutoShotgun : Weapon
             A_Recoil(5);
             A_Quake(4, 8, 0, 150);
         }
-        TLHG C 3;
-        TLHG B 3;
-        TLHG A 4;
+        ZHTG C 3;
+        ZHTG B 3;
+        ZHTG A 4;
         Goto Ready;
 
     Zoom:
-        TLHG A 2;
-        TLHG B 3
+        ZHTG A 2;
+        ZHTG B 3
         {
             A_FireProjectile("ShotgunSlug");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
@@ -2605,18 +2605,18 @@ class SemiAutoShotgun : Weapon
             A_Recoil(5);
             A_Quake(4, 8, 0, 150);
         }
-        TLHG C 3;
-        TLHG B 3;
-        TLHG A 4;
+        ZHTG C 3;
+        ZHTG B 3;
+        ZHTG A 4;
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZHTF A 3 Bright A_Light1;
+        ZHTF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHT A -1;
+        ZHOT A -1;
         Stop;
     }
 
@@ -2714,7 +2714,7 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
-        TLHG A 0
+        ZHGG A 0
         {
             if (invoker.overheated)
                 return ResolveState("Overheated");
@@ -2728,7 +2728,7 @@ class TLHChaingun : Chaingun replaces Chaingun
             return ResolveState(null);
         }
 
-        TLHG A 1
+        ZHGG A 1
         {
             double heatFactor = double(invoker.heat) / double(MaxHeat);
 
@@ -2750,7 +2750,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Deselect:
-        TLHG A 1
+        ZHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -2760,7 +2760,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Select:
-        TLHG A 1
+        ZHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -2770,7 +2770,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Fire:
-        TLHG A 0
+        ZHGG A 0
         {
             if (invoker.overheated)
                 return ResolveState("Overheated");
@@ -2799,7 +2799,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         }
 
     FireNormal:
-        TLHG A 2
+        ZHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2808,8 +2808,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.65);
         }
-        TLHG B 1;
-        TLHG A 0
+        ZHGG B 1;
+        ZHGG A 0
         {
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.25);
@@ -2831,11 +2831,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        TLHG A 0 A_ReFire;
+        ZHGG A 0 A_ReFire;
         Goto Ready;
 
     FireWarm:
-        TLHG A 3
+        ZHGG A 3
         {
             A_FireCGun();
             invoker.heat += 3;
@@ -2851,8 +2851,8 @@ class TLHChaingun : Chaingun replaces Chaingun
                 A_Print("CHAINGUN: CRITICAL HEAT");
             }
         }
-        TLHG B 1;
-        TLHG A 0
+        ZHGG B 1;
+        ZHGG A 0
         {
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.30);
@@ -2867,11 +2867,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        TLHG A 0 A_ReFire;
+        ZHGG A 0 A_ReFire;
         Goto Ready;
 
     FireHot:
-        TLHG A 4
+        ZHGG A 4
         {
             A_FireCGun();
             invoker.heat += 4;
@@ -2888,8 +2888,8 @@ class TLHChaingun : Chaingun replaces Chaingun
                 A_Print("CHAINGUN: CRITICAL HEAT");
             }
         }
-        TLHG B 1;
-        TLHG A 0
+        ZHGG B 1;
+        ZHGG A 0
         {
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
@@ -2905,11 +2905,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        TLHG A 0 A_ReFire;
+        ZHGG A 0 A_ReFire;
         Goto Ready;
 
     FireBurst:
-        TLHG A 2
+        ZHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2917,8 +2917,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        TLHG B 1;
-        TLHG A 2
+        ZHGG B 1;
+        ZHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2926,8 +2926,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        TLHG B 1;
-        TLHG A 2
+        ZHGG B 1;
+        ZHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2935,12 +2935,12 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        TLHG B 1;
-        TLHG A 8;
+        ZHGG B 1;
+        ZHGG A 8;
         Goto Ready;
 
     Overheated:
-        TLHG A 2
+        ZHGG A 2
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
 
@@ -2969,7 +2969,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Reload:
-        TLHG A 0
+        ZHGG A 0
         {
             // R while overheated = emergency vent.
             if (invoker.overheated)
@@ -2982,29 +2982,29 @@ class TLHChaingun : Chaingun replaces Chaingun
         }
 
     SetBurst:
-        TLHG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        TLHG A 6
+        ZHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        ZHGG A 6
         {
             invoker.burstMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("CHAINGUN: CONTROLLED BURST");
         }
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetAuto:
-        TLHG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        TLHG A 6
+        ZHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        ZHGG A 6
         {
             invoker.burstMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("CHAINGUN: FULL AUTO");
         }
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     ManualVent:
-        TLHG A 4
+        ZHGG A 4
         {
             int oldHeat = invoker.heat;
             invoker.heat -= 55;
@@ -3013,13 +3013,13 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_StartSound("weapons/sawidle", CHAN_WEAPON);
             A_Print(String.Format("CHAINGUN: VENTING %d%% → %d%%", oldHeat, invoker.heat));
         }
-        TLHG A 5
+        ZHGG A 5
         {
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_OverlayOffset(PSP_WEAPON, FRandom(-0.5, 0.5), 33.0, 0);
             A_OverlayRotate(PSP_WEAPON, FRandom(-0.8, 0.8));
         }
-        TLHG A 5
+        ZHGG A 5
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -3029,12 +3029,12 @@ class TLHChaingun : Chaingun replaces Chaingun
         Goto Ready;
 
     Flash:
-        TLHF A 2 Bright A_Light1;
-        TLHF B 2 Bright A_Light2;
+        ZHGF A 2 Bright A_Light1;
+        ZHGF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHN A -1;
+        ZGUN A -1;
         Stop;
     }
 
@@ -3064,7 +3064,7 @@ class TacticalM4A1 : DoomWeapon
     States
     {
     Ready:
-        TLHG A 0
+        ZHGG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("ReadyDual");
@@ -3076,7 +3076,7 @@ class TacticalM4A1 : DoomWeapon
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLHG A 1
+        ZHGG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -3085,7 +3085,7 @@ class TacticalM4A1 : DoomWeapon
         Loop;
 
     ReadyDual:
-        TLHG A 0
+        ZHGG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
@@ -3095,7 +3095,7 @@ class TacticalM4A1 : DoomWeapon
             A_Overlay(TLH_AKIMBO_LAYER, "M4LeftIdle");
             return ResolveState(null);
         }
-        TLHG A 1
+        ZHGG A 1
         {
             double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
             A_OverlayOffset(PSP_WEAPON, 30 + sway, 34 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.18, 0);
@@ -3105,7 +3105,7 @@ class TacticalM4A1 : DoomWeapon
         Loop;
 
     M4LeftIdle:
-        TLHG A 1
+        ZHGG A 1
         {
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.92, 1.02);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
@@ -3117,29 +3117,29 @@ class TacticalM4A1 : DoomWeapon
         Loop;
 
     M4LeftFire:
-        TLHG B 1;
-        TLHG A 1;
+        ZHGG B 1;
+        ZHGG A 1;
         Goto M4LeftIdle;
     Deselect:
-        TLHG A 0
+        ZHGG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
-        TLHG A 1 A_Lower;
+        ZHGG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 0
+        ZHGG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
         }
-        TLHG A 1 A_Raise;
+        ZHGG A 1 A_Raise;
         Loop;
 
     Reload:
-        TLHG A 0
+        ZHGG A 0
         {
             // Single R keeps the original mode-toggle behavior.
             // Double R is handled centrally by TacticalPlayer.
@@ -3149,7 +3149,7 @@ class TacticalM4A1 : DoomWeapon
         }
 
     ReloadDecision:
-        TLHG A 1
+        ZHGG A 1
         {
             int buttons = player.cmd.buttons;
 
@@ -3170,7 +3170,7 @@ class TacticalM4A1 : DoomWeapon
         }
 
     SetAuto:
-        TLHG A 8
+        ZHGG A 8
         {
             invoker.burstMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -3178,8 +3178,8 @@ class TacticalM4A1 : DoomWeapon
         }
         Goto FinishReload;
     FinishReload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
@@ -3187,7 +3187,7 @@ class TacticalM4A1 : DoomWeapon
         // CHGGA0 = normal frame, CHGGB0 = muzzle-flash frame.
         // Fast gameplay cadence: 1 tic base + 1 tic flash = 2 tics/shot.
         // This is actual gameplay cadence, not only visual animation.
-        TLHG A 0
+        ZHGG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualLeft");
@@ -3195,40 +3195,40 @@ class TacticalM4A1 : DoomWeapon
                 return ResolveState("FireBurst");
             return ResolveState(null);
         }
-        TLHG A 1
+        ZHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
-        TLHG B 1;
-        TLHG A 0 A_ReFire;
+        ZHGG B 1;
+        ZHGG A 0 A_ReFire;
         Goto Ready;
 
     FireBurst:
         // Three-round burst. Each shot keeps the same readable A0/B0 animation.
-        TLHG A 1
+        ZHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        TLHG B 1;
-        TLHG A 1
+        ZHGG B 1;
+        ZHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        TLHG B 1;
-        TLHG A 1
+        ZHGG B 1;
+        ZHGG A 1
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        TLHG B 1;
-        TLHG A 15;
+        ZHGG B 1;
+        ZHGG A 15;
         Goto Ready;
 
     AltFire:
-        TLHG A 0
+        ZHGG A 0
         {
             if (invoker.dualWield)
                 return ResolveState("FireDualRight");
@@ -3237,19 +3237,19 @@ class TacticalM4A1 : DoomWeapon
             return ResolveState("Ready");
         }
     FireM203:
-        TLHG A 4
+        ZHGG A 4
         {
             A_FireProjectile("M203Grenade");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
             A_Recoil(2);
         }
-        TLHG B 10;
-        TLHG A 15 A_StartSound("weapons/sshotl", CHAN_WEAPON);
+        ZHGG B 10;
+        ZHGG A 15 A_StartSound("weapons/sshotl", CHAN_WEAPON);
         Goto Ready;
 
     FireDualLeft:
-        TLHG A 0
+        ZHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -3268,9 +3268,9 @@ class TacticalM4A1 : DoomWeapon
             A_Recoil(2.0);
             return ResolveState(null);
         }
-        TLHG B 1;
-        TLHG A 1;
-        TLHG A 0
+        ZHGG B 1;
+        ZHGG A 1;
+        ZHGG A 0
         {
             if (player.cmd.buttons & BT_ATTACK)
                 return ResolveState("FireDualLeft");
@@ -3278,7 +3278,7 @@ class TacticalM4A1 : DoomWeapon
         }
 
     FireDualRight:
-        TLHG A 0
+        ZHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
                 return ResolveState("ReadyDual");
@@ -3296,9 +3296,9 @@ class TacticalM4A1 : DoomWeapon
             A_Recoil(2.0);
             return ResolveState(null);
         }
-        TLHG B 1;
-        TLHG A 1;
-        TLHG A 0
+        ZHGG B 1;
+        ZHGG A 1;
+        ZHGG A 0
         {
             if (player.cmd.buttons & BT_ALTATTACK)
                 return ResolveState("FireDualRight");
@@ -3306,17 +3306,17 @@ class TacticalM4A1 : DoomWeapon
         }
 
     DualOnStart:
-        TLHG A 3
+        ZHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 30, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.6);
         }
-        TLHG A 3
+        ZHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 30, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 2.2);
         }
-        TLHG A 0
+        ZHGG A 0
         {
             invoker.dualWield = true;
             A_Overlay(TLH_AKIMBO_LAYER, "M4LeftIdle");
@@ -3324,7 +3324,7 @@ class TacticalM4A1 : DoomWeapon
             A_Print("M4A1: DUAL WIELD ACTIVE | M1 LEFT / M2 RIGHT");
             return ResolveState(null);
         }
-        TLHG A 3
+        ZHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 30, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.8);
@@ -3332,17 +3332,17 @@ class TacticalM4A1 : DoomWeapon
         Goto ReadyDual;
 
     DualOffStart:
-        TLHG A 3
+        ZHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 24, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.0);
         }
-        TLHG A 3
+        ZHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.2);
         }
-        TLHG A 0
+        ZHGG A 0
         {
             invoker.dualWield = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
@@ -3350,7 +3350,7 @@ class TacticalM4A1 : DoomWeapon
             A_Print("M4A1: SINGLE WIELD");
             return ResolveState(null);
         }
-        TLHG A 3
+        ZHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
@@ -3358,24 +3358,24 @@ class TacticalM4A1 : DoomWeapon
         Goto Ready;
 
     Zoom:
-        TLHG A 1 A_WeaponOffset(-15, 45, WOF_INTERPOLATE);
-        TLHG A 1 A_WeaponOffset(-32, 65, WOF_INTERPOLATE);
-        TLHG A 1 A_WeaponOffset(-45, 85, WOF_INTERPOLATE);
-        TLHG A 2
+        ZHGG A 1 A_WeaponOffset(-15, 45, WOF_INTERPOLATE);
+        ZHGG A 1 A_WeaponOffset(-32, 65, WOF_INTERPOLATE);
+        ZHGG A 1 A_WeaponOffset(-45, 85, WOF_INTERPOLATE);
+        ZHGG A 2
         {
             A_CustomPunch(40, TRUE, CPF_PULLIN, "BulletPuff", 72, 0, 0, "ArmorBonus", "skeleton/swing");
             A_RadiusThrust(500, 96, RTF_NOIMPACTDAMAGE);
             A_SetPitch(pitch + 2.0, SPF_INTERPOLATE);
         }
-        TLHG A 2 A_WeaponOffset(0, 80, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 50, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 80, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 50, WOF_INTERPOLATE);
+        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     // Short, immediately visible muzzle flash.
     // Keep it shorter than the full-auto firing cycle so every shot can refresh it.
     Spawn:
-        TLHN A -1;
+        ZGUN A -1;
         Stop;
     }
 
@@ -3465,7 +3465,7 @@ class M60MachineGun : DoomWeapon
     States
     {
     Ready:
-        TLHA A 0
+        ZSYA A 0
         {
             if (invoker.stability <= 0)
                 invoker.stability = 100;
@@ -3477,7 +3477,7 @@ class M60MachineGun : DoomWeapon
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
 
-        TLHA A 1
+        ZSYA A 1
         {
             double swayScale = invoker.braced ? 0.35 : 1.0;
             double movement = invoker.braced ? 0.10 : 0.28;
@@ -3499,7 +3499,7 @@ class M60MachineGun : DoomWeapon
         Loop;
 
     Deselect:
-        TLHA A 1
+        ZSYA A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -3509,7 +3509,7 @@ class M60MachineGun : DoomWeapon
         Loop;
 
     Select:
-        TLHA A 1
+        ZSYA A 1
         {
             invoker.stability = 100;
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
@@ -3520,9 +3520,9 @@ class M60MachineGun : DoomWeapon
         Loop;
 
     Reload:
-        TLHA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHA A 2 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
-        TLHA A 0
+        ZSYA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZSYA A 2 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
+        ZSYA A 0
         {
             if (invoker.precisionMode)
                 return ResolveState("SetSustain");
@@ -3531,29 +3531,29 @@ class M60MachineGun : DoomWeapon
         }
 
     SetPrecision:
-        TLHA A 7
+        ZSYA A 7
         {
             invoker.precisionMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("M60: PRECISION FIRE");
         }
-        TLHA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHA A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZSYA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZSYA A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetSustain:
-        TLHA A 7
+        ZSYA A 7
         {
             invoker.precisionMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("M60: SUSTAINED FIRE");
         }
-        TLHA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHA A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZSYA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZSYA A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        TLHA A 0
+        ZSYA A 0
         {
             if (invoker.precisionMode)
                 return ResolveState("FirePrecision");
@@ -3562,7 +3562,7 @@ class M60MachineGun : DoomWeapon
         }
 
     FireSustain:
-        TLHA A 1
+        ZSYA A 1
         {
             int dmg = invoker.CurrentDamage();
             double spread = invoker.CurrentSpread();
@@ -3579,18 +3579,18 @@ class M60MachineGun : DoomWeapon
             A_OverlayRotate(PSP_WEAPON, -recoil);
             A_SetPitch(pitch - (invoker.braced ? 0.18 : 0.42), SPF_INTERPOLATE);
         }
-        TLHB A 1;
-        TLHA A 2
+        ZSYB A 1;
+        ZSYA A 2
         {
             A_WeaponOffset(0, 34.0, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, 0.0, 33.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, invoker.braced ? 0.10 : 0.22);
         }
-        TLHA A 0 A_ReFire;
+        ZSYA A 0 A_ReFire;
         Goto Ready;
 
     FirePrecision:
-        TLHA A 1
+        ZSYA A 1
         {
             int dmg = invoker.CurrentDamage();
             double spread = invoker.CurrentSpread();
@@ -3607,19 +3607,19 @@ class M60MachineGun : DoomWeapon
             A_OverlayRotate(PSP_WEAPON, -recoil);
             A_SetPitch(pitch - (invoker.braced ? 0.14 : 0.32), SPF_INTERPOLATE);
         }
-        TLHB A 1;
-        TLHA A 3
+        ZSYB A 1;
+        ZSYA A 3
         {
             A_WeaponOffset(0, 34.0, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, 0.0, 33.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, invoker.braced ? 0.08 : 0.18);
         }
-        TLHA A 0 A_ReFire;
+        ZSYA A 0 A_ReFire;
         Goto Ready;
 
     AltFire:
-        TLHA A 1;
-        TLHB A 1
+        ZSYA A 1;
+        ZSYB A 1
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("RocketAmmo") < 1)
                 return ResolveState("Ready");
@@ -3633,13 +3633,13 @@ class M60MachineGun : DoomWeapon
             A_Recoil(2);
             return ResolveState(null);
         }
-        TLHA A 3;
-        TLHA A 4 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        TLHA A 2 A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        ZSYA A 3;
+        ZSYA A 4 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        ZSYA A 2 A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Zoom:
-        TLHA A 0
+        ZSYA A 0
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && !tp.TryModeToggle())
@@ -3656,45 +3656,45 @@ class M60MachineGun : DoomWeapon
         }
 
     BraceStart:
-        TLHA A 3
+        ZSYA A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.8);
         }
-        TLHA A 3
+        ZSYA A 3
         {
             invoker.braced = true;
             A_OverlayOffset(PSP_WEAPON, 0, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_Print("M60: BRACED / LOW RECOIL");
         }
-        TLHA A 3
+        ZSYA A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto Ready;
 
     UnbraceStart:
-        TLHA A 3
+        ZSYA A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 43, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.8);
         }
-        TLHA A 3
+        ZSYA A 3
         {
             invoker.braced = false;
             A_OverlayOffset(PSP_WEAPON, 0, 40, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_Print("M60: BRACE DISENGAGED");
         }
-        TLHA A 3
+        ZSYA A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto Ready;
 
     Spawn:
-        TLHX A -1;
+        ZSIX A -1;
         Stop;
     }
 
@@ -3722,13 +3722,13 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
     States
     {
     Ready:
-        TLHG A 0
+        ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        TLHG A 1
+        ZISG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -3736,22 +3736,22 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZISG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZISG A 1 A_Raise;
         Loop;
 
     Reload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        TLHG A 0
+        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        ZISG A 0
         {
             if (invoker.nukeMode) return ResolveState("SetNormal");
             return ResolveState("SetNuke");
         }
     SetNuke:
-        TLHG A 8
+        ZISG A 8
         {
             invoker.nukeMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -3759,7 +3759,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     SetNormal:
-        TLHG A 8
+        ZISG A 8
         {
             invoker.nukeMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -3767,34 +3767,34 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     FinishReload:
-        TLHG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        TLHG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        TLHG A 0
+        ZISG A 0
         {
             if (invoker.nukeMode) return ResolveState("FireNuke");
             return ResolveState(null);
         }
-        TLHG B 8
+        ZISG B 8
         {
             A_GunFlash();
             A_FireMissile();
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
-        TLHG B 12;
-        TLHG A 0 A_ReFire;
+        ZISG B 12;
+        ZISG A 0 A_ReFire;
         Goto Ready;
 
     FireNuke:
-        TLHG A 0
+        ZISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("RocketAmmo") >= 10) return ResolveState("DoFireNuke");
             return ResolveState("Ready");
         }
     DoFireNuke:
-        TLHG B 10
+        ZISG B 10
         {
             A_TakeInventory("RocketAmmo", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("NukeMissile", useammo: false);
@@ -3803,63 +3803,63 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             A_Quake(3, 8, 0, 200);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
         }
-        TLHG B 20;
+        ZISG B 20;
         Goto Ready;
 
     AltFire:
-        TLHG B 2
+        ZISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        TLHG B 2
+        ZISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        TLHG B 2
+        ZISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        TLHG B 15;
+        ZISG B 15;
         Goto Ready;
 
     Zoom:
-        TLHG A 0
+        ZISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Clip") >= 3) return ResolveState(null);
             return ResolveState("Ready");
         }
-        TLHG B 2
+        ZISG B 2
         {
             A_TakeInventory("Clip", 3, TIF_NOTAKEINFINITE);
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        TLHG B 2
+        ZISG B 2
         {
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        TLHG B 2
+        ZISG B 2
         {
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        TLHG B 10;
+        ZISG B 10;
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZISF A 3 Bright A_Light1;
+        ZISF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHN A -1;
+        ZAUN A -1;
         Stop;
     }
 
@@ -3884,7 +3884,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     States
     {
     Ready:
-        TLHG A 0
+        ZLSG A 0
         {
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
@@ -3893,7 +3893,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        TLHG A 1
+        ZLSG A 1
         {
             double sway = sin(level.time * 1.9480565) * 0.30;
             A_OverlayOffset(PSP_WEAPON, sway, 32 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.13, 0);
@@ -3903,25 +3903,25 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         Loop;
 
     Deselect:
-        TLHG A 0
+        ZLSG A 0
         {
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
-        TLHG A 1 A_Lower;
+        ZLSG A 1 A_Lower;
         Loop;
 
     Select:
-        TLHG A 0
+        ZLSG A 0
         {
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
-        TLHG A 1 A_Raise;
+        ZLSG A 1 A_Raise;
         Loop;
 
     Reload:
-        TLHG A 0
+        ZLSG A 0
         {
             invoker.empMode = !invoker.empMode;
             if (invoker.empMode)
@@ -3936,49 +3936,49 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             }
             return ResolveState(null);
         }
-        TLHG A 8;
+        ZLSG A 8;
         Goto Ready;
 
     Fire:
-        TLHG A 0
+        ZLSG A 0
         {
             if (invoker.empMode)
                 return ResolveState("FireEMP");
 
             return ResolveState(null);
         }
-        TLHG A 3
+        ZLSG A 3
         {
             A_WeaponOffset(0, 35, WOF_INTERPOLATE);
             A_FirePlasma();
             A_SetPitch(pitch - 0.3, SPF_INTERPOLATE);
         }
-        TLHG B 20 A_ReFire;
+        ZLSG B 20 A_ReFire;
         Goto Ready;
 
     FireEMP:
-        TLHG A 5
+        ZLSG A 5
         {
             A_FireProjectile("EMPPlasma");
             A_SetPitch(pitch - 1.5, SPF_INTERPOLATE);
             A_Quake(1, 3, 0, 100);
         }
-        TLHG B 20 A_ReFire;
+        ZLSG B 20 A_ReFire;
         Goto Ready;
 
     AltFire:
-        TLHG A 5;
-        TLHG B 5
+        ZLSG A 5;
+        ZLSG B 5
         {
             A_FireProjectile("GravityOrb");
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
-        TLHG B 10;
+        ZLSG B 10;
         Goto Ready;
 
     Zoom:
-        TLHG A 4 A_StartSound("weapons/sshoto", CHAN_WEAPON);
-        TLHG B 4
+        ZLSG A 4 A_StartSound("weapons/sshoto", CHAN_WEAPON);
+        ZLSG B 4
         {
             for (int i = -3; i <= 3; i++)
             {
@@ -3986,16 +3986,16 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             }
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
-        TLHG B 15;
+        ZLSG B 15;
         Goto Ready;
 
     Flash:
-        TLHF A 2 Bright A_Light1;
-        TLHF B 2 Bright A_Light2;
+        ZLSF A 2 Bright A_Light1;
+        ZLSF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHS A -1;
+        ZLAS A -1;
         Stop;
     }
 
@@ -4018,13 +4018,13 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
     States
     {
     Ready:
-        TLHG A 0
+        ZFGG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        TLHG A 1
+        ZFGG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -4032,33 +4032,33 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZFGG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZFGG A 1 A_Raise;
         Loop;
 
     Fire:
-        TLHG A 20 A_BFGSound;
-        TLHG B 10 A_GunFlash;
-        TLHG B 10
+        ZFGG A 20 A_BFGSound;
+        ZFGG B 10 A_GunFlash;
+        ZFGG B 10
         {
             A_FireBFG();
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Quake(5, 15, 0, 500);
         }
-        TLHG B 20 A_ReFire;
+        ZFGG B 20 A_ReFire;
         Goto Ready;
 
     AltFire:
-        TLHG A 0
+        ZFGG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Cell") >= 10) return ResolveState("DoBFGBurst");
             return ResolveState("Ready");
         }
     DoBFGBurst:
-        TLHG A 10;
-        TLHG B 5
+        ZFGG A 10;
+        ZFGG B 5
         {
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_Explode(50, 128, XF_EXPLICITDAMAGETYPE, false, 128);
@@ -4067,36 +4067,36 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
             A_SetPitch(pitch - 6.0, SPF_INTERPOLATE);
             A_Quake(4, 10, 0, 200);
         }
-        TLHG B 15;
+        ZFGG B 15;
         Goto Ready;
 
     Zoom:
-        TLHG A 0
+        ZFGG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Cell") >= 10) return ResolveState("DoBFGBeam");
             return ResolveState("Ready");
         }
     DoBFGBeam:
-        TLHG A 10 A_BFGSound;
-        TLHG B 5
+        ZFGG A 10 A_BFGSound;
+        ZFGG B 5
         {
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("BFGBeam", useammo: false);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
         }
-        TLHG B 15;
+        ZFGG B 15;
         Goto Ready;
 
     Reload:
-        TLHG A 0
+        ZFGG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Cell") >= 10) return ResolveState("DoSlowOrb");
             return ResolveState("Ready");
         }
     DoSlowOrb:
-        TLHG A 30 A_BFGSound;
-        TLHG B 10 A_GunFlash;
-        TLHG B 10
+        ZFGG A 30 A_BFGSound;
+        ZFGG B 10 A_GunFlash;
+        ZFGG B 10
         {
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("BFGSlowOrb", useammo: false);
@@ -4104,16 +4104,16 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
             A_Recoil(5);
             A_Quake(3, 10, 0, 300);
         }
-        TLHG B 30;
+        ZFGG B 30;
         Goto Ready;
 
     Flash:
-        TLHF A 11 Bright A_Light1;
-        TLHF B 6 Bright A_Light2;
+        ZFGF A 11 Bright A_Light1;
+        ZFGF B 6 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHG A -1;
+        ZFUG A -1;
         Stop;
     }
 
@@ -4154,13 +4154,13 @@ class AMR99RailRifle : Weapon
     States
     {
     Ready:
-        TLHG A 0
+        ZLSG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.84, 0.92);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        TLHG A 1
+        ZLSG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4169,20 +4169,20 @@ class AMR99RailRifle : Weapon
         }
         Loop;
     Deselect:
-        TLHG A 0
+        ZLSG A 0
         {
             invoker.isZoomed = false;
             A_ZoomFactor(1.0, ZOOM_INSTANT);
         }
-        TLHG A 1 A_Lower;
+        ZLSG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZLSG A 1 A_Raise;
         Loop;
 
     Fire:
-        TLHG A 4;
-        TLHG B 6
+        ZLSG A 4;
+        ZLSG B 6
         {
             A_GunFlash();
             A_WeaponOffset(0, 46, WOF_INTERPOLATE);
@@ -4192,12 +4192,12 @@ class AMR99RailRifle : Weapon
             A_Quake(7, 14, 0, 350);
             A_Recoil(5);
         }
-        TLHG B 28;
-        TLHG A 8;
+        ZLSG B 28;
+        ZLSG A 8;
         Goto Ready;
 
     Reload:
-        TLHG A 0
+        ZLSG A 0
         {
             if (invoker.isZoomed)
             {
@@ -4206,17 +4206,17 @@ class AMR99RailRifle : Weapon
             }
             A_StartSound("weapons/sshoto", CHAN_WEAPON);
         }
-        TLHG A 8;
+        ZLSG A 8;
         Goto Ready;
 
     Zoom:
-        TLHG A 0
+        ZLSG A 0
         {
             if (invoker.isZoomed) return ResolveState("ZoomOut");
             return ResolveState("ZoomIn");
         }
     ZoomIn:
-        TLHG A 4
+        ZLSG A 4
         {
             invoker.isZoomed = true;
             A_StartSound("weapons/sshoto", CHAN_WEAPON);
@@ -4224,7 +4224,7 @@ class AMR99RailRifle : Weapon
         }
         Goto Ready;
     ZoomOut:
-        TLHG A 4
+        ZLSG A 4
         {
             invoker.isZoomed = false;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -4233,12 +4233,12 @@ class AMR99RailRifle : Weapon
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZLSF A 3 Bright A_Light1;
+        ZLSF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHS A -1;
+        ZLAS A -1;
         Stop;
     }
 
@@ -4274,13 +4274,13 @@ class HellfireProjector : Weapon
     States
     {
     Ready:
-        TLHG A 0
+        ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.72, 0.76);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        TLHG A 1
+        ZISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4289,15 +4289,15 @@ class HellfireProjector : Weapon
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZISG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZISG A 1 A_Raise;
         Loop;
 
     Fire:
-        TLHG A 3;
-        TLHG B 5
+        ZISG A 3;
+        ZISG B 5
         {
             A_GunFlash();
             A_WeaponOffset(0, 36, WOF_INTERPOLATE);
@@ -4306,29 +4306,29 @@ class HellfireProjector : Weapon
             A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 220);
         }
-        TLHG B 5;
-        TLHG A 3 A_ReFire;
+        ZISG B 5;
+        ZISG A 3 A_ReFire;
         Goto Ready;
 
     AltFire:
-        TLHG A 3;
-        TLHG B 5
+        ZISG A 3;
+        ZISG B 5
         {
             A_FireProjectile("NapalmGlob", random(-4, 4), true, 0, 0, 0, random(-2, 2));
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 5, 0, 160);
         }
-        TLHG B 5;
+        ZISG B 5;
         Goto Ready;
 
     Flash:
-        TLHF A 2 Bright A_Light1;
-        TLHF B 2 Bright A_Light2;
+        ZISF A 2 Bright A_Light1;
+        ZISF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHG A -1;
+        ZISG A -1;
         Stop;
     }
 
@@ -4363,13 +4363,13 @@ class AirstrikeDesignator : Weapon
     States
     {
     Ready:
-        TLHG A 0
+        ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.54, 0.54);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        TLHG A 1
+        ZISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4378,31 +4378,31 @@ class AirstrikeDesignator : Weapon
         }
         Loop;
     Deselect:
-        TLHG A 1 A_Lower;
+        ZISG A 1 A_Lower;
         Loop;
     Select:
-        TLHG A 1 A_Raise;
+        ZISG A 1 A_Raise;
         Loop;
 
     Fire:
-        TLHG A 8;
-        TLHG B 12
+        ZISG A 8;
+        ZISG B 12
         {
             A_FireProjectile("AirstrikeBeacon");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
         }
-        TLHG A 40;
+        ZISG A 40;
         Goto Ready;
 
     Flash:
-        TLHF A 3 Bright A_Light1;
-        TLHF B 3 Bright A_Light2;
+        ZISF A 3 Bright A_Light1;
+        ZISF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHT A -1;
+        ZIST A -1;
         Stop;
     }
 
@@ -6235,19 +6235,19 @@ class TLHCompactSMG : Weapon
     States
     {
     Ready:
-        TLHG A 1 A_WeaponReady;
+        ZHGG A 1 A_WeaponReady;
         Loop;
 
     Deselect:
-        TLHG A 1 A_Lower;
+        ZHGG A 1 A_Lower;
         Loop;
 
     Select:
-        TLHG A 1 A_Raise;
+        ZHGG A 1 A_Raise;
         Loop;
 
     Fire:
-        TLHG A 0
+        ZHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) &&
                 player.mo.CountInv("Clip") < 1)
@@ -6255,20 +6255,20 @@ class TLHCompactSMG : Weapon
             return ResolveState("SMGFire");
         }
     SMGFire:
-        TLHG A 2
+        ZHGG A 2
         {
             A_GunFlash();
             A_FireBullets(3.5, 2.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Recoil(1.2);
         }
-        TLHG B 2;
-        TLHG A 0 A_ReFire;
+        ZHGG B 2;
+        ZHGG A 0 A_ReFire;
         Goto Ready;
 
     // Three-round burst. Each A_FireBullets call consumes one Clip normally.
     AltFire:
-        TLHG A 0
+        ZHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) &&
                 player.mo.CountInv("Clip") < 3)
@@ -6276,23 +6276,23 @@ class TLHCompactSMG : Weapon
             return ResolveState("SMGBurst");
         }
     SMGBurst:
-        TLHG A 1
+        ZHGG A 1
         {
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Recoil(2.0);
         }
-        TLHG B 1;
-        TLHG A 1
+        ZHGG B 1;
+        ZHGG A 1
         {
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Recoil(2.0);
         }
-        TLHG B 1;
-        TLHG A 1
+        ZHGG B 1;
+        ZHGG A 1
         {
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
@@ -6302,12 +6302,12 @@ class TLHCompactSMG : Weapon
         Goto Ready;
 
     Flash:
-        TLHF A 2 Bright A_Light1;
-        TLHF B 2 Bright A_Light2;
+        ZHGF A 2 Bright A_Light1;
+        ZHGF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHN A -1;
+        ZGUN A -1;
         Stop;
     }
 }
