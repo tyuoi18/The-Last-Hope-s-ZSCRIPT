@@ -3208,6 +3208,7 @@ class TacticalM4A1 : DoomWeapon
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "RocketAmmo";
         Weapon.AmmoUse2 1;
+        Weapon.AmmoGive2 4;
         AttackSound "weapons/chngun";
     }
 
@@ -3398,16 +3399,34 @@ class TacticalM4A1 : DoomWeapon
     AltFire:
         ZHGG A 0
         {
+            // In dual-wield mode M2 belongs to the right-hand weapon.
             if (invoker.dualWield)
                 return ResolveState("FireDualRight");
 
-            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("RocketAmmo") >= 1) return ResolveState("FireM203");
+            // The M203 shares RocketAmmo with the rocket launcher.
+            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) ||
+                player.mo.CountInv("RocketAmmo") >= 1)
+                return ResolveState("FireM203");
+
             return ResolveState("Ready");
         }
     FireM203:
-        ZHGG A 4
+        ZHGG A 0
         {
-            A_FireProjectile("M203Grenade");
+            // Consume exactly one grenade round here; don't let the generic
+            // projectile action consume the primary M4A1 magazine instead.
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (!infinite)
+            {
+                if (!player.mo || player.mo.CountInv("RocketAmmo") < 1)
+                    return ResolveState("Ready");
+
+                A_TakeInventory("RocketAmmo", 1);
+            }
+
+            A_FireProjectile("M203Grenade", useammo: false);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
             A_Recoil(2);
