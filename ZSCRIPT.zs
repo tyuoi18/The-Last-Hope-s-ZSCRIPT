@@ -7197,35 +7197,24 @@ class TacticalHUDHandler : EventHandler
         tlhAimTargetVisible = true;
     }
 
-    ui void DrawAimTargetLabel(Actor p)
+    ui void DrawAimTargetLabel(Actor p, RenderEvent e)
     {
         Actor target = tlhAimTarget;
         if (!tlhAimTargetVisible || !target || target.Health <= 0) return;
         if (!p || !p.player) return;
 
-        double dx = target.Pos.X - p.Pos.X;
-        double dy = target.Pos.Y - p.Pos.Y;
-        double horizontalDistance = sqrt(dx * dx + dy * dy);
-        if (horizontalDistance < 1.0 || horizontalDistance > 1024.0) return;
-
-        // Project the live head position into the 640x360 UI canvas. Player
-        // viewz and target Pos.Z/Height account for jumping, crouching and pitch.
-        double targetYaw = atan2(dy, dx);
-        double relativeYaw = deltaangle(p.Angle, targetYaw);
         double fov = clamp(double(p.player.FOV), 20.0, 160.0);
-        if (abs(relativeYaw) > fov * 0.48) return;
+        Vector3 headPos = target.Pos + (0, 0, target.Height + 5.0);
+        double screenX, screenY, depth;
 
-        double targetElevation = atan2((target.Pos.Z + target.Height + 5.0) - p.player.viewz, horizontalDistance);
-        double relativeElevation = targetElevation + p.Pitch;
-        double aspect = double(Screen.GetWidth()) / max(1.0, double(Screen.GetHeight()));
-        double verticalHalfFov = atan(tan(fov * 0.5) / max(0.1, aspect));
-        if (verticalHalfFov < 1.0) return;
-
-        double screenX = 320.0 + (relativeYaw / (fov * 0.5)) * 320.0;
-        double screenY = 180.0 - (relativeElevation / verticalHalfFov) * 180.0;
+        // Reuse the HUD's native camera projection, including view pitch, roll,
+        // aspect ratio and camera position. This keeps the label over the head
+        // while the player jumps, crouches or looks up/down.
+        if (!ProjectWorld(headPos, e, fov, screenX, screenY, depth)) return;
+        if (depth < 1.0 || depth > 1024.0) return;
         if (screenX < 12.0 || screenX > 628.0 || screenY < 18.0 || screenY > 330.0) return;
 
-        String hp = String.Format("%d / %d HP", tlhAimTargetHealth, tlhAimTargetMaxHealth);
+        String hp = String.Format("%d / %d HP  |  %d u", tlhAimTargetHealth, tlhAimTargetMaxHealth, int(tlhAimTargetDistance));
         double width = max(double(SmallFont.StringWidth(tlhAimTargetName)), double(SmallFont.StringWidth(hp))) * 0.36;
         double left = clamp(screenX - width * 0.5, 6.0, 634.0 - width);
         double top = clamp(screenY - 21.0, 8.0, 320.0);
@@ -8187,7 +8176,7 @@ class TacticalHUDHandler : EventHandler
         DrawFaceNode();
         DrawPeripheralAnalyzer(e);
         DrawSSGChainCompact();
-        DrawAimTargetLabel(p);
+        DrawAimTargetLabel(p, e);
     }
 
 }
