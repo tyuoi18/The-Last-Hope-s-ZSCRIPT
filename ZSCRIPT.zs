@@ -3155,15 +3155,15 @@ class HeavyChaingun : Weapon
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
-            A_SetPitch(pitch - 1.25, SPF_INTERPOLATE);
-            A_Recoil(7.0);
-            A_Quake(1, 2, 0, 60);
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            A_Recoil(2.4);
+            A_Quake(0.35, 0.8, 0, 35);
         }
         CHGG B 1
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
-            A_SetPitch(pitch - 1.25, SPF_INTERPOLATE);
-            A_Recoil(7.0);
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            A_Recoil(2.4);
         }
         CHGG A 0 A_ReFire;
         Goto Ready;
@@ -3173,22 +3173,22 @@ class HeavyChaingun : Weapon
         {
             A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
-            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_Recoil(8.0);
+            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            A_Recoil(3.0);
         }
         CHGG B 1;
         CHGG A 1
         {
             A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
-            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_Recoil(8.0);
+            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            A_Recoil(3.0);
         }
         CHGG B 1;
         CHGG A 1
         {
             A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
-            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_Recoil(8.0);
+            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            A_Recoil(3.0);
         }
         CHGG B 4;
         Goto Ready;
@@ -4845,7 +4845,7 @@ class TacticalRocketLauncher : Weapon
     States
     {
     Deselect:
-        MISG A 0
+        ZISG A 0
         {
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_ClearOverlays(TLH_STOWED_LAYER, TLH_STOWED_LAYER);
@@ -4854,22 +4854,22 @@ class TacticalRocketLauncher : Weapon
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
-        MISG A 1 A_Lower;
+        ZISG A 1 A_Lower;
         Loop;
 
     Select:
-        MISG A 0
+        ZISG A 0
         {
             invoker.pistolMode = false;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_ClearOverlays(TLH_STOWED_LAYER, TLH_STOWED_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
-        MISG A 1 A_Raise;
+        ZISG A 1 A_Raise;
         Loop;
 
     Ready:
-        MISG A 0
+        ZISG A 0
         {
             if (invoker.pistolMode) return ResolveState("ReadyPistol");
             A_OverlayScale(PSP_WEAPON, 0.98, 0.98);
@@ -4879,7 +4879,7 @@ class TacticalRocketLauncher : Weapon
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
-        MISG A 1
+        ZISG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.034 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.022 * TLH_RAD_TO_DEG) * 0.28);
@@ -4935,7 +4935,7 @@ class TacticalRocketLauncher : Weapon
         Goto PistolLeftIdle;
 
     LauncherStowed:
-        MISG A 1;
+        ZISG A 1;
         Loop;
 
     PistolRaise:
@@ -4945,10 +4945,10 @@ class TacticalRocketLauncher : Weapon
         Goto ReadyPistol;
 
     SwitchToPistol:
-        MISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 40, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
-        MISG A 3 { A_OverlayOffset(PSP_WEAPON, -34, 49, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
-        MISG A 3 { A_OverlayOffset(PSP_WEAPON, -54, 61, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -8.0); }
-        MISG A 0
+        ZISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 40, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -34, 49, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -54, 61, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -8.0); }
+        ZISG A 0
         {
             A_Overlay(TLH_STOWED_LAYER, "LauncherStowed");
             A_OverlayScale(TLH_STOWED_LAYER, 0.55, 0.55);
@@ -4998,12 +4998,12 @@ class TacticalRocketLauncher : Weapon
         }
 
     Fire:
-        MISG A 0
+        ZISG A 0
         {
             if (invoker.pistolMode) return ResolveState("PistolFireLeft");
             return ResolveState(null);
         }
-        MISG B 7
+        ZISG B 7
         {
             A_GunFlash();
             A_FireProjectile("TLHTacticalMissile");
@@ -5011,26 +5011,26 @@ class TacticalRocketLauncher : Weapon
             A_SetPitch(pitch - 3.5, SPF_INTERPOLATE);
             A_Recoil(5.0);
         }
-        MISG A 8;
-        MISG A 0 A_ReFire;
+        ZISG A 8;
+        ZISG A 0 A_ReFire;
         Goto Ready;
 
     FireMicroBurst:
-        MISG B 0 A_GunFlash;
-        MISG B 2 A_FireProjectile("MicroMissile");
-        MISG B 2 A_FireProjectile("MicroMissile");
-        MISG B 2
+        ZISG B 0 A_GunFlash;
+        ZISG B 2 A_FireProjectile("MicroMissile");
+        ZISG B 2 A_FireProjectile("MicroMissile");
+        ZISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
             A_Recoil(2.0);
         }
-        MISG A 12;
+        ZISG A 12;
         Goto Ready;
 
     AltFire:
-        MISG A 0
+        ZISG A 0
         {
             if (invoker.pistolMode) return ResolveState("PistolFireRight");
             return ResolveState("FireMicroBurst");
@@ -5078,11 +5078,11 @@ class TacticalRocketLauncher : Weapon
         Goto ReadyPistol;
 
     Flash:
-        MISF A 3 Bright A_Light1;
-        MISF B 3 Bright A_Light2;
+        ZISF A 3 Bright A_Light1;
+        ZISF B 3 Bright A_Light2;
         Goto LightDone;
     Spawn:
-        LAUN A -1;
+        ZAUN A -1;
         Stop;
     }
 }
@@ -5191,7 +5191,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
         // Slot 4 includes the M4A1, TLH Tactical Chaingun, vanilla-sprite Heavy Chaingun, compact SMG and M60. No HeavyMinigun alias.
         Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
-        Player.WeaponSlot 5, "TLHGrenadeLauncher", "RecoilRocketLauncher", "MicroMissileLauncher", "TacticalRocketLauncher";
+        Player.WeaponSlot 5, "TLHGrenadeLauncher", "RecoilRocketLauncher", "TacticalRocketLauncher";
         Player.WeaponSlot 6, "RecoilPlasmaRifle";
         Player.WeaponSlot 7, "RecoilBFG9000";
         Player.WeaponSlot 8, "AMR99RailRifle";
@@ -6685,7 +6685,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (FindInventory("M60MachineGun")) count++;
         if (FindInventory("TLHGrenadeLauncher")) count++;
         if (FindInventory("RecoilRocketLauncher")) count++;
-        if (FindInventory("MicroMissileLauncher")) count++;
         if (FindInventory("TacticalRocketLauncher")) count++;
         if (FindInventory("RecoilPlasmaRifle")) count++;
         if (FindInventory("AMR99RailRifle")) count++;
@@ -6748,11 +6747,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (selected == "" && FindInventory("RecoilRocketLauncher"))
         {
             if (pick == 1) selected = "RecoilRocketLauncher";
-            else pick--;
-        }
-        if (selected == "" && FindInventory("MicroMissileLauncher"))
-        {
-            if (pick == 1) selected = "MicroMissileLauncher";
             else pick--;
         }
         if (selected == "" && FindInventory("TacticalRocketLauncher"))
@@ -7820,7 +7814,6 @@ class TacticalHUDHandler : EventHandler
             else if (hudWeaponName == "TLHCompactSMG") hudWeaponName = "M12 COMPACT SMG";
             else if (hudWeaponName == "M60MachineGun") hudWeaponName = "M60 MACHINE GUN";
             else if (hudWeaponName == "RecoilRocketLauncher") hudWeaponName = "ROCKET LAUNCHER";
-            else if (hudWeaponName == "MicroMissileLauncher") hudWeaponName = "MICRO-MISSILE LAUNCHER";
             else if (hudWeaponName == "TLHGrenadeLauncher") hudWeaponName = "GRENADE LAUNCHER";
             else if (hudWeaponName == "TacticalRocketLauncher")
             {
