@@ -6252,7 +6252,9 @@ class TLHCompactSMG : Weapon
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) &&
                 player.mo.CountInv("Clip") < 1)
                 return ResolveState("Ready");
+            return ResolveState("SMGFire");
         }
+    SMGFire:
         CHGG A 2
         {
             A_GunFlash();
@@ -6264,13 +6266,16 @@ class TLHCompactSMG : Weapon
         CHGG A 0 A_ReFire;
         Goto Ready;
 
+    // Three-round burst. Each A_FireBullets call consumes one Clip normally.
     AltFire:
         CHGG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) &&
                 player.mo.CountInv("Clip") < 3)
                 return ResolveState("Ready");
+            return ResolveState("SMGBurst");
         }
+    SMGBurst:
         CHGG A 1
         {
             A_GunFlash();
