@@ -945,7 +945,8 @@ class TLHGrenadeLauncherGrenade : FlakGrenade
 {
     Default
     {
-        Damage 45;
+        // A dedicated launcher round: stronger than the shotgun's grenade.
+        Damage 60;
         Speed 32;
         BounceFactor 0.72;
         WallBounceFactor 0.72;
@@ -956,7 +957,7 @@ class TLHGrenadeLauncherGrenade : FlakGrenade
     Death:
         MISL B 4 Bright
         {
-            A_Explode(90, 128);
+            A_Explode(120, 144);
             A_StartSound("weapons/rocklx", CHAN_WEAPON);
             A_Quake(3, 8, 0, 280);
         }
@@ -8079,8 +8080,10 @@ class TacticalHUDHandler : EventHandler
             int(x), int(y), s,
             DTA_VirtualWidth, 640,
             DTA_VirtualHeight, 360,
-            DTA_ScaleX, scale * GetHUDResolutionScale(),
-            DTA_ScaleY, scale * GetHUDResolutionScale(),
+            // Coordinates already use the 640x360 virtual canvas. Let GZDoom
+            // scale that canvas to the actual output resolution exactly once.
+            DTA_ScaleX, scale,
+            DTA_ScaleY, scale,
             DTA_Shadow, false
         );
     }
