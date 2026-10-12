@@ -4535,7 +4535,6 @@ class ServiceRevolver : Weapon
 {
     Default
     {
-        DoomEdNum 30001;
         Weapon.SlotNumber 2;
         Weapon.SlotPriority 2.05;
         Weapon.SelectionOrder 205;
@@ -4610,7 +4609,6 @@ class StreetSweeperShotgun : Weapon
 {
     Default
     {
-        DoomEdNum 30002;
         Weapon.SlotNumber 3;
         Weapon.SlotPriority 3.25;
         Weapon.SelectionOrder 325;
@@ -4685,7 +4683,6 @@ class MicroMissileLauncher : Weapon
 {
     Default
     {
-        DoomEdNum 30003;
         Weapon.SlotNumber 5;
         Weapon.SlotPriority 5.15;
         Weapon.SelectionOrder 515;
