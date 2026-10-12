@@ -4137,7 +4137,7 @@ class AMR99RailRifle : Weapon
         Weapon.AmmoUse1 10;
         Inventory.PickupMessage "I found an AMR-99 Gauss Rifle!";
 
-        // Palette remap in ZScript. Doom green is 112:127. The BFG source
+        // Palette remap in ZScript. Doom green is 112:127. The Plasma Rifle source
         // uses that ramp, so it is redirected to Doom's light-blue family.
         // Black/gray ramps are lifted to cleaner, lighter gunmetal values.
         Translation
@@ -4154,13 +4154,13 @@ class AMR99RailRifle : Weapon
     States
     {
     Ready:
-        BFGG A 0
+        PLSG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.84, 0.92);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        BFGG A 1
+        PLSG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4169,20 +4169,20 @@ class AMR99RailRifle : Weapon
         }
         Loop;
     Deselect:
-        BFGG A 0
+        PLSG A 0
         {
             invoker.isZoomed = false;
             A_ZoomFactor(1.0, ZOOM_INSTANT);
         }
-        BFGG A 1 A_Lower;
+        PLSG A 1 A_Lower;
         Loop;
     Select:
-        BFGG A 1 A_Raise;
+        PLSG A 1 A_Raise;
         Loop;
 
     Fire:
-        BFGG A 4;
-        BFGG B 6
+        PLSG A 4;
+        PLSG B 6
         {
             A_GunFlash();
             A_WeaponOffset(0, 46, WOF_INTERPOLATE);
@@ -4192,12 +4192,12 @@ class AMR99RailRifle : Weapon
             A_Quake(7, 14, 0, 350);
             A_Recoil(5);
         }
-        BFGG B 28;
-        BFGG A 8;
+        PLSG B 28;
+        PLSG A 8;
         Goto Ready;
 
     Reload:
-        BFGG A 0
+        PLSG A 0
         {
             if (invoker.isZoomed)
             {
@@ -4206,17 +4206,17 @@ class AMR99RailRifle : Weapon
             }
             A_StartSound("weapons/sshoto", CHAN_WEAPON);
         }
-        BFGG A 8;
+        PLSG A 8;
         Goto Ready;
 
     Zoom:
-        BFGG A 0
+        PLSG A 0
         {
             if (invoker.isZoomed) return ResolveState("ZoomOut");
             return ResolveState("ZoomIn");
         }
     ZoomIn:
-        BFGG A 4
+        PLSG A 4
         {
             invoker.isZoomed = true;
             A_StartSound("weapons/sshoto", CHAN_WEAPON);
@@ -4224,7 +4224,7 @@ class AMR99RailRifle : Weapon
         }
         Goto Ready;
     ZoomOut:
-        BFGG A 4
+        PLSG A 4
         {
             invoker.isZoomed = false;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -4233,12 +4233,12 @@ class AMR99RailRifle : Weapon
         Goto Ready;
 
     Flash:
-        BFGF A 3 Bright A_Light1;
-        BFGF B 3 Bright A_Light2;
+        PLSF A 3 Bright A_Light1;
+        PLSF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        BFUG A -1;
+        PLAS A -1;
         Stop;
     }
 
