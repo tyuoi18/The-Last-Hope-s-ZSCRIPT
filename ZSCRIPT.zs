@@ -2998,14 +2998,50 @@ class TLHChaingun : Chaingun replaces Chaingun
 
 
 // ============================================================================
-// HEAVY CHAINGUN SPRITE FIX
-// Keep HeavyChaingun on Doom II's vanilla CHGG/CHGF/MGUN sprites.
-// TLH's redesigned chaingun uses TCHG/TCHF/TCHD, and the M4A1 uses ZHGG.
-// This replacement inherits HeavyChaingun's properties and custom gameplay,
-// overriding its visual state references so they cannot resolve to M4A1 art.
 // ============================================================================
-class TLHHeavyChaingunVanillaSprites : HeavyChaingun replaces HeavyChaingun
+/* HEAVY CHAINGUN
+   Standalone class: do not inherit from a nonexistent HeavyChaingun base.
+   Use Doom II's vanilla weapon, flash, and world-pickup sprite families:
+   CHGG, CHGF, and MGUN. The TLH Chaingun and M4A1 keep separate sprite names.
+*/
+class HeavyChaingun : Weapon
 {
+    bool burstMode;
+
+    Default
+    {
+        Weapon.SlotNumber 4;
+        Weapon.SlotPriority 4.8;
+        Weapon.SelectionOrder 410;
+        Weapon.AmmoType1 "Clip";
+        Weapon.AmmoUse1 1;
+        Weapon.AmmoGive1 40;
+        Weapon.AmmoType2 "RocketAmmo";
+        Weapon.AmmoUse2 1;
+        Weapon.Kickback 160;
+        Weapon.WeaponScaleX 0.85;
+        Weapon.WeaponScaleY 0.95;
+        Inventory.PickupMessage "Picked up the Heavy Chaingun.";
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (fireMode == PrimaryFire && burstMode)
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+
+    override void DoEffect()
+    {
+        Super.DoEffect();
+        if (Owner && Owner.player && Owner.player.ReadyWeapon == self)
+        {
+            let psp = Owner.player.GetPSprite(PSP_WEAPON);
+            if (psp)
+                psp.bPlayerTranslated = false;
+        }
+    }
+
     States
     {
     Ready:
@@ -3013,6 +3049,7 @@ class TLHHeavyChaingunVanillaSprites : HeavyChaingun replaces HeavyChaingun
         {
             A_OverlayScale(PSP_WEAPON, 0.82, 0.82);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
@@ -3029,6 +3066,7 @@ class TLHHeavyChaingunVanillaSprites : HeavyChaingun replaces HeavyChaingun
         CHGG A 1
         {
             A_OverlayScale(PSP_WEAPON, 0.82, 0.82);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
             A_Raise();
         }
         Loop;
@@ -4588,8 +4626,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
         Player.WeaponSlot 2, "RecoilPistol", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun";
-        // Automatic weapons: M4A1, Tactical Chaingun, M60. No HeavyMinigun alias.
-        Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "TLHCompactSMG", "M60MachineGun";
+        // Slot 4 includes the M4A1, TLH Tactical Chaingun, vanilla-sprite Heavy Chaingun, compact SMG and M60. No HeavyMinigun alias.
+        Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
         Player.WeaponSlot 6, "RecoilPlasmaRifle";
         Player.WeaponSlot 7, "RecoilBFG9000";
