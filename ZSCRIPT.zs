@@ -3294,8 +3294,7 @@ class TacticalM4A1 : DoomWeapon
         Goto Ready;
 
     Fire:
-        // M4A1 uses the original Chaingun weapon sprites directly:
-        // CHGGA0 = normal frame, CHGGB0 = muzzle-flash frame.
+        // M4A1 retains its custom ZHGG weapon sprite family.
         // Fast gameplay cadence: 1 tic base + 1 tic flash = 2 tics/shot.
         // This is actual gameplay cadence, not only visual animation.
         ZHGG A 0
