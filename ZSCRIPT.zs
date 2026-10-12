@@ -3971,7 +3971,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         Goto LightDone;
 
     Spawn:
-        ZAUN A -1;
+        LAUN A -1;
         Stop;
     }
 
@@ -5597,6 +5597,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 0.98; scaleY = 1.04; offsetY = 0.6; sway = 1.10;
         }
+        else if (cls == "ServiceRevolver")
+        {
+            scaleX = 0.94; scaleY = 1.00; offsetY = 0.6; sway = 1.06;
+        }
         else if (cls == "OfficerVulkanPistol")
         {
             scaleX = 0.96; scaleY = 1.06; offsetY = 0.4; sway = 1.12;
@@ -5604,6 +5608,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else if (cls == "RecoilShotgun")
         {
             scaleX = 0.98; scaleY = 1.10; offsetY = 0.8; sway = 0.96;
+        }
+        else if (cls == "StreetSweeperShotgun")
+        {
+            scaleX = 1.00; scaleY = 1.12; offsetY = 0.9; sway = 0.98;
         }
         else if (cls == "FastRecoilSSG")
         {
@@ -5628,6 +5636,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else if (cls == "RecoilRocketLauncher")
         {
             scaleX = 1.03; scaleY = 1.10; offsetY = 1.3; sway = 0.66;
+        }
+        else if (cls == "MicroMissileLauncher")
+        {
+            scaleX = 0.94; scaleY = 1.00; offsetY = 1.2; sway = 0.72;
         }
         else if (cls == "RecoilPlasmaRifle")
         {
@@ -6347,12 +6359,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (pick == 1) selected = "OfficerVulkanPistol";
             else pick--;
         }
-        if (selected == "" && FindInventory("StreetSweeperShotgun"))
+        if (selected == "" && FindInventory("RecoilShotgun"))
         {
-            if (pick == 1) selected = "StreetSweeperShotgun";
+            if (pick == 1) selected = "RecoilShotgun";
             else pick--;
         }
-        if (selected == "" && FindInventory("RecoilShotgun"))
+        if (selected == "" && FindInventory("StreetSweeperShotgun"))
         {
             if (pick == 1) selected = "RecoilShotgun";
             else pick--;
