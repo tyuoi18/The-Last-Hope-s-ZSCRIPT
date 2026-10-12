@@ -4925,6 +4925,7 @@ class TacticalRocketLauncher : Weapon
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
             A_ClearOverlays(TLH_STOWED_LAYER, TLH_STOWED_LAYER);
             invoker.pistolMode = false;
+            A_OverlayOffset(PSP_WEAPON, 0, 35);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
@@ -5065,7 +5066,7 @@ class TacticalRocketLauncher : Weapon
         }
 
     Reload:
-        MISG A 0
+        TNT1 A 0
         {
             if (invoker.pistolMode) return ResolveState("SwitchToLauncher");
             return ResolveState("SwitchToPistol");
