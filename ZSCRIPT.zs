@@ -2663,8 +2663,8 @@ class SemiAutoShotgun : Weapon
 
 // ==========================================
 // TLH TACTICAL CHAINGUN - OVERHEAT SYSTEM
-// Uses its own renamed TCHG/TCHF/TCHD sprite family for the redesigned TLH weapon.
-// Keep Doom II's vanilla CHGG chaingun sprites separate for HeavyChaingun.
+// Uses the custom TCHG/TCHF HUD family and the TLH ZGUN pickup sprite.
+// Keep Doom II's vanilla CHGG/CHGF/MGUN sprites separate for HeavyChaingun.
 // ==========================================
 
 class TLHChaingun : Chaingun replaces Chaingun
