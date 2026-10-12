@@ -3465,7 +3465,7 @@ class M60MachineGun : DoomWeapon
     States
     {
     Ready:
-        MSYA A 0
+        CHGG A 0
         {
             if (invoker.stability <= 0)
                 invoker.stability = 100;
@@ -3477,7 +3477,7 @@ class M60MachineGun : DoomWeapon
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
 
-        MSYA A 1
+        CHGG A 1
         {
             double swayScale = invoker.braced ? 0.35 : 1.0;
             double movement = invoker.braced ? 0.10 : 0.28;
@@ -3499,7 +3499,7 @@ class M60MachineGun : DoomWeapon
         Loop;
 
     Deselect:
-        MSYA A 1
+        CHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -3509,7 +3509,7 @@ class M60MachineGun : DoomWeapon
         Loop;
 
     Select:
-        MSYA A 1
+        CHGG A 1
         {
             invoker.stability = 100;
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
@@ -3520,9 +3520,9 @@ class M60MachineGun : DoomWeapon
         Loop;
 
     Reload:
-        MSYA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        MSYA A 2 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
-        MSYA A 0
+        CHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
+        CHGG A 0
         {
             if (invoker.precisionMode)
                 return ResolveState("SetSustain");
@@ -3531,29 +3531,29 @@ class M60MachineGun : DoomWeapon
         }
 
     SetPrecision:
-        MSYA A 7
+        CHGG A 7
         {
             invoker.precisionMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("M60: PRECISION FIRE");
         }
-        MSYA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        MSYA A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetSustain:
-        MSYA A 7
+        CHGG A 7
         {
             invoker.precisionMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("M60: SUSTAINED FIRE");
         }
-        MSYA A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        MSYA A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        MSYA A 0
+        CHGG A 0
         {
             if (invoker.precisionMode)
                 return ResolveState("FirePrecision");
@@ -3562,7 +3562,7 @@ class M60MachineGun : DoomWeapon
         }
 
     FireSustain:
-        MSYA A 1
+        CHGG A 1
         {
             int dmg = invoker.CurrentDamage();
             double spread = invoker.CurrentSpread();
@@ -3579,18 +3579,18 @@ class M60MachineGun : DoomWeapon
             A_OverlayRotate(PSP_WEAPON, -recoil);
             A_SetPitch(pitch - (invoker.braced ? 0.18 : 0.42), SPF_INTERPOLATE);
         }
-        MSYB A 1;
-        MSYA A 2
+        CHGG B 1;
+        CHGG A 2
         {
             A_WeaponOffset(0, 34.0, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, 0.0, 33.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, invoker.braced ? 0.10 : 0.22);
         }
-        MSYA A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FirePrecision:
-        MSYA A 1
+        CHGG A 1
         {
             int dmg = invoker.CurrentDamage();
             double spread = invoker.CurrentSpread();
@@ -3607,19 +3607,19 @@ class M60MachineGun : DoomWeapon
             A_OverlayRotate(PSP_WEAPON, -recoil);
             A_SetPitch(pitch - (invoker.braced ? 0.14 : 0.32), SPF_INTERPOLATE);
         }
-        MSYB A 1;
-        MSYA A 3
+        CHGG B 1;
+        CHGG A 3
         {
             A_WeaponOffset(0, 34.0, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, 0.0, 33.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, invoker.braced ? 0.08 : 0.18);
         }
-        MSYA A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     AltFire:
-        MSYA A 1;
-        MSYB A 1
+        CHGG A 1;
+        CHGG B 1
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("RocketAmmo") < 1)
                 return ResolveState("Ready");
@@ -3633,13 +3633,13 @@ class M60MachineGun : DoomWeapon
             A_Recoil(2);
             return ResolveState(null);
         }
-        MSYA A 3;
-        MSYA A 4 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        MSYA A 2 A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        CHGG A 3;
+        CHGG A 4 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        CHGG A 2 A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Zoom:
-        MSYA A 0
+        CHGG A 0
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && !tp.TryModeToggle())
@@ -3656,45 +3656,45 @@ class M60MachineGun : DoomWeapon
         }
 
     BraceStart:
-        MSYA A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.8);
         }
-        MSYA A 3
+        CHGG A 3
         {
             invoker.braced = true;
             A_OverlayOffset(PSP_WEAPON, 0, 45, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_Print("M60: BRACED / LOW RECOIL");
         }
-        MSYA A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto Ready;
 
     UnbraceStart:
-        MSYA A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 43, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.8);
         }
-        MSYA A 3
+        CHGG A 3
         {
             invoker.braced = false;
             A_OverlayOffset(PSP_WEAPON, 0, 40, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_Print("M60: BRACE DISENGAGED");
         }
-        MSYA A 3
+        CHGG A 3
         {
             A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto Ready;
 
     Spawn:
-        MSIX A -1;
+        MGUN A -1;
         Stop;
     }
 
