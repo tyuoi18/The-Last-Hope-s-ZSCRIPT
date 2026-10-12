@@ -4814,6 +4814,18 @@ class TLHGrenadeLauncher : Weapon
     }
 }
 
+// Legacy MAPINFO compatibility: older Textures.wad builds still map editor number 30003
+// to MicroMissileLauncher. Keep this alias so those WADs can start, without adding a
+// third weapon to the player's slot-5 arsenal.
+// Once the stale DoomEdNums entry is removed from Textures.wad, this alias can be removed.
+class MicroMissileLauncher : TacticalRocketLauncher
+{
+    Default
+    {
+        Inventory.PickupMessage "Picked up the Tactical Rocket Launcher.";
+    }
+}
+
 class TacticalRocketLauncher : Weapon
 {
     bool pistolMode;
