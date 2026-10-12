@@ -13,6 +13,7 @@ version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
+const TLH_STOWED_LAYER = 1; // folded launcher overlay while Tactical Rocket Launcher is in pistol mode
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
@@ -939,6 +940,61 @@ class M203Grenade : Actor
     }
 }
 
+
+class TLHGrenadeLauncherGrenade : FlakGrenade
+{
+    Default
+    {
+        Damage 45;
+        Speed 32;
+        BounceFactor 0.72;
+        WallBounceFactor 0.72;
+        Scale 0.42;
+    }
+    States
+    {
+    Death:
+        MISL B 4 Bright
+        {
+            A_Explode(90, 128);
+            A_StartSound("weapons/rocklx", CHAN_WEAPON);
+            A_Quake(3, 8, 0, 280);
+        }
+        MISL C 4 Bright;
+        MISL D 4 Bright;
+        Stop;
+    }
+}
+
+class TLHTacticalMissile : Rocket
+{
+    Default
+    {
+        Speed 28;
+        Damage 45;
+        Radius 7;
+        Height 7;
+        Scale 0.45;
+        +SEEKERMISSILE
+    }
+    States
+    {
+    Spawn:
+        MISL A 1 Bright { A_SeekerMissile(8, 18, SMF_LOOK | SMF_PRECISE); }
+        Loop;
+    Death:
+        MISL B 5 Bright
+        {
+            A_Explode(70, 128);
+            A_StartSound("weapons/rocklx", CHAN_WEAPON);
+            A_Quake(3, 7, 0, 240);
+        }
+        MISL C 4 Bright;
+        MISL D 4 Bright;
+        Stop;
+    }
+}
+
 // ============================================================================
 // 3. ARSENAL TÁCTICO
 // ============================================================================
@@ -1161,25 +1217,44 @@ class RecoilPistol : Pistol replaces Pistol
         }
         Loop;
 
+
     ReadyDual:
         PISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.90, 0.90);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, 42, 34);
+            A_OverlayOffset(PSP_WEAPON, -42, 46);
             A_OverlayRotate(PSP_WEAPON, 0);
-            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftIdle");
             return ResolveState(null);
         }
         PISG A 1
         {
             double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
-            A_OverlayOffset(PSP_WEAPON, sway, 33 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.16, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.38);
+            A_OverlayOffset(PSP_WEAPON, -42 + sway, 46 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.16, 0);
+            A_OverlayRotate(PSP_WEAPON, -1.0 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
+
+    PistolLeftDraw:
+        PISG A 1
+        {
+            A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
+        }
+        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
+        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 42, 46, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Goto PistolLeftIdle;
+
+    PistolLeftHolster:
+        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Stop;
 
     PistolLeftIdle:
         PISG A 1
@@ -1187,8 +1262,8 @@ class RecoilPistol : Pistol replaces Pistol
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, -42 + sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.55, 46 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.35, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, -1.5 + sin(level.time * 0.021 * TLH_RAD_TO_DEG) * 0.35);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 42 + sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.55, 46 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.35, 0);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 1.5 + sin(level.time * 0.021 * TLH_RAD_TO_DEG) * 0.35);
             return ResolveState(null);
         }
         Loop;
@@ -1277,43 +1352,31 @@ class RecoilPistol : Pistol replaces Pistol
         PISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
+
     DualOnStart:
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 42, 44, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.8);
-        }
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 42, 51, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.6);
-        }
+        PISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 41, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -32, 50, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -42, 56, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -7.0); }
         PISG A 0
         {
             invoker.dualWield = true;
-            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftIdle");
+            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftDraw");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("PISTOL: DUAL WIELD");
             return ResolveState(null);
         }
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 42, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -42, 46, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto ReadyDual;
+
 
     DualOffStart:
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 45, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.8);
+            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftHolster");
+            A_OverlayOffset(PSP_WEAPON, -24, 53, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.5);
         }
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 1.5);
-        }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 62, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.0); }
         PISG A 0
         {
             invoker.dualWield = false;
@@ -1322,11 +1385,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_Print("PISTOL: SINGLE WIELD");
             return ResolveState(null);
         }
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 42, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto Ready;
 
     Fire:
@@ -1537,25 +1596,44 @@ class OfficerVulkanPistol : Weapon
         }
         Loop;
 
+
     ReadyDual:
         ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.76, 0.86);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_OverlayOffset(PSP_WEAPON, 0, 34);
+            A_OverlayOffset(PSP_WEAPON, -40, 46);
             A_OverlayRotate(PSP_WEAPON, 0);
-            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftIdle");
             return ResolveState(null);
         }
         ZISG A 1
         {
-            double sway = sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.42;
-            A_OverlayOffset(PSP_WEAPON, sway, 33 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.15, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.36);
-            A_WeaponReady(WRF_ALLOWRELOAD);
+            double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
+            A_OverlayOffset(PSP_WEAPON, -40 + sway, 46 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.15, 0);
+            A_OverlayRotate(PSP_WEAPON, -1.2 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.30);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
+
+    OfficerPistolLeftDraw:
+        ZISG A 1
+        {
+            A_OverlayScale(TLH_AKIMBO_LAYER, 0.76, 0.86);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
+        }
+        ZISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        ZISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
+        ZISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 40, 46, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Goto OfficerPistolLeftIdle;
+
+    OfficerPistolLeftHolster:
+        ZISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        ZISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Stop;
 
     OfficerPistolLeftIdle:
         ZISG A 1
@@ -1563,8 +1641,8 @@ class OfficerVulkanPistol : Weapon
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.76, 0.86);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, -40 + sin(level.time * 0.03 * TLH_RAD_TO_DEG) * 0.55, 48 + cos(level.time * 0.025 * TLH_RAD_TO_DEG) * 0.35, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, -1.4 + sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 40 + sin(level.time * 0.03 * TLH_RAD_TO_DEG) * 0.55, 46 + cos(level.time * 0.025 * TLH_RAD_TO_DEG) * 0.35, 0);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 1.4 + sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.30);
             return ResolveState(null);
         }
         Loop;
@@ -1813,43 +1891,31 @@ class OfficerVulkanPistol : Weapon
         ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
         Goto Ready;
 
+
     DualOnStart:
-        ZISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 40, 45, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.8);
-        }
-        ZISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 40, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.5);
-        }
+        ZISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 41, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -32, 50, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -40, 56, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -7.0); }
         ZISG A 0
         {
             invoker.dualWield = true;
-            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftIdle");
+            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftDraw");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("OFFICER VULKAN: DUAL WIELD");
             return ResolveState(null);
         }
-        ZISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 40, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, -40, 46, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto ReadyDual;
+
 
     DualOffStart:
         ZISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 45, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.8);
+            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftHolster");
+            A_OverlayOffset(PSP_WEAPON, -24, 53, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.5);
         }
-        ZISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 1.5);
-        }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 62, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.0); }
         ZISG A 0
         {
             invoker.dualWield = false;
@@ -1858,11 +1924,7 @@ class OfficerVulkanPistol : Weapon
             A_Print("OFFICER VULKAN: SINGLE WIELD");
             return ResolveState(null);
         }
-        ZISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
+        ZISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto Ready;
 
     Zoom:
@@ -3195,25 +3257,44 @@ class TacticalM4A1 : DoomWeapon
         }
         Loop;
 
+
     ReadyDual:
         ZHGG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, 30, 34);
-            A_OverlayRotate(PSP_WEAPON, 0.8);
-            A_Overlay(TLH_AKIMBO_LAYER, "M4LeftIdle");
+            A_OverlayOffset(PSP_WEAPON, -30, 46);
+            A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
         ZHGG A 1
         {
             double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
-            A_OverlayOffset(PSP_WEAPON, 30 + sway, 34 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.18, 0);
-            A_OverlayRotate(PSP_WEAPON, 0.8 + sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.34);
+            A_OverlayOffset(PSP_WEAPON, -30 + sway, 46 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.18, 0);
+            A_OverlayRotate(PSP_WEAPON, -1.0 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.28);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
+
+    M4LeftDraw:
+        ZHGG A 1
+        {
+            A_OverlayScale(TLH_AKIMBO_LAYER, 0.92, 1.02);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
+        }
+        ZHGG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        ZHGG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
+        ZHGG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 30, 46, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Goto M4LeftIdle;
+
+    M4LeftHolster:
+        ZHGG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        ZHGG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Stop;
 
     M4LeftIdle:
         ZHGG A 1
@@ -3221,8 +3302,8 @@ class TacticalM4A1 : DoomWeapon
             A_OverlayScale(TLH_AKIMBO_LAYER, 0.92, 1.02);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
             A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, -30 + sin(level.time * 0.03 * TLH_RAD_TO_DEG) * 0.48, 47 + cos(level.time * 0.025 * TLH_RAD_TO_DEG) * 0.36, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, -1.0 + sin(level.time * 0.019 * TLH_RAD_TO_DEG) * 0.28);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 30 + sin(level.time * 0.03 * TLH_RAD_TO_DEG) * 0.48, 46 + cos(level.time * 0.025 * TLH_RAD_TO_DEG) * 0.36, 0);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0 + sin(level.time * 0.019 * TLH_RAD_TO_DEG) * 0.28);
             return ResolveState(null);
         }
         Loop;
@@ -3415,43 +3496,31 @@ class TacticalM4A1 : DoomWeapon
             return ResolveState("ReadyDual");
         }
 
+
     DualOnStart:
-        ZHGG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 30, 44, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 1.6);
-        }
-        ZHGG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 30, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 2.2);
-        }
+        ZHGG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 41, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
+        ZHGG A 3 { A_OverlayOffset(PSP_WEAPON, -32, 50, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
+        ZHGG A 3 { A_OverlayOffset(PSP_WEAPON, -30, 56, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -7.0); }
         ZHGG A 0
         {
             invoker.dualWield = true;
-            A_Overlay(TLH_AKIMBO_LAYER, "M4LeftIdle");
+            A_Overlay(TLH_AKIMBO_LAYER, "M4LeftDraw");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("M4A1: DUAL WIELD ACTIVE | M1 LEFT / M2 RIGHT");
             return ResolveState(null);
         }
-        ZHGG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 30, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.8);
-        }
+        ZHGG A 3 { A_OverlayOffset(PSP_WEAPON, -30, 46, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto ReadyDual;
+
 
     DualOffStart:
         ZHGG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 24, 45, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.0);
+            A_Overlay(TLH_AKIMBO_LAYER, "M4LeftHolster");
+            A_OverlayOffset(PSP_WEAPON, -24, 53, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.5);
         }
-        ZHGG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.2);
-        }
+        ZHGG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 62, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.0); }
         ZHGG A 0
         {
             invoker.dualWield = false;
@@ -3460,11 +3529,7 @@ class TacticalM4A1 : DoomWeapon
             A_Print("M4A1: SINGLE WIELD");
             return ResolveState(null);
         }
-        ZHGG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
+        ZHGG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto Ready;
 
     Zoom:
@@ -4752,6 +4817,327 @@ class MicroMissileLauncher : Weapon
 }
 
 
+
+class TLHGrenadeLauncher : Weapon
+{
+    Default
+    {
+        Weapon.SlotNumber 5;
+        Weapon.SlotPriority 5.05;
+        Weapon.SelectionOrder 505;
+        Weapon.Kickback 145;
+        Weapon.AmmoType1 "RocketAmmo";
+        Weapon.AmmoGive1 6;
+        Weapon.AmmoUse1 1;
+        Weapon.AmmoType2 "RocketAmmo";
+        Weapon.AmmoUse2 1;
+        Inventory.PickupMessage "Picked up the Grenade Launcher.";
+    }
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (fireMode == AltFire) return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+    States
+    {
+    Ready:
+        MISG A 0 { A_OverlayScale(PSP_WEAPON, 0.90, 0.94); A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM); }
+        MISG A 1
+        {
+            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.033 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.14, 0);
+            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.022 * TLH_RAD_TO_DEG) * 0.25);
+            A_WeaponReady(WRF_ALLOWRELOAD);
+        }
+        Loop;
+    Deselect:
+        MISG A 1 A_Lower;
+        Loop;
+    Select:
+        MISG A 1 { A_OverlayScale(PSP_WEAPON, 0.90, 0.94); A_Raise(); }
+        Loop;
+    Fire:
+        MISG B 0 A_GunFlash;
+        MISG B 7
+        {
+            A_FireProjectile("TLHGrenadeLauncherGrenade");
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_SetPitch(pitch - 2.8, SPF_INTERPOLATE);
+            A_Recoil(4.0);
+        }
+        MISG A 7;
+        MISG A 0 A_ReFire;
+        Goto Ready;
+    AltFire:
+        MISG B 0 A_GunFlash;
+        MISG B 3 { A_FireProjectile("TLHGrenadeLauncherGrenade", -7); A_Recoil(2.0); }
+        MISG B 3 A_FireProjectile("TLHGrenadeLauncherGrenade", 0);
+        MISG B 3
+        {
+            A_FireProjectile("TLHGrenadeLauncherGrenade", 7);
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_Quake(2, 5, 0, 140);
+        }
+        MISG A 12;
+        Goto Ready;
+    Flash:
+        MISF A 3 Bright A_Light1;
+        MISF B 3 Bright A_Light2;
+        Goto LightDone;
+    Spawn:
+        LAUN A -1;
+        Stop;
+    }
+}
+
+class TacticalRocketLauncher : Weapon
+{
+    bool pistolMode;
+
+    Default
+    {
+        Weapon.SlotNumber 5;
+        Weapon.SlotPriority 5.35;
+        Weapon.SelectionOrder 535;
+        Weapon.Kickback 115;
+        Weapon.AmmoType1 "RocketAmmo";
+        Weapon.AmmoGive1 8;
+        Weapon.AmmoUse1 1;
+        Weapon.AmmoType2 "RocketAmmo";
+        Weapon.AmmoUse2 1;
+        Inventory.PickupMessage "Picked up the Tactical Rocket Launcher.";
+    }
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (pistolMode)
+        {
+            if (!requireAmmo || sv_infiniteammo) return true;
+            if (Owner && (Owner.FindInventory("PowerInfiniteAmmo", true) || Owner.CountInv("Clip") >= 1)) return true;
+            return false;
+        }
+        if (fireMode == AltFire) return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+    States
+    {
+    Ready:
+        MISG A 0
+        {
+            if (invoker.pistolMode) return ResolveState("ReadyPistol");
+            A_OverlayScale(PSP_WEAPON, 0.98, 0.98);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState(null);
+        }
+        MISG A 1
+        {
+            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.034 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.022 * TLH_RAD_TO_DEG) * 0.28);
+            A_WeaponReady(WRF_ALLOWRELOAD);
+        }
+        Loop;
+
+    ReadyPistol:
+        PISG A 1
+        {
+            A_OverlayScale(PSP_WEAPON, 0.90, 0.90);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            double sway = sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.45;
+            A_OverlayOffset(PSP_WEAPON, 42 + sway, 35 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.16, 0);
+            A_OverlayRotate(PSP_WEAPON, 0.8 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.30);
+            A_WeaponReady(WRF_ALLOWRELOAD);
+        }
+        Loop;
+
+    PistolLeftIdle:
+        PISG A 1
+        {
+            A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, -42 + sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.50, 46 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.32, 0);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, -1.4 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.30);
+            return ResolveState(null);
+        }
+        Loop;
+    PistolLeftDraw:
+        PISG A 1
+        {
+            A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
+            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
+            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
+        }
+        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, -18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, -34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
+        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, -42, 46, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Goto PistolLeftIdle;
+    PistolLeftHolster:
+        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, -24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
+        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+        Stop;
+    PistolLeftFire:
+        PISG B 1;
+        PISF A 1 Bright;
+        PISG A 1;
+        Goto PistolLeftIdle;
+
+    LauncherStowed:
+        MISG A 1;
+        Loop;
+
+    PistolRaise:
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 18, 62, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 4.0); }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 36, 48, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 2.0); }
+        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 42, 35, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0.8); }
+        Goto ReadyPistol;
+
+    SwitchToPistol:
+        MISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 40, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
+        MISG A 3 { A_OverlayOffset(PSP_WEAPON, -34, 49, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
+        MISG A 3 { A_OverlayOffset(PSP_WEAPON, -54, 61, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -8.0); }
+        MISG A 0
+        {
+            A_Overlay(TLH_STOWED_LAYER, "LauncherStowed");
+            A_OverlayScale(TLH_STOWED_LAYER, 0.55, 0.55);
+            A_OverlayPivotAlign(TLH_STOWED_LAYER, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(TLH_STOWED_LAYER, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(TLH_STOWED_LAYER, -66, 70);
+            A_OverlayRotate(TLH_STOWED_LAYER, -8.0);
+            A_OverlayOffset(PSP_WEAPON, 0, 70);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftDraw");
+            invoker.pistolMode = true;
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Print("TACTICAL ROCKET LAUNCHER: AKIMBO SIDEARMS");
+            return ResolveState("PistolRaise");
+        }
+
+    SwitchToLauncher:
+        PISG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 24, 50, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 1.5);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, -20, 58, WOF_INTERPOLATE);
+            A_OverlayOffset(TLH_STOWED_LAYER, -46, 62, WOF_INTERPOLATE);
+        }
+        PISG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 64, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE);
+            A_OverlayOffset(TLH_STOWED_LAYER, -16, 46, WOF_INTERPOLATE);
+        }
+        PISG A 0
+        {
+            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_STOWED_LAYER, TLH_STOWED_LAYER);
+            invoker.pistolMode = false;
+            A_StartSound("weapons/sshotl", CHAN_WEAPON);
+            A_Print("TACTICAL ROCKET LAUNCHER: MISSILE MODE");
+            return ResolveState("Ready");
+        }
+
+    Reload:
+        MISG A 0
+        {
+            if (invoker.pistolMode) return ResolveState("SwitchToLauncher");
+            return ResolveState("SwitchToPistol");
+        }
+
+    Fire:
+        MISG A 0
+        {
+            if (invoker.pistolMode) return ResolveState("PistolFireLeft");
+            return ResolveState(null);
+        }
+        MISG B 7
+        {
+            A_GunFlash();
+            A_FireProjectile("TLHTacticalMissile");
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_SetPitch(pitch - 3.5, SPF_INTERPOLATE);
+            A_Recoil(5.0);
+        }
+        MISG A 8;
+        MISG A 0 A_ReFire;
+        Goto Ready;
+
+    FireMicroBurst:
+        MISG B 0 A_GunFlash;
+        MISG B 2 A_FireProjectile("MicroMissile");
+        MISG B 2 A_FireProjectile("MicroMissile");
+        MISG B 2
+        {
+            A_FireProjectile("MicroMissile");
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
+            A_Recoil(2.0);
+        }
+        MISG A 12;
+        Goto Ready;
+
+    AltFire:
+        MISG A 0
+        {
+            if (invoker.pistolMode) return ResolveState("PistolFireRight");
+            return ResolveState("FireMicroBurst");
+        }
+
+    PistolFireLeft:
+        PISG B 1
+        {
+            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)))
+                A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            let mo = player.mo;
+            if (mo)
+            {
+                double shotAngle = angle + FRandom(-3.0, 3.0);
+                double shotPitch = pitch + FRandom(-1.5, 1.5);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 8, "Normal", "BulletPuff", 0, null, 0, 0, -22.0);
+            }
+            A_StartSound("weapons/pistol", CHAN_WEAPON);
+            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftFire");
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            A_Recoil(2.0);
+        }
+        PISG A 3;
+        PISG A 0 A_ReFire;
+        Goto ReadyPistol;
+
+    PistolFireRight:
+        PISG B 1
+        {
+            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)))
+                A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            let mo = player.mo;
+            if (mo)
+            {
+                double shotAngle = angle + FRandom(-3.0, 3.0);
+                double shotPitch = pitch + FRandom(-1.5, 1.5);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 8, "Normal", "BulletPuff", 0, null, 0, 0, 22.0);
+            }
+            A_StartSound("weapons/pistol", CHAN_WEAPON);
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            A_Recoil(2.0);
+        }
+        PISG A 3;
+        PISG A 0 A_ReFire;
+        Goto ReadyPistol;
+
+    Flash:
+        MISF A 3 Bright A_Light1;
+        MISF B 3 Bright A_Light2;
+        Goto LightDone;
+    Spawn:
+        LAUN A -1;
+        Stop;
+    }
+}
+
 class TacticalPlayer : DoomPlayer replaces DoomPlayer
 {
     int jumpCount;
@@ -4856,7 +5242,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
         // Slot 4 includes the M4A1, TLH Tactical Chaingun, vanilla-sprite Heavy Chaingun, compact SMG and M60. No HeavyMinigun alias.
         Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
-        Player.WeaponSlot 5, "RecoilRocketLauncher", "MicroMissileLauncher";
+        Player.WeaponSlot 5, "TLHGrenadeLauncher", "RecoilRocketLauncher", "MicroMissileLauncher", "TacticalRocketLauncher";
         Player.WeaponSlot 6, "RecoilPlasmaRifle";
         Player.WeaponSlot 7, "RecoilBFG9000";
         Player.WeaponSlot 8, "AMR99RailRifle";
@@ -5645,6 +6031,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 0.94; scaleY = 1.00; offsetY = 1.2; sway = 0.72;
         }
+        else if (cls == "TLHGrenadeLauncher")
+        {
+            scaleX = 0.92; scaleY = 1.03; offsetY = 1.1; sway = 0.68;
+        }
+        else if (cls == "TacticalRocketLauncher")
+        {
+            scaleX = 0.98; scaleY = 1.04; offsetY = 1.0; sway = 0.64;
+        }
         else if (cls == "RecoilPlasmaRifle")
         {
             scaleX = 1.00; scaleY = 1.09; offsetY = 0.6; sway = 0.74;
@@ -5693,7 +6087,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Very heavy weapons move less but hit harder when they recoil.
         if (cls == "M60MachineGun") return 0.66;
-        if (cls == "RecoilRocketLauncher") return 0.62;
+        if (cls == "RecoilRocketLauncher" || cls == "TacticalRocketLauncher") return 0.62;
+        if (cls == "TLHGrenadeLauncher") return 0.68;
         if (cls == "RecoilPlasmaRifle") return 0.70;
         if (cls == "RecoilBFG9000") return 0.55;
         if (cls == "AMR99RailRifle") return 0.58;
@@ -5811,7 +6206,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                     impulse *= 1.70;
                 else if (cls == "M60MachineGun")
                     impulse *= 1.25;
-                else if (cls == "RecoilRocketLauncher" || cls == "HellfireProjector")
+                else if (cls == "RecoilRocketLauncher" || cls == "HellfireProjector" ||
+                         cls == "TacticalRocketLauncher" || cls == "TLHGrenadeLauncher")
                     impulse *= 2.00;
                 else if (cls == "RecoilPlasmaRifle")
                     impulse *= 0.72;
@@ -6338,8 +6734,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (FindInventory("TacticalM4A1")) count++;
         if (FindInventory("TLHChaingun")) count++;
         if (FindInventory("M60MachineGun")) count++;
+        if (FindInventory("TLHGrenadeLauncher")) count++;
         if (FindInventory("RecoilRocketLauncher")) count++;
         if (FindInventory("MicroMissileLauncher")) count++;
+        if (FindInventory("TacticalRocketLauncher")) count++;
         if (FindInventory("RecoilPlasmaRifle")) count++;
         if (FindInventory("AMR99RailRifle")) count++;
 
@@ -6393,6 +6791,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (pick == 1) selected = "M60MachineGun";
             else pick--;
         }
+        if (selected == "" && FindInventory("TLHGrenadeLauncher"))
+        {
+            if (pick == 1) selected = "TLHGrenadeLauncher";
+            else pick--;
+        }
         if (selected == "" && FindInventory("RecoilRocketLauncher"))
         {
             if (pick == 1) selected = "RecoilRocketLauncher";
@@ -6401,6 +6804,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (selected == "" && FindInventory("MicroMissileLauncher"))
         {
             if (pick == 1) selected = "MicroMissileLauncher";
+            else pick--;
+        }
+        if (selected == "" && FindInventory("TacticalRocketLauncher"))
+        {
+            if (pick == 1) selected = "TacticalRocketLauncher";
             else pick--;
         }
         if (selected == "" && FindInventory("RecoilPlasmaRifle"))
@@ -7387,9 +7795,11 @@ class TacticalHUDHandler : EventHandler
         tlhVisorActive = p.FindInventory("PowerInvulnerable") != null;
 
         let tpState = TacticalPlayer(p);
-        if (tpState)
+        if (tpState) tlhHUDDualActive = tpState.tlhDualWieldActive;
+        if (p.player.ReadyWeapon is "TacticalRocketLauncher")
         {
-            tlhHUDDualActive = tpState.tlhDualWieldActive;
+            let tl = TacticalRocketLauncher(p.player.ReadyWeapon);
+            if (tl) tlhHUDDualActive = tl.pistolMode;
         }
 
         hudPlayerHealth = max(0, p.Health);
@@ -7462,6 +7872,12 @@ class TacticalHUDHandler : EventHandler
             else if (hudWeaponName == "M60MachineGun") hudWeaponName = "M60 MACHINE GUN";
             else if (hudWeaponName == "RecoilRocketLauncher") hudWeaponName = "ROCKET LAUNCHER";
             else if (hudWeaponName == "MicroMissileLauncher") hudWeaponName = "MICRO-MISSILE LAUNCHER";
+            else if (hudWeaponName == "TLHGrenadeLauncher") hudWeaponName = "GRENADE LAUNCHER";
+            else if (hudWeaponName == "TacticalRocketLauncher")
+            {
+                let tl = TacticalRocketLauncher(ready);
+                hudWeaponName = (tl && tl.pistolMode) ? "TACTICAL AKIMBO SIDEARMS" : "TACTICAL ROCKET LAUNCHER";
+            }
             else if (hudWeaponName == "RecoilPlasmaRifle") hudWeaponName = "PLASMA RIFLE";
             else if (hudWeaponName == "RecoilBFG9000") hudWeaponName = "BFG 9000";
             else if (hudWeaponName == "AMR99RailRifle") hudWeaponName = "AMR-99 GAUSS RIFLE";
@@ -7605,6 +8021,13 @@ class TacticalHUDHandler : EventHandler
     // PROCEDURAL DRAWING PRIMITIVES // YARBIS v2
     // ========================================================================
 
+    ui double GetHUDResolutionScale()
+    {
+        double sx = double(Screen.GetWidth()) / 640.0;
+        double sy = double(Screen.GetHeight()) / 360.0;
+        return max(0.25, min(sx, sy));
+    }
+
     ui Vector2 V(double x, double y)
     {
         return Screen.VirtualToRealCoords(
@@ -7620,7 +8043,7 @@ class TacticalHUDHandler : EventHandler
     {
         Vector2 p0 = V(x0, y0);
         Vector2 p1 = V(x1, y1);
-        double scale = Screen.GetWidth() / 640.0;
+        double scale = GetHUDResolutionScale();
         Screen.DrawThickLine(p0.X, p0.Y, p1.X, p1.Y, max(0.55, w * scale), c, a);
     }
 
@@ -7632,8 +8055,8 @@ class TacticalHUDHandler : EventHandler
             int(x), int(y), s,
             DTA_VirtualWidth, 640,
             DTA_VirtualHeight, 360,
-            DTA_ScaleX, scale,
-            DTA_ScaleY, scale,
+            DTA_ScaleX, scale * GetHUDResolutionScale(),
+            DTA_ScaleY, scale * GetHUDResolutionScale(),
             DTA_Shadow, false
         );
     }
@@ -8168,6 +8591,16 @@ class TacticalHUDHandler : EventHandler
         {
             primary = 0x7F8D89;
             secondary = 0x33413D;
+        }
+        else if (cls == "TLHGrenadeLauncher")
+        {
+            primary = 0xA16B42; secondary = 0x553D2F;
+            profileX = 0.92; profileY = 1.03; accentStrength = 0.90;
+        }
+        else if (cls == "TacticalRocketLauncher")
+        {
+            primary = 0x647D86; secondary = 0xB3C1C4;
+            profileX = 0.98; profileY = 1.04; accentStrength = 1.08;
         }
     }
 
