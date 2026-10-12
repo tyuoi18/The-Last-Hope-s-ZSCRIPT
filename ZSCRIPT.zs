@@ -1464,7 +1464,7 @@ class RecoilPistol : Pistol replaces Pistol
         Goto LightDone;
 
     Spawn:
-        ZIST A -1;
+        PISG A -1;
         Stop;
     }
 
@@ -2714,7 +2714,7 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
-        ZHGG A 0
+        CHGG A 0
         {
             if (invoker.overheated)
                 return ResolveState("Overheated");
@@ -2728,7 +2728,7 @@ class TLHChaingun : Chaingun replaces Chaingun
             return ResolveState(null);
         }
 
-        ZHGG A 1
+        CHGG A 1
         {
             double heatFactor = double(invoker.heat) / double(MaxHeat);
 
@@ -2750,7 +2750,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Deselect:
-        ZHGG A 1
+        CHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -2760,7 +2760,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Select:
-        ZHGG A 1
+        CHGG A 1
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -2770,7 +2770,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Fire:
-        ZHGG A 0
+        CHGG A 0
         {
             if (invoker.overheated)
                 return ResolveState("Overheated");
@@ -2799,7 +2799,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         }
 
     FireNormal:
-        ZHGG A 2
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2808,8 +2808,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.65);
         }
-        ZHGG B 1;
-        ZHGG A 0
+        CHGG B 1;
+        CHGG A 0
         {
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.25);
@@ -2831,11 +2831,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        ZHGG A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireWarm:
-        ZHGG A 3
+        CHGG A 3
         {
             A_FireCGun();
             invoker.heat += 3;
@@ -2851,8 +2851,8 @@ class TLHChaingun : Chaingun replaces Chaingun
                 A_Print("CHAINGUN: CRITICAL HEAT");
             }
         }
-        ZHGG B 1;
-        ZHGG A 0
+        CHGG B 1;
+        CHGG A 0
         {
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0.30);
@@ -2867,11 +2867,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        ZHGG A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireHot:
-        ZHGG A 4
+        CHGG A 4
         {
             A_FireCGun();
             invoker.heat += 4;
@@ -2888,8 +2888,8 @@ class TLHChaingun : Chaingun replaces Chaingun
                 A_Print("CHAINGUN: CRITICAL HEAT");
             }
         }
-        ZHGG B 1;
-        ZHGG A 0
+        CHGG B 1;
+        CHGG A 0
         {
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
@@ -2905,11 +2905,11 @@ class TLHChaingun : Chaingun replaces Chaingun
 
             return ResolveState(null);
         }
-        ZHGG A 0 A_ReFire;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     FireBurst:
-        ZHGG A 2
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2917,8 +2917,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        ZHGG B 1;
-        ZHGG A 2
+        CHGG B 1;
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2926,8 +2926,8 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        ZHGG B 1;
-        ZHGG A 2
+        CHGG B 1;
+        CHGG A 2
         {
             A_FireCGun();
             invoker.heat += 2;
@@ -2935,12 +2935,12 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.70);
         }
-        ZHGG B 1;
-        ZHGG A 8;
+        CHGG B 1;
+        CHGG A 8;
         Goto Ready;
 
     Overheated:
-        ZHGG A 2
+        CHGG A 2
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
 
@@ -2969,7 +2969,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Loop;
 
     Reload:
-        ZHGG A 0
+        CHGG A 0
         {
             // R while overheated = emergency vent.
             if (invoker.overheated)
@@ -2982,29 +2982,29 @@ class TLHChaingun : Chaingun replaces Chaingun
         }
 
     SetBurst:
-        ZHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        ZHGG A 6
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 6
         {
             invoker.burstMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("CHAINGUN: CONTROLLED BURST");
         }
-        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetAuto:
-        ZHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        ZHGG A 6
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 6
         {
             invoker.burstMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("CHAINGUN: FULL AUTO");
         }
-        ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     ManualVent:
-        ZHGG A 4
+        CHGG A 4
         {
             int oldHeat = invoker.heat;
             invoker.heat -= 55;
@@ -3013,13 +3013,13 @@ class TLHChaingun : Chaingun replaces Chaingun
             A_StartSound("weapons/sawidle", CHAN_WEAPON);
             A_Print(String.Format("CHAINGUN: VENTING %d%% → %d%%", oldHeat, invoker.heat));
         }
-        ZHGG A 5
+        CHGG A 5
         {
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_OverlayOffset(PSP_WEAPON, FRandom(-0.5, 0.5), 33.0, 0);
             A_OverlayRotate(PSP_WEAPON, FRandom(-0.8, 0.8));
         }
-        ZHGG A 5
+        CHGG A 5
         {
             A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
@@ -3029,12 +3029,12 @@ class TLHChaingun : Chaingun replaces Chaingun
         Goto Ready;
 
     Flash:
-        ZHGF A 2 Bright A_Light1;
-        ZHGF B 2 Bright A_Light2;
+        CHGF A 2 Bright A_Light1;
+        CHGF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        ZGUN A -1;
+        MGUN A -1;
         Stop;
     }
 
