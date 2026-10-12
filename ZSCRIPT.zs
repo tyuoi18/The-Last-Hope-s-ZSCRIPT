@@ -2623,9 +2623,9 @@ class SemiAutoShotgun : Weapon
 }
 
 // ==========================================
-// CHAINGUN TACTICA - OVERHEAT SYSTEM
-// Replaces the vanilla Chaingun. Uses DOOM II's native CHGG chaingun
-// sprites with a dark tactical translation.
+// TLH TACTICAL CHAINGUN - OVERHEAT SYSTEM
+// Uses its own renamed TCHG/TCHF/TCHD sprite family for the redesigned TLH weapon.
+// Keep Doom II's vanilla CHGG chaingun sprites separate for HeavyChaingun.
 // ==========================================
 
 class TLHChaingun : Chaingun replaces Chaingun
