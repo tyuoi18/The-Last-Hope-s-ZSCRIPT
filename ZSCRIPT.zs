@@ -3146,15 +3146,14 @@ class HeavyChaingun : Weapon
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
+            // Camera kick only; A_Recoil would physically push the player backward.
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
-            A_Recoil(2.4);
             A_Quake(0.35, 0.8, 0, 35);
         }
         CHGG B 1
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
-            A_Recoil(2.4);
         }
         CHGG A 0 A_ReFire;
         Goto Ready;
@@ -3165,21 +3164,18 @@ class HeavyChaingun : Weapon
             A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
-            A_Recoil(3.0);
         }
         CHGG B 1;
         CHGG A 1
         {
             A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
-            A_Recoil(3.0);
         }
         CHGG B 1;
         CHGG A 1
         {
             A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
-            A_Recoil(3.0);
         }
         CHGG B 4;
         Goto Ready;
@@ -3189,7 +3185,9 @@ class HeavyChaingun : Weapon
         {
             A_FireProjectile("M203Grenade");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
-            A_Recoil(-6);
+            // Heavy launcher kick is camera-only: no horizontal velocity impulse.
+            A_SetPitch(pitch - 2.2, SPF_INTERPOLATE);
+            A_Quake(1.2, 3.0, 0, 70);
         }
         CHGG A 8;
         Goto Ready;
@@ -3910,13 +3908,13 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
     States
     {
     Ready:
-        ZISG A 0
+        RISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        ZISG A 1
+        RISG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -3924,22 +3922,22 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Loop;
     Deselect:
-        ZISG A 1 A_Lower;
+        RISG A 1 A_Lower;
         Loop;
     Select:
-        ZISG A 1 A_Raise;
+        RISG A 1 A_Raise;
         Loop;
 
     Reload:
-        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        ZISG A 0
+        RISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        RISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        RISG A 0
         {
             if (invoker.nukeMode) return ResolveState("SetNormal");
             return ResolveState("SetNuke");
         }
     SetNuke:
-        ZISG A 8
+        RISG A 8
         {
             invoker.nukeMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -3947,7 +3945,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     SetNormal:
-        ZISG A 8
+        RISG A 8
         {
             invoker.nukeMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
@@ -3955,34 +3953,34 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     FinishReload:
-        ZISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        RISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        RISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        ZISG A 0
+        RISG A 0
         {
             if (invoker.nukeMode) return ResolveState("FireNuke");
             return ResolveState(null);
         }
-        ZISG B 8
+        RISG B 8
         {
             A_GunFlash();
             A_FireMissile();
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
-        ZISG B 12;
-        ZISG A 0 A_ReFire;
+        RISG B 12;
+        RISG A 0 A_ReFire;
         Goto Ready;
 
     FireNuke:
-        ZISG A 0
+        RISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("RocketAmmo") >= 10) return ResolveState("DoFireNuke");
             return ResolveState("Ready");
         }
     DoFireNuke:
-        ZISG B 10
+        RISG B 10
         {
             A_TakeInventory("RocketAmmo", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("NukeMissile", useammo: false);
@@ -3991,59 +3989,59 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             A_Quake(3, 8, 0, 200);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
         }
-        ZISG B 20;
+        RISG B 20;
         Goto Ready;
 
     AltFire:
-        ZISG B 2
+        RISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        RISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        RISG B 2
         {
             A_FireProjectile("MicroMissile");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZISG B 15;
+        RISG B 15;
         Goto Ready;
 
     Zoom:
-        ZISG A 0
+        RISG A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Clip") >= 3) return ResolveState(null);
             return ResolveState("Ready");
         }
-        ZISG B 2
+        RISG B 2
         {
             A_TakeInventory("Clip", 3, TIF_NOTAKEINFINITE);
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        RISG B 2
         {
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        ZISG B 2
+        RISG B 2
         {
             A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        ZISG B 10;
+        RISG B 10;
         Goto Ready;
 
     Flash:
-        ZISF A 3 Bright A_Light1;
-        ZISF B 3 Bright A_Light2;
+        RISF A 3 Bright A_Light1;
+        RISF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
@@ -4053,10 +4051,31 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
 
 }
 
-// Legacy MAPINFO compatibility only. This class is not part of the player's weapon slots.
-class MicroMissileLauncher : RecoilRocketLauncher
+// Legacy MAPINFO compatibility for obsolete editor numbers that may remain in Textures.wad.
+// These actors are invisible, inert map markers, NOT weapons. They prevent stale DoomEdNums
+// entries from creating a second Rocket Launcher or causing unknown-actor parse errors.
+class TLHLegacyRemovedWeapon : Actor
 {
+    Default
+    {
+        Radius 1;
+        Height 1;
+        +NOINTERACTION
+        +NOBLOCKMAP
+        +NOGRAVITY
+    }
+
+    States
+    {
+    Spawn:
+        TNT1 A -1;
+        Stop;
+    }
 }
+
+class MicroMissileLauncher : TLHLegacyRemovedWeapon {}
+class TLHGrenadeLauncher : TLHLegacyRemovedWeapon {}
+class TacticalRocketLauncher : TLHLegacyRemovedWeapon {}
 
 
 class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
