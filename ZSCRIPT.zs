@@ -418,15 +418,16 @@ class NapalmFireArea : Actor
         Goto Active;
 
     Active:
-        BAL1 CDE 2 Bright
+        // Animate the fire continuously, but apply damage once per six-tic pulse.
+        BAL1 CDE 2 Bright;
+        TNT1 A 0
         {
-            A_Explode(4, 90, XF_NOTMISSILE);
+            A_Explode(2, 90, XF_NOTMISSILE);
             A_SpawnItemEx("SlideSmoke", random(-28, 28), random(-28, 28), random(0, 36), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
-            duration -= 2;
+            duration -= 6;
             if (duration <= 0) return ResolveState("Death");
-            return ResolveState(null);
+            return ResolveState("Active");
         }
-        Loop;
 
     Death:
         TNT1 A 1;
@@ -3576,9 +3577,9 @@ class TacticalM4A1 : DoomWeapon
         ZHGG A 1 A_WeaponOffset(-45, 85, WOF_INTERPOLATE);
         ZHGG A 2
         {
-            A_CustomPunch(40, TRUE, CPF_PULLIN, "BulletPuff", 72, 0, 0, "ArmorBonus", "skeleton/swing");
-            A_RadiusThrust(500, 96, RTF_NOIMPACTDAMAGE);
-            A_SetPitch(pitch + 2.0, SPF_INTERPOLATE);
+            // A rifle butt strike should be a short, single-target melee hit.
+            A_CustomPunch(20, TRUE, 0, "BulletPuff", 48, 0, 0, "ArmorBonus", "weapons/melee");
+            A_SetPitch(pitch + 1.0, SPF_INTERPOLATE);
         }
         ZHGG A 2 A_WeaponOffset(0, 80, WOF_INTERPOLATE);
         ZHGG A 2 A_WeaponOffset(0, 50, WOF_INTERPOLATE);
@@ -4046,32 +4047,15 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         RISG B 15;
         Goto Ready;
 
+    // Emergency melee: strike with the launcher body. It does not magically fire pistol ammo.
     Zoom:
-        RISG A 0
+        RISG A 3 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        RISG B 4
         {
-            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Clip") >= 3) return ResolveState(null);
-            return ResolveState("Ready");
+            A_CustomPunch(20, TRUE, 0, "BulletPuff", 48, 0, 0, "ArmorBonus", "weapons/melee");
+            A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        RISG B 2
-        {
-            A_TakeInventory("Clip", 3, TIF_NOTAKEINFINITE);
-            A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
-            A_StartSound("weapons/chngun", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
-        }
-        RISG B 2
-        {
-            A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
-            A_StartSound("weapons/chngun", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
-        }
-        RISG B 2
-        {
-            A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
-            A_StartSound("weapons/chngun", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
-        }
-        RISG B 10;
+        RISG A 7 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Flash:
@@ -4170,13 +4154,14 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
 
             return ResolveState(null);
         }
-        PLSG A 3
+        // Standard plasma bolts cycle at 3 tics per shot (~700 RPM at 35 tics/sec).
+        PLSG A 2
         {
             A_WeaponOffset(0, 35, WOF_INTERPOLATE);
             A_FirePlasma();
             A_SetPitch(pitch - 0.3, SPF_INTERPOLATE);
         }
-        PLSG B 20 A_ReFire;
+        PLSG B 1 A_ReFire;
         Goto Ready;
 
     FireEMP:
@@ -6788,7 +6773,7 @@ class TLHCompactSMG : Weapon
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Recoil(1.2);
         }
-        ZHGG B 2;
+        ZHGG B 1;
         ZHGG A 0 A_ReFire;
         Goto Ready;
 
