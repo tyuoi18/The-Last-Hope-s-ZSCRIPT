@@ -4645,6 +4645,12 @@ class AirstrikeDesignator : Weapon
 // RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 class ServiceRevolver : Weapon
 {
+    // Six-shot cylinder. Clip ammo is held in reserve and transferred on reload.
+    int cylinderAmmo;
+    bool cylinderInitialized;
+    bool triggerLatched;
+    bool altTriggerLatched;
+
     Default
     {
         Weapon.SlotNumber 2;
@@ -4652,22 +4658,26 @@ class ServiceRevolver : Weapon
         Weapon.SelectionOrder 205;
         Weapon.Kickback 105;
         Weapon.AmmoType1 "Clip";
+        // Grant 12 rounds: up to six go into the cylinder on first equip,
+        // leaving the remainder as reserve ammunition.
         Weapon.AmmoGive1 12;
-        Weapon.AmmoUse1 1;
+        Weapon.AmmoUse1 0;
         Weapon.AmmoType2 "Clip";
-        // Secondary fire fans three shots and consumes three rounds at once.
-        Weapon.AmmoUse2 1;
+        Weapon.AmmoUse2 0;
         Inventory.PickupMessage "Picked up the .357 Service Revolver.";
     }
 
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
-        // Fan the Hammer fires three separate A_FireBullets actions.
-        // Require three rounds before entering AltFire so partial fans never occur.
-        if (fireMode == AltFire)
-            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        bool infinite = sv_infiniteammo ||
+            (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
 
-        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+        if (infinite || cylinderAmmo > 0 || (Owner && Owner.CountInv("Clip") > 0))
+            return true;
+
+        // Force the base class to check for one reserve round so the engine can
+        // select another weapon when both the cylinder and reserve are empty.
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 1);
     }
 
     States
@@ -4681,17 +4691,52 @@ class ServiceRevolver : Weapon
         }
         RVOL Q 1
         {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (!invoker.cylinderInitialized)
+            {
+                invoker.cylinderInitialized = true;
+                if (infinite)
+                {
+                    invoker.cylinderAmmo = 6;
+                }
+                else if (player.mo)
+                {
+                    int reserve = player.mo.CountInv("Clip");
+                    invoker.cylinderAmmo = min(6, reserve);
+                    if (invoker.cylinderAmmo > 0)
+                        A_TakeInventory("Clip", invoker.cylinderAmmo, TIF_NOTAKEINFINITE);
+                }
+            }
+
+            // A revolver fires once per trigger press. Holding the trigger cannot
+            // turn the weapon into a slow automatic rifle.
+            if (!(player.cmd.buttons & BT_ATTACK))
+                invoker.triggerLatched = false;
+            if (!(player.cmd.buttons & BT_ALTATTACK))
+                invoker.altTriggerLatched = false;
+
+            int readyFlags = WRF_ALLOWRELOAD;
+            if (invoker.triggerLatched || invoker.altTriggerLatched)
+                readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
+
             A_OverlayOffset(PSP_WEAPON,
-                sin(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.22,
-                32 + cos(level.time * 0.024 * TLH_RAD_TO_DEG) * 0.10, 0);
+                sin(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.18,
+                32 + cos(level.time * 0.024 * TLH_RAD_TO_DEG) * 0.08, 0);
             A_OverlayRotate(PSP_WEAPON,
-                sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.18);
-            A_WeaponReady();
+                sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.12);
+            A_WeaponReady(readyFlags);
         }
         Loop;
 
     Deselect:
-        RVOL Q 1 A_Lower;
+        RVOL Q 1
+        {
+            A_OverlayRotate(PSP_WEAPON, 0);
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_Lower();
+        }
         Loop;
 
     Select:
@@ -4700,75 +4745,183 @@ class ServiceRevolver : Weapon
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayRotate(PSP_WEAPON, 0);
         }
         RVOL Q 1 A_Raise;
         Loop;
 
-    // Primary fire: precise, heavy single shot.
-    // REVA is the muzzle/trigger frame, REVB is the shot, REVC is recoil recovery.
+    // Reload like a speed-loader cylinder: top up to six rounds from shared Clip reserve.
+    // The original sprite set has no separate open-cylinder frames, so the reload is
+    // represented by a short lowered/tilted weapon motion rather than invented artwork.
+    Reload:
+        RVOL Q 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (!infinite && invoker.cylinderAmmo >= 6)
+            {
+                A_Print("REVOLVER: CYLINDER FULL");
+                return ResolveState("Ready");
+            }
+            if (!infinite && (!player.mo || player.mo.CountInv("Clip") <= 0))
+            {
+                A_StartSound("weapons/sshoto", CHAN_WEAPON);
+                A_Print("REVOLVER: NO RESERVE AMMO");
+                return ResolveState("Ready");
+            }
+
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            return ResolveState(null);
+        }
+        RVOL Q 5
+        {
+            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 2, 39, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -4.0);
+        }
+        RVOL Q 8
+        {
+            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 4, 43, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -9.0);
+        }
+        RVOL Q 10
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (infinite)
+            {
+                invoker.cylinderAmmo = 6;
+            }
+            else if (player.mo)
+            {
+                int reserve = player.mo.CountInv("Clip");
+                int needed = 6 - invoker.cylinderAmmo;
+                int loaded = min(needed, reserve);
+                if (loaded > 0)
+                {
+                    A_TakeInventory("Clip", loaded, TIF_NOTAKEINFINITE);
+                    invoker.cylinderAmmo += loaded;
+                }
+            }
+            A_StartSound("weapons/sshotl", CHAN_WEAPON);
+        }
+        RVOL Q 7
+        {
+            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 1, 36, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
+        }
+        RVOL Q 5
+        {
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            A_Print(String.Format("REVOLVER: {0}/6", invoker.cylinderAmmo));
+        }
+        Goto Ready;
+
+    // Single-action trigger: high per-shot impact, narrow spread, deliberate recovery.
     Fire:
-        RVOL A 1;
+        RVOL A 0
+        {
+            invoker.triggerLatched = true;
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (!infinite && invoker.cylinderAmmo <= 0)
+            {
+                A_StartSound("weapons/sshoto", CHAN_WEAPON);
+                A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
+                return ResolveState("Ready");
+            }
+            return ResolveState(null);
+        }
+        RVOL A 2;
         RVOL B 1
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
 
-            // "Last Round Gambit": the final physical bullet hits harder,
-            // but only when ammo is genuinely finite.
-            if (!infinite && player.mo && player.mo.CountInv("Clip") <= 1)
-            {
-                A_FireBullets(0.25, 0.15, 1, 12, "BulletPuff");
-                A_StartSound("weapons/sshotc", CHAN_WEAPON);
-                A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-                A_Quake(0.9, 1.7, 0, 45);
+            if (!infinite)
+                invoker.cylinderAmmo--;
+
+            // Flags 0 prevent the engine from spending the shared reserve a second time.
+            A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
+            A_StartSound("weapons/pistol", CHAN_WEAPON);
+            A_SetPitch(pitch - 2.4, SPF_INTERPOLATE);
+            A_Recoil(1.8);
+            A_Quake(0.35, 0.7, 0, 20);
+
+            if (!infinite && invoker.cylinderAmmo == 1)
                 A_Print("REVOLVER: LAST ROUND");
-            }
-            else
-            {
-                A_FireBullets(0.35, 0.15, 1, 8, "BulletPuff");
-                A_StartSound("weapons/pistol", CHAN_WEAPON);
-                A_SetPitch(pitch - 2.4, SPF_INTERPOLATE);
-                A_Quake(0.25, 0.65, 0, 20);
-            }
+            else if (!infinite && invoker.cylinderAmmo == 0)
+                A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
-        RVOL C 2;
-        RVOL Q 1 A_ReFire;
+        RVOL C 6;
         Goto Ready;
 
-    // Secondary fire: "Fan the Hammer". Three fast shots, each with
-    // progressively wider spread. Weapon.AmmoUse2 handles the three-round cost.
+    // Fan the Hammer: three fast, progressively less accurate shots. It uses
+    // three loaded rounds, is triggered once per click, and cannot be spammed by holding M2.
     AltFire:
+        RVOL Q 0
+        {
+            invoker.altTriggerLatched = true;
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (!infinite && invoker.cylinderAmmo < 3)
+            {
+                A_StartSound("weapons/sshoto", CHAN_WEAPON);
+                A_Print(String.Format("REVOLVER: FAN NEEDS 3 ROUNDS ({0}/6) | PRESS R", invoker.cylinderAmmo));
+                return ResolveState("Ready");
+            }
+            return ResolveState("FanFire1");
+        }
+    FanFire1:
         RVOL A 1
         {
-            A_FireBullets(0.8, 0.3, 1, 3, "BulletPuff");
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite) invoker.cylinderAmmo--;
+            A_FireBullets(0.7, 0.3, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.7, SPF_INTERPOLATE);
             A_Quake(0.18, 0.4, 0, 12);
         }
-        RVOL B 1
+        RVOL B 2
         {
-            A_FireBullets(1.8, 0.7, 1, 3, "BulletPuff");
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite) invoker.cylinderAmmo--;
+            A_FireBullets(1.8, 0.7, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 0.9, SPF_INTERPOLATE);
             A_Quake(0.22, 0.45, 0, 14);
         }
         RVOL C 2
         {
-            A_FireBullets(3.0, 1.0, 1, 3, "BulletPuff");
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite) invoker.cylinderAmmo--;
+            A_FireBullets(3.0, 1.0, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.9, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 1.1, SPF_INTERPOLATE);
             A_Quake(0.28, 0.5, 0, 16);
+
+            if (!infinite && invoker.cylinderAmmo <= 0)
+                A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
-        RVOL Q 4;
+        RVOL Q 6;
         Goto Ready;
 
-    // Custom world pickup sprite: lump RVOLG0.
     Spawn:
         RVOL G -1;
         Stop;
     }
 }
-
 
 class StreetSweeperShotgun : Weapon
 {
