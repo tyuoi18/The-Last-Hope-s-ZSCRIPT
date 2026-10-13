@@ -4607,8 +4607,8 @@ class AirstrikeDesignator : Weapon
 // ============================================================================
 
 // Custom Service Revolver.
-// GZDoom sprite convention: REVQ/REVA/REVB/REVC are four-character sprite families.
-// For rotation 0, the corresponding sprite lumps are REVQA0, REVAA0, REVBA0 and REVCA0.
+// GZDoom requires a four-character sprite prefix. All frames use RVOL:
+// RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 class ServiceRevolver : Weapon
 {
     Default
@@ -4728,7 +4728,7 @@ class ServiceRevolver : Weapon
         RVOL Q 4;
         Goto Ready;
 
-    // Custom world pickup sprite: lump REVG0.
+    // Custom world pickup sprite: lump RVOLG0.
     Spawn:
         RVOL G -1;
         Stop;
