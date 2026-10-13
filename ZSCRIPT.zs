@@ -4051,32 +4051,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
 
 }
 
-// Legacy MAPINFO compatibility for obsolete editor numbers that may remain in Textures.wad.
-// These actors are invisible, inert map markers, NOT weapons. They prevent stale DoomEdNums
-// entries from creating a second Rocket Launcher or causing unknown-actor parse errors.
-class TLHLegacyRemovedWeapon : Actor
-{
-    Default
-    {
-        Radius 1;
-        Height 1;
-        +NOINTERACTION
-        +NOBLOCKMAP
-        +NOGRAVITY
-    }
-
-    States
-    {
-    Spawn:
-        TNT1 A -1;
-        Stop;
-    }
-}
-
-class MicroMissileLauncher : TLHLegacyRemovedWeapon {}
-class TLHGrenadeLauncher : TLHLegacyRemovedWeapon {}
-class TacticalRocketLauncher : TLHLegacyRemovedWeapon {}
-
+// Obsolete placeholder launcher classes removed. Their old MAPINFO DoomEdNums must also be removed.
 
 class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
 {
@@ -4648,8 +4623,18 @@ class ServiceRevolver : Weapon
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "Clip";
         // Secondary fire fans three shots and consumes three rounds at once.
-        Weapon.AmmoUse2 3;
+        Weapon.AmmoUse2 1;
         Inventory.PickupMessage "Picked up the .357 Service Revolver.";
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        // Fan the Hammer fires three separate A_FireBullets actions.
+        // Require three rounds before entering AltFire so partial fans never occur.
+        if (fireMode == AltFire)
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
@@ -4697,7 +4682,7 @@ class ServiceRevolver : Weapon
 
             // "Last Round Gambit": the final physical bullet hits harder,
             // but only when ammo is genuinely finite.
-            if (!infinite && player.mo && player.mo.CountInv("Clip") <= 0)
+            if (!infinite && player.mo && player.mo.CountInv("Clip") <= 1)
             {
                 A_FireBullets(0.25, 0.15, 1, 12, "BulletPuff");
                 A_StartSound("weapons/sshotc", CHAN_WEAPON);
@@ -4943,6 +4928,58 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 8, "AMR99RailRifle";
         Player.WeaponSlot 9, "HellfireProjector";
         Player.WeaponSlot 0, "AirstrikeDesignator";
+    }
+
+    // ========================================================================
+    // EXPLICIT CHEAT WEAPON LIST
+    // GZDoom's generic CheatGive("weapons") scans every registered Weapon class.
+    // Use only the real TLH arsenal so removed/legacy classes can never be handed
+    // out by IDFA/IDKFA, and keep cheat grants aligned with Player.WeaponSlot.
+    // ========================================================================
+    override void CheatGive(String name, int amount)
+    {
+        if (name ~== "weapons")
+        {
+            if (!player || !player.mo || player.health <= 0)
+                return;
+
+            let savedPending = player.PendingWeapon;
+
+            // Slot 1
+            GiveInventory("DashFist", 1, true);
+            GiveInventory("HookChainsaw", 1, true);
+
+            // Slot 2
+            GiveInventory("RecoilPistol", 1, true);
+            GiveInventory("ServiceRevolver", 1, true);
+            GiveInventory("OfficerVulkanPistol", 1, true);
+
+            // Slot 3
+            GiveInventory("RecoilShotgun", 1, true);
+            GiveInventory("FastRecoilSSG", 1, true);
+            GiveInventory("SemiAutoShotgun", 1, true);
+            GiveInventory("StreetSweeperShotgun", 1, true);
+
+            // Slot 4
+            GiveInventory("TacticalM4A1", 1, true);
+            GiveInventory("TLHChaingun", 1, true);
+            GiveInventory("HeavyChaingun", 1, true);
+            GiveInventory("TLHCompactSMG", 1, true);
+            GiveInventory("M60MachineGun", 1, true);
+
+            // Slots 5-9 and 0
+            GiveInventory("RecoilRocketLauncher", 1, true);
+            GiveInventory("RecoilPlasmaRifle", 1, true);
+            GiveInventory("RecoilBFG9000", 1, true);
+            GiveInventory("AMR99RailRifle", 1, true);
+            GiveInventory("HellfireProjector", 1, true);
+            GiveInventory("AirstrikeDesignator", 1, true);
+
+            player.PendingWeapon = savedPending;
+            return;
+        }
+
+        Super.CheatGive(name, amount);
     }
 
     // ========================================================================
