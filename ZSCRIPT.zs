@@ -4819,7 +4819,7 @@ class ServiceRevolver : Weapon
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
-            A_Print(String.Format("REVOLVER: {0}/6", invoker.cylinderAmmo));
+            A_Print(String.Format("REVOLVER: %d/6", invoker.cylinderAmmo));
         }
         Goto Ready;
 
@@ -4875,7 +4875,7 @@ class ServiceRevolver : Weapon
             if (!infinite && invoker.cylinderAmmo < 3)
             {
                 A_StartSound("weapons/sshoto", CHAN_WEAPON);
-                A_Print(String.Format("REVOLVER: FAN NEEDS 3 ROUNDS ({0}/6) | PRESS R", invoker.cylinderAmmo));
+                A_Print(String.Format("REVOLVER: FAN NEEDS 3 ROUNDS (%d/6) | PRESS R", invoker.cylinderAmmo));
                 return ResolveState("Ready");
             }
             return ResolveState("FanFire1");
@@ -7023,6 +7023,8 @@ class TacticalHUDHandler : EventHandler
     int hudArmor;
     int hudArmorMax;
     int hudClip;
+    int hudRevolverAmmo;
+    int hudRevolverReserve;
     int hudShell;
     int hudRocket;
     int hudCell;
@@ -7608,6 +7610,8 @@ class TacticalHUDHandler : EventHandler
         hudArmor = 0;
         hudArmorMax = 0;
         hudClip = 0;
+        hudRevolverAmmo = 0;
+        hudRevolverReserve = 0;
         hudShell = 0;
         hudRocket = 0;
         hudCell = 0;
@@ -7733,6 +7737,16 @@ class TacticalHUDHandler : EventHandler
             }
 
             hudWeaponName = ready.GetClassName();
+
+            if (ready is "ServiceRevolver")
+            {
+                let revolver = ServiceRevolver(ready);
+                if (revolver)
+                {
+                    hudRevolverAmmo = revolver.cylinderAmmo;
+                    hudRevolverReserve = hudClip;
+                }
+            }
 
             if (ready is "TLHChaingun")
             {
@@ -8630,10 +8644,20 @@ class TacticalHUDHandler : EventHandler
         // module, so its palette design visibly changes with the weapon.
         DrawProceduralWeaponHUD();
 
-        Text("BUL", 518, 306, dim, 0.21);
-        TextR(String.Format("%03d", hudClip), 555, 306, Font.CR_WHITE, 0.24);
-        Text("SHE", 564, 306, dim, 0.21);
-        TextR(String.Format("%03d", hudShell), 609, 306, Font.CR_WHITE, 0.24);
+        if (tlhVisorWeaponClass == "ServiceRevolver")
+        {
+            Text("CYL", 518, 306, dim, 0.21);
+            TextR(String.Format("%d/6", hudRevolverAmmo), 555, 306, Font.CR_WHITE, 0.24);
+            Text("RES", 564, 306, dim, 0.21);
+            TextR(String.Format("%03d", hudRevolverReserve), 609, 306, Font.CR_WHITE, 0.24);
+        }
+        else
+        {
+            Text("BUL", 518, 306, dim, 0.21);
+            TextR(String.Format("%03d", hudClip), 555, 306, Font.CR_WHITE, 0.24);
+            Text("SHE", 564, 306, dim, 0.21);
+            TextR(String.Format("%03d", hudShell), 609, 306, Font.CR_WHITE, 0.24);
+        }
 
         Text("RCK", 518, 317, dim, 0.21);
         TextR(String.Format("%03d", hudRocket), 555, 317, Font.CR_WHITE, 0.24);
