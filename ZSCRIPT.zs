@@ -21,10 +21,10 @@ const TLH_RAD_TO_DEG = 57.29577951308232;
 // pickups, game modes and HUD logic all agree on the same ceilings.
 const TLH_MAX_HEALTH = 800;
 const TLH_MAX_ARMOR = 600;
-const TLH_MAX_BULLETS = 600;
-const TLH_MAX_SHELLS = 200;
-const TLH_MAX_ROCKETS = 100;
-const TLH_MAX_CELLS = 1000;
+const TLH_MAX_BULLETS = 300;
+const TLH_MAX_SHELLS = 100;
+const TLH_MAX_ROCKETS = 50;
+const TLH_MAX_CELLS = 300;
 
 // The Last Hope gameplay modes. The actual selector is the user CVar
 // "tlh_gamemode" defined in CVARINFO.
@@ -298,7 +298,7 @@ class OfficerHeavyGrenade : Actor
         Radius 6;
         Height 6;
         Speed 35;
-        Damage 30;
+        Damage 20;
         Scale 0.4;
         Projectile;
         -NOGRAVITY
@@ -320,7 +320,7 @@ class OfficerHeavyGrenade : Actor
     Death:
         MISL B 4 Bright
         {
-            A_Explode(100, 160);
+            A_Explode(70, 128);
             A_StartSound("weapons/rocklx", CHAN_WEAPON);
             A_Quake(3, 8, 0, 300);
         }
@@ -412,7 +412,7 @@ class NapalmFireArea : Actor
     Spawn:
         BAL1 A 0 NoDelay
         {
-            duration = 140;
+            duration = 105;
             A_StartSound("weapons/rocklx", CHAN_BODY);
         }
         Goto Active;
@@ -420,9 +420,9 @@ class NapalmFireArea : Actor
     Active:
         BAL1 CDE 2 Bright
         {
-            A_Explode(18, 90, XF_NOTMISSILE);
+            A_Explode(4, 90, XF_NOTMISSILE);
             A_SpawnItemEx("SlideSmoke", random(-28, 28), random(-28, 28), random(0, 36), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
-            duration -= 6;
+            duration -= 2;
             if (duration <= 0) return ResolveState("Death");
             return ResolveState(null);
         }
@@ -1524,7 +1524,7 @@ class OfficerVulkanPistol : Weapon
         Weapon.AmmoType1 "Clip";
         Weapon.AmmoGive1 24;
         Weapon.AmmoUse1 1;
-        Weapon.AmmoType2 "Shell";
+        Weapon.AmmoType2 "RocketAmmo";
         Weapon.AmmoGive2 2;
         Weapon.AmmoUse2 1;
         Inventory.PickupMessage "I found an Officer's Vulkan Pistol!";
@@ -1691,11 +1691,11 @@ class OfficerVulkanPistol : Weapon
         {
             A_GunFlash();
             A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-            A_FireBullets(2.0, 0, 1, 40, "BulletPuff");
-            A_SetPitch(pitch - 6.5, SPF_INTERPOLATE);
+            A_FireBullets(2.0, 0, 1, 16, "BulletPuff");
+            A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Quake(4, 6, 0, 100);
-            A_Recoil(2);
+            A_Quake(1.5, 2.5, 0, 100);
+            A_Recoil(1.4);
         }
         PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
@@ -1706,11 +1706,11 @@ class OfficerVulkanPistol : Weapon
         {
             A_GunFlash();
             A_WeaponOffset(0, 38, WOF_INTERPOLATE);
-            A_FireBullets(3.0, 0, 1, 40, "BulletPuff");
-            A_SetPitch(pitch - 8.0, SPF_INTERPOLATE);
+            A_FireBullets(3.0, 0, 1, 12, "BulletPuff");
+            A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Quake(5, 8, 0, 100);
-            A_Recoil(3);
+            A_Quake(1.8, 3.0, 0, 100);
+            A_Recoil(1.8);
         }
         PISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG A 0 A_ReFire;
@@ -1728,13 +1728,13 @@ class OfficerVulkanPistol : Weapon
             {
                 double shotAngle = angle + FRandom(-2.8, 2.8);
                 double shotPitch = pitch + FRandom(-1.3, 1.3);
-                mo.LineAttack(shotAngle, 2048, shotPitch, 40, "Normal", "BulletPuff", 0, null, 0, 0, -20.0);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 14, "Normal", "BulletPuff", 0, null, 0, 0, -20.0);
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftFire");
-            A_SetPitch(pitch - 6.8, SPF_INTERPOLATE);
-            A_Quake(2, 4, 0, 80);
-            A_Recoil(2.5);
+            A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
+            A_Quake(1.2, 2.0, 0, 80);
+            A_Recoil(1.5);
             return ResolveState(null);
         }
         PISG B 2;
@@ -1757,13 +1757,13 @@ class OfficerVulkanPistol : Weapon
             {
                 double shotAngle = angle + FRandom(-2.8, 2.8);
                 double shotPitch = pitch + FRandom(-1.3, 1.3);
-                mo.LineAttack(shotAngle, 2048, shotPitch, 40, "Normal", "BulletPuff", 0, null, 0, 0, 20.0);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 14, "Normal", "BulletPuff", 0, null, 0, 0, 20.0);
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_GunFlash();
-            A_SetPitch(pitch - 6.8, SPF_INTERPOLATE);
-            A_Quake(2, 4, 0, 80);
-            A_Recoil(2.5);
+            A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
+            A_Quake(1.2, 2.0, 0, 80);
+            A_Recoil(1.5);
             return ResolveState(null);
         }
         PISG B 2;
@@ -1777,19 +1777,19 @@ class OfficerVulkanPistol : Weapon
     FireLauncher:
         PISG A 0
         {
-            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Shell") < 1)
+            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("RocketAmmo") < 1)
                 return ResolveState("ReadyLauncher");
 
             return ResolveState(null);
         }
         PISG B 5
         {
-            A_TakeInventory("Shell", 1, TIF_NOTAKEINFINITE);
+            A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
             A_FireProjectile("OfficerHeavyGrenade", useammo: false);
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
-            A_Quake(6, 10, 0, 200);
-            A_Recoil(5);
+            A_SetPitch(pitch - 4.5, SPF_INTERPOLATE);
+            A_Quake(3, 5, 0, 200);
+            A_Recoil(3.5);
         }
         PISG C 5;
         PISG A 5 A_ReFire;
@@ -2578,11 +2578,11 @@ class SemiAutoShotgun : Weapon
         ZHTG B 2
         {
             A_GunFlash();
-            A_FireBullets(7.0, 4.0, 8, 7, "BulletPuff");
+            A_FireBullets(7.0, 4.0, 8, 5, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 5.5, SPF_INTERPOLATE);
-            A_Recoil(3);
-            A_Quake(2, 5, 0, 100);
+            A_SetPitch(pitch - 3.5, SPF_INTERPOLATE);
+            A_Recoil(2.5);
+            A_Quake(1.4, 3.0, 0, 100);
         }
         ZHTG C 2;
         Goto Ready;
@@ -2598,21 +2598,21 @@ class SemiAutoShotgun : Weapon
         {
             A_TakeInventory("Shell", 3, TIF_NOTAKEINFINITE);
             A_GunFlash();
-            A_FireBullets(8.0, 4.0, 7, 7, "BulletPuff", 0);
+            A_FireBullets(8.0, 4.0, 7, 5, "BulletPuff", 0);
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
-            A_Recoil(3);
+            A_Recoil(2.5);
         }
         ZHTG B 2
         {
             A_GunFlash();
-            A_FireBullets(8.0, 4.0, 7, 7, "BulletPuff", 0);
+            A_FireBullets(8.0, 4.0, 7, 5, "BulletPuff", 0);
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
         ZHTG B 2
         {
             A_GunFlash();
-            A_FireBullets(8.0, 4.0, 7, 7, "BulletPuff", 0);
+            A_FireBullets(8.0, 4.0, 7, 5, "BulletPuff", 0);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
         ZHTG C 5;
@@ -2705,6 +2705,13 @@ class TLHChaingun : Chaingun replaces Chaingun
             "168:175=176:191",         // deep red -> stronger red
             "176:191=176:191",         // light red -> stronger red
             "192:255=64:79";           // remaining colors -> graphite
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (fireMode == PrimaryFire && burstMode)
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     // ------------------------------------------------------------------------
@@ -3142,7 +3149,7 @@ class HeavyChaingun : Weapon
                 return ResolveState("BurstFire");
             return ResolveState(null);
         }
-        CHGG A 1
+        CHGG A 2
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
@@ -3150,31 +3157,27 @@ class HeavyChaingun : Weapon
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
             A_Quake(0.35, 0.8, 0, 35);
         }
-        CHGG B 1
-        {
-            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
-            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
-        }
+        CHGG B 1;
         CHGG A 0 A_ReFire;
         Goto Ready;
 
     BurstFire:
         CHGG A 1
         {
-            A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
+            A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
         CHGG B 1;
         CHGG A 1
         {
-            A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
+            A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
         CHGG B 1;
         CHGG A 1
         {
-            A_FireBullets(3.0, 3.0, 1, 16, "BulletPuff");
+            A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
         CHGG B 4;
@@ -3223,6 +3226,14 @@ class TacticalM4A1 : DoomWeapon
         Weapon.AmmoUse2 1;
         Weapon.AmmoGive2 4;
         AttackSound "weapons/chngun";
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        // Three-round burst needs a full three-round reserve. Akimbo fires single shots.
+        if (fireMode == PrimaryFire && !dualWield && burstMode)
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
@@ -3346,7 +3357,7 @@ class TacticalM4A1 : DoomWeapon
                 if (invoker.burstMode)
                     return ResolveState("SetAuto");
 
-                return ResolveState("SetAuto");
+                return ResolveState("SetBurst");
             }
 
             return ResolveState("ReloadDecision");
@@ -3360,6 +3371,15 @@ class TacticalM4A1 : DoomWeapon
             A_Print("M4A1: FULL AUTO");
         }
         Goto FinishReload;
+    SetBurst:
+        ZHGG A 8
+        {
+            invoker.burstMode = true;
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Print("M4A1: 3-ROUND BURST");
+        }
+        Goto FinishReload;
+
     FinishReload:
         ZHGG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
         ZHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
@@ -3367,7 +3387,7 @@ class TacticalM4A1 : DoomWeapon
 
     Fire:
         // M4A1 retains its custom ZHGG weapon sprite family.
-        // Fast gameplay cadence: 1 tic base + 1 tic flash = 2 tics/shot.
+        // Controlled full-auto cadence of 3 tics per shot (~700 RPM at 35 tics/sec).
         // This is actual gameplay cadence, not only visual animation.
         ZHGG A 0
         {
@@ -3377,7 +3397,7 @@ class TacticalM4A1 : DoomWeapon
                 return ResolveState("FireBurst");
             return ResolveState(null);
         }
-        ZHGG A 1
+        ZHGG A 2
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
@@ -3388,19 +3408,19 @@ class TacticalM4A1 : DoomWeapon
 
     FireBurst:
         // Three-round burst. Each shot keeps the same readable A0/B0 animation.
-        ZHGG A 1
+        ZHGG A 2
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
         ZHGG B 1;
-        ZHGG A 1
+        ZHGG A 2
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
         ZHGG B 1;
-        ZHGG A 1
+        ZHGG A 2
         {
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
@@ -3904,6 +3924,14 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         Weapon.AmmoUse2 1;
     }
 
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        // Require all three rockets before starting a micro-missile volley.
+        if (fireMode == AltFire)
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+
     States
     {
     Ready:
@@ -4164,12 +4192,25 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         Goto Ready;
 
     Zoom:
+        PLSG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 7))
+                return ResolveState("Ready");
+            return ResolveState("PlasmaSpread");
+        }
+    PlasmaSpread:
         PLSG A 4 A_StartSound("weapons/sshoto", CHAN_WEAPON);
         PLSG B 4
         {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite)
+                A_TakeInventory("Cell", 7, TIF_NOTAKEINFINITE);
             for (int i = -3; i <= 3; i++)
             {
-                A_FireProjectile("PlasmaBall", i * 5, 0);
+                A_FireProjectile("PlasmaBall", i * 5, false);
             }
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
         }
@@ -4779,10 +4820,10 @@ class StreetSweeperShotgun : Weapon
         SHTG B 0 A_GunFlash;
         SHTG B 5
         {
-            A_FireBullets(7.0, 5.5, 12, 6, "BulletPuff");
+            A_FireBullets(7.0, 5.5, 10, 5, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
-            A_Recoil(7.0);
+            A_Recoil(5.5);
         }
         SHTG C 3 A_ReFire;
         Goto Ready;
@@ -4791,10 +4832,10 @@ class StreetSweeperShotgun : Weapon
         SHTG B 0 A_GunFlash;
         SHTG B 8
         {
-            A_FireBullets(4.5, 3.5, 18, 5, "BulletPuff");
+            A_FireBullets(4.5, 3.5, 14, 5, "BulletPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(11.0);
+            A_Recoil(8.0);
         }
         SHTG C 5;
         Goto Ready;
@@ -6743,7 +6784,7 @@ class TLHCompactSMG : Weapon
         ZHGG A 0 A_ReFire;
         Goto Ready;
 
-    // Three-round burst. Each A_FireBullets call consumes one Clip normally.
+    // Three-round burst. Each shot consumes one Clip; per-shot damage matches primary fire.
     AltFire:
         ZHGG A 0
         {
@@ -6756,7 +6797,7 @@ class TLHCompactSMG : Weapon
         ZHGG A 1
         {
             A_GunFlash();
-            A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
+            A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Recoil(2.0);
         }
@@ -6764,7 +6805,7 @@ class TLHCompactSMG : Weapon
         ZHGG A 1
         {
             A_GunFlash();
-            A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
+            A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Recoil(2.0);
         }
@@ -6772,7 +6813,7 @@ class TLHCompactSMG : Weapon
         ZHGG A 1
         {
             A_GunFlash();
-            A_FireBullets(5.0, 3.0, 1, 7, "BulletPuff");
+            A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Recoil(2.0);
         }
