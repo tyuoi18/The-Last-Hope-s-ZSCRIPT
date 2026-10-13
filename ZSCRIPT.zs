@@ -2672,8 +2672,8 @@ class SemiAutoShotgun : Weapon
 
 // ==========================================
 // TLH TACTICAL CHAINGUN - OVERHEAT SYSTEM
-// Uses the custom TCHG/TCHF HUD family and the TLH ZGUN pickup sprite.
-// Keep Doom II's vanilla CHGG/CHGF/MGUN sprites separate for HeavyChaingun.
+// Uses TCHG/TCHF for its first-person HUD and the vanilla MGUN pickup sprite.
+// Shares the same ground sprite with HeavyChaingun.
 // ==========================================
 
 class TLHChaingun : Chaingun replaces Chaingun
@@ -3045,7 +3045,7 @@ class TLHChaingun : Chaingun replaces Chaingun
         Goto LightDone;
 
     Spawn:
-        TCHD A -1;
+        MGUN A -1;
         Stop;
     }
 
@@ -3057,7 +3057,7 @@ class TLHChaingun : Chaingun replaces Chaingun
 /* HEAVY CHAINGUN
    Standalone class: do not inherit from a nonexistent HeavyChaingun base.
    HUD: CHGG/CHGF (vanilla family), recolored to darker gunmetal and stretched vertically.
-   Pickup: TCHD, the dedicated TLH chaingun drop sprite. M4A1 keeps ZHGG/ZGUN.
+   Pickup: vanilla MGUN sprite, shared with the replaced vanilla Chaingun. M4A1 keeps ZHGG/ZGUN.
 */
 class HeavyChaingun : Weapon
 {
@@ -4726,22 +4726,21 @@ class ServiceRevolver : Weapon
             if (invoker.triggerLatched || invoker.altTriggerLatched)
                 readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
 
-            A_OverlayOffset(PSP_WEAPON,
-                sin(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.18,
-                32 + cos(level.time * 0.024 * TLH_RAD_TO_DEG) * 0.08, 0);
-            A_OverlayRotate(PSP_WEAPON,
-                sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.12);
+            // Keep the standard weapon bob. A_WeaponReady resets the overlay
+            // offset every tic, so layering custom sinusoidal offsets here causes jitter.
             A_WeaponReady(readyFlags);
         }
         Loop;
 
     Deselect:
-        RVOL Q 1
+        // Reset recoil pose once before lowering; resetting the offset every tic
+        // fights A_Lower and can leave the revolver permanently selected.
+        RVOL Q 0
         {
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayOffset(PSP_WEAPON, 0, 32);
-            A_Lower();
         }
+        RVOL Q 1 A_Lower;
         Loop;
 
     Select:
@@ -4750,6 +4749,7 @@ class ServiceRevolver : Weapon
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         RVOL Q 1 A_Raise;
