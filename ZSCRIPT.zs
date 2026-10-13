@@ -1691,7 +1691,7 @@ class OfficerVulkanPistol : Weapon
         {
             A_GunFlash();
             A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-            A_FireBullets(2.0, 0, 1, 16, "BulletPuff");
+            A_FireBullets(2.0, 0, 1, 8, "BulletPuff");
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Quake(1.5, 2.5, 0, 100);
@@ -1706,7 +1706,7 @@ class OfficerVulkanPistol : Weapon
         {
             A_GunFlash();
             A_WeaponOffset(0, 38, WOF_INTERPOLATE);
-            A_FireBullets(3.0, 0, 1, 12, "BulletPuff");
+            A_FireBullets(3.0, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Quake(1.8, 3.0, 0, 100);
@@ -1728,7 +1728,7 @@ class OfficerVulkanPistol : Weapon
             {
                 double shotAngle = angle + FRandom(-2.8, 2.8);
                 double shotPitch = pitch + FRandom(-1.3, 1.3);
-                mo.LineAttack(shotAngle, 2048, shotPitch, 14, "Normal", "BulletPuff", 0, null, 0, 0, -20.0);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 8, "Normal", "BulletPuff", 0, null, 0, 0, -20.0);
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftFire");
@@ -1757,7 +1757,7 @@ class OfficerVulkanPistol : Weapon
             {
                 double shotAngle = angle + FRandom(-2.8, 2.8);
                 double shotPitch = pitch + FRandom(-1.3, 1.3);
-                mo.LineAttack(shotAngle, 2048, shotPitch, 14, "Normal", "BulletPuff", 0, null, 0, 0, 20.0);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 8, "Normal", "BulletPuff", 0, null, 0, 0, 20.0);
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_GunFlash();
@@ -2012,6 +2012,14 @@ class RecoilShotgun : Shotgun replaces Shotgun
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "Shell";
         Weapon.AmmoUse2 1;
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        // Three flak grenades are fired per alternate trigger; require the full volley.
+        if (fireMode == AltFire)
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
@@ -2575,7 +2583,7 @@ class SemiAutoShotgun : Weapon
             return ResolveState(null);
         }
         ZHTG A 2;
-        ZHTG B 2
+        ZHTG B 3
         {
             A_GunFlash();
             A_FireBullets(7.0, 4.0, 8, 5, "BulletPuff");
@@ -4820,7 +4828,7 @@ class StreetSweeperShotgun : Weapon
         SHTG B 0 A_GunFlash;
         SHTG B 5
         {
-            A_FireBullets(7.0, 5.5, 10, 5, "BulletPuff");
+            A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
             A_Recoil(5.5);
@@ -4832,7 +4840,7 @@ class StreetSweeperShotgun : Weapon
         SHTG B 0 A_GunFlash;
         SHTG B 8
         {
-            A_FireBullets(4.5, 3.5, 14, 5, "BulletPuff");
+            A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Recoil(8.0);
@@ -6794,7 +6802,7 @@ class TLHCompactSMG : Weapon
             return ResolveState("SMGBurst");
         }
     SMGBurst:
-        ZHGG A 1
+        ZHGG A 2
         {
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
@@ -6802,7 +6810,7 @@ class TLHCompactSMG : Weapon
             A_Recoil(2.0);
         }
         ZHGG B 1;
-        ZHGG A 1
+        ZHGG A 2
         {
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
@@ -6810,7 +6818,7 @@ class TLHCompactSMG : Weapon
             A_Recoil(2.0);
         }
         ZHGG B 1;
-        ZHGG A 1
+        ZHGG A 2
         {
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
