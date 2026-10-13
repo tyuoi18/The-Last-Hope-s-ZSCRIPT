@@ -4857,16 +4857,30 @@ class ServiceRevolver : Weapon
             // Flags 0 prevent the engine from spending the shared reserve a second time.
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.4, SPF_INTERPOLATE);
-            A_Recoil(1.8);
-            A_Quake(0.35, 0.7, 0, 20);
+            A_SetPitch(pitch - 3.6, SPF_INTERPOLATE);
+            A_Recoil(3.8);
+            A_Quake(0.8, 1.3, 0, 20);
+            A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
 
             if (!infinite && invoker.cylinderAmmo == 1)
                 A_Print("REVOLVER: LAST ROUND");
             else if (!infinite && invoker.cylinderAmmo == 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
-        RVOL C 6;
+        RVOL C 2
+        {
+            A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.0);
+        }
+        RVOL Q 4
+        {
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
         Goto Ready;
 
     // Fan the Hammer: three fast, progressively less accurate shots. It uses
@@ -4887,40 +4901,82 @@ class ServiceRevolver : Weapon
             return ResolveState("FanFire1");
         }
     FanFire1:
+        // M4A1-style burst rhythm: show the pre-shot A frame for one tic,
+        // then the B firing frame; repeat for each cartridge.
         RVOL A 1
+        {
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
+        RVOL B 1
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite) invoker.cylinderAmmo--;
             A_FireBullets(0.7, 0.3, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.7, SPF_INTERPOLATE);
-            A_Quake(0.18, 0.4, 0, 12);
+            A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
+            A_Recoil(1.4);
+            A_Quake(0.3, 0.55, 0, 12);
+            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -2.4);
         }
-        RVOL B 2
+        RVOL A 1
+        {
+            A_WeaponOffset(0, 33, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -0.8);
+        }
+        RVOL B 1
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite) invoker.cylinderAmmo--;
             A_FireBullets(1.8, 0.7, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.9, SPF_INTERPOLATE);
-            A_Quake(0.22, 0.45, 0, 14);
+            A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
+            A_Recoil(1.7);
+            A_Quake(0.35, 0.65, 0, 14);
+            A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
         }
-        RVOL C 2
+        RVOL A 1
+        {
+            A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.0);
+        }
+        RVOL B 1
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite) invoker.cylinderAmmo--;
             A_FireBullets(3.0, 1.0, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 1.1, SPF_INTERPOLATE);
-            A_Quake(0.28, 0.5, 0, 16);
-
+            A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
+            A_Recoil(2.1);
+            A_Quake(0.45, 0.8, 0, 16);
+            A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.8);
             if (!infinite && invoker.cylinderAmmo <= 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
-        RVOL Q 6;
+        RVOL C 3
+        {
+            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.3);
+        }
+        RVOL Q 4
+        {
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
         Goto Ready;
 
     Spawn:
@@ -8652,10 +8708,11 @@ class TacticalHUDHandler : EventHandler
 
         if (tlhVisorWeaponClass == "ServiceRevolver")
         {
-            Text("CYL", 518, 306, dim, 0.21);
-            TextR(String.Format("%d/6", hudRevolverAmmo), 555, 306, Font.CR_WHITE, 0.24);
-            Text("RES", 564, 306, dim, 0.21);
-            TextR(String.Format("%03d", hudRevolverReserve), 609, 306, Font.CR_WHITE, 0.24);
+            Text("CYLINDER", 518, 306, dim, 0.21);
+            TextR(String.Format("%02d/06", hudRevolverAmmo), 609, 306,
+                hudRevolverAmmo <= 1 ? warn : Font.CR_WHITE, 0.25);
+            Text("RESERVE", 518, 317, dim, 0.21);
+            TextR(String.Format("%03d", hudRevolverReserve), 609, 317, Font.CR_WHITE, 0.23);
         }
         else
         {
@@ -8663,12 +8720,12 @@ class TacticalHUDHandler : EventHandler
             TextR(String.Format("%03d", hudClip), 555, 306, Font.CR_WHITE, 0.24);
             Text("SHE", 564, 306, dim, 0.21);
             TextR(String.Format("%03d", hudShell), 609, 306, Font.CR_WHITE, 0.24);
-        }
 
-        Text("RCK", 518, 317, dim, 0.21);
-        TextR(String.Format("%03d", hudRocket), 555, 317, Font.CR_WHITE, 0.24);
-        Text("CEL", 564, 317, dim, 0.21);
-        TextR(String.Format("%03d", hudCell), 609, 317, Font.CR_WHITE, 0.24);
+            Text("RCK", 518, 317, dim, 0.21);
+            TextR(String.Format("%03d", hudRocket), 555, 317, Font.CR_WHITE, 0.24);
+            Text("CEL", 564, 317, dim, 0.21);
+            TextR(String.Format("%03d", hudCell), 609, 317, Font.CR_WHITE, 0.24);
+        }
 
         Text("HOST", 518, 328, dim, 0.21);
         TextR(String.Format("%03d", hudLiveEnemies), 555, 328,
