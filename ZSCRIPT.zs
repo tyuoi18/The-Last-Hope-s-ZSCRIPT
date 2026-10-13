@@ -4650,6 +4650,7 @@ class ServiceRevolver : Weapon
     bool cylinderInitialized;
     bool triggerLatched;
     bool altTriggerLatched;
+    bool reloadLatched;
 
     Default
     {
@@ -4714,10 +4715,14 @@ class ServiceRevolver : Weapon
             // turn the weapon into a slow automatic rifle.
             if (!(player.cmd.buttons & BT_ATTACK))
                 invoker.triggerLatched = false;
+            if (!(player.cmd.buttons & BT_RELOAD))
+                invoker.reloadLatched = false;
             if (!(player.cmd.buttons & BT_ALTATTACK))
                 invoker.altTriggerLatched = false;
 
-            int readyFlags = WRF_ALLOWRELOAD;
+            int readyFlags = 0;
+            if (!invoker.reloadLatched)
+                readyFlags |= WRF_ALLOWRELOAD;
             if (invoker.triggerLatched || invoker.altTriggerLatched)
                 readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
 
@@ -4756,6 +4761,7 @@ class ServiceRevolver : Weapon
     Reload:
         RVOL Q 0
         {
+            invoker.reloadLatched = true;
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
 
