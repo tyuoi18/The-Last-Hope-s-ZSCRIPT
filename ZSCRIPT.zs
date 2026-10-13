@@ -2019,7 +2019,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
     Ready:
         SHTG A 0
         {
-            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
+            A_OverlayScale(PSP_WEAPON, 0.92, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
@@ -4641,7 +4641,7 @@ class ServiceRevolver : Weapon
     Ready:
         RVOL Q 0
         {
-            A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
+            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
@@ -4663,7 +4663,7 @@ class ServiceRevolver : Weapon
     Select:
         RVOL Q 0
         {
-            A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
+            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
