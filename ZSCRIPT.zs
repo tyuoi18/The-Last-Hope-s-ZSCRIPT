@@ -4639,13 +4639,13 @@ class ServiceRevolver : Weapon
     States
     {
     Ready:
-        REV Q 0
+        RVOL Q 0
         {
             A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        REV Q 1
+        RVOL Q 1
         {
             A_OverlayOffset(PSP_WEAPON,
                 sin(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.22,
@@ -4657,24 +4657,24 @@ class ServiceRevolver : Weapon
         Loop;
 
     Deselect:
-        REV Q 1 A_Lower;
+        RVOL Q 1 A_Lower;
         Loop;
 
     Select:
-        REV Q 0
+        RVOL Q 0
         {
             A_OverlayScale(PSP_WEAPON, 0.92, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        REV Q 1 A_Raise;
+        RVOL Q 1 A_Raise;
         Loop;
 
     // Primary fire: precise, heavy single shot.
     // REVA is the muzzle/trigger frame, REVB is the shot, REVC is recoil recovery.
     Fire:
-        REV A 1;
-        REV B 1
+        RVOL A 1;
+        RVOL B 1
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
@@ -4697,40 +4697,40 @@ class ServiceRevolver : Weapon
                 A_Quake(0.25, 0.65, 0, 20);
             }
         }
-        REV C 2;
-        REV Q 1 A_ReFire;
+        RVOL C 2;
+        RVOL Q 1 A_ReFire;
         Goto Ready;
 
     // Secondary fire: "Fan the Hammer". Three fast shots, each with
     // progressively wider spread. Weapon.AmmoUse2 handles the three-round cost.
     AltFire:
-        REV A 1
+        RVOL A 1
         {
             A_FireBullets(0.8, 0.3, 1, 3, "BulletPuff");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.7, SPF_INTERPOLATE);
             A_Quake(0.18, 0.4, 0, 12);
         }
-        REV B 1
+        RVOL B 1
         {
             A_FireBullets(1.8, 0.7, 1, 3, "BulletPuff");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
             A_Quake(0.22, 0.45, 0, 14);
         }
-        REV C 2
+        RVOL C 2
         {
             A_FireBullets(3.0, 1.0, 1, 3, "BulletPuff");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.9, SPF_INTERPOLATE);
             A_Quake(0.28, 0.5, 0, 16);
         }
-        REV Q 4;
+        RVOL Q 4;
         Goto Ready;
 
     // Custom world pickup sprite: lump REVG0.
     Spawn:
-        REV G -1;
+        RVOL G -1;
         Stop;
     }
 }
