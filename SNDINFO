@@ -1,0 +1,7 @@
+// Player corpse reaction voice lines.
+// Audio lumps must exist in the WAD with these exact names.
+REAC01 REAC01
+REAC02 REAC02
+REAC03 REAC03
+REAC04 REAC04
+REAC05 REAC05
