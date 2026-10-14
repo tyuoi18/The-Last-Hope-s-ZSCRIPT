@@ -4745,13 +4745,19 @@ class ServiceRevolver : Weapon
         Loop;
 
     Deselect:
-        // Normalize the weapon PSprite before lowering it. Offset calls used by
-        // recoil/reload are absolute, and a switch can interrupt them mid-frame.
-        // Clear interpolation so the interrupted pose cannot blend back upward.
+        // Auto-switch may interrupt any recoil, fan-fire, or reload frame.
+        // Normalize the actual PSprite and clear its interpolation history
+        // before A_Lower, so it cannot blend toward the interrupted old pose.
         RVOL Q 0
         {
-            A_OverlayOffset(PSP_WEAPON, 0, WEAPONTOP);
-            A_OverlayRotate(PSP_WEAPON, 0);
+            PSprite weaponPSP = player ? player.GetPSprite(PSP_WEAPON) : null;
+            if (weaponPSP)
+            {
+                weaponPSP.x = 0;
+                weaponPSP.y = WEAPONTOP;
+                weaponPSP.rotation = 0;
+                weaponPSP.ResetInterpolation();
+            }
         }
         RVOL Q 1 A_Lower;
         Loop;
@@ -5601,10 +5607,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return (0, 0);
 
         double speed = Vel.XY.Length();
-        // The revolver's idle state is deliberately static. Its recoil/reload
-        // states already animate the weapon, so stationary gait phase must not
-        // make the sprite tremble vertically between shots.
-        if (weapon is "ServiceRevolver" && speed < 0.45)
+        // The revolver has authored recoil/reload offsets of its own. Do not
+        // layer the player's procedural bob over those offsets, while moving or
+        // standing still; that second transform is what causes vertical jitter.
+        if (weapon is "ServiceRevolver")
             return (0, 0);
         double speed01 = clamp(speed / 18.0, 0.0, 1.0);
         double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
