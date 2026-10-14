@@ -4733,23 +4733,21 @@ class ServiceRevolver : Weapon
         Loop;
 
     Deselect:
-        // Restore the default weapon pose once before A_Lower runs. This matters
-        // when auto-switch interrupts the last-shot recoil frames.
-        RVOL Q 0
-        {
-            A_WeaponOffset(0, 32);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
+        // Let the engine lower the weapon from its current pose. Do not snap
+        // its y coordinate back to WEAPONTOP: auto-switch can interrupt any
+        // recoil/reload frame, and A_Lower must continue from that frame.
+        RVOL Q 0 A_OverlayRotate(PSP_WEAPON, 0);
         RVOL Q 1 A_Lower;
         Loop;
 
     Select:
+        // A_Raise resets the PSprite when it begins bringing the weapon up.
+        // Avoid writing a second, competing y coordinate during the transition.
         RVOL Q 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_WeaponOffset(0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         RVOL Q 1 A_Raise;
@@ -4781,15 +4779,11 @@ class ServiceRevolver : Weapon
             return ResolveState(null);
         }
         RVOL Q 5
-        {
-            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 2, 39, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 2, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -4.0);
         }
         RVOL Q 8
-        {
-            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 4, 43, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 4, 43, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -9.0);
         }
         RVOL Q 10
@@ -4815,15 +4809,11 @@ class ServiceRevolver : Weapon
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
         }
         RVOL Q 7
-        {
-            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 1, 36, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 1, 36, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL Q 5
-        {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_Print(String.Format("REVOLVER: %d/6", invoker.cylinderAmmo));
         }
@@ -4858,10 +4848,7 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.6, SPF_INTERPOLATE);
-            A_Recoil(3.8);
-
-            A_WeaponOffset(0, 40, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_Recoil(3.8);            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
 
             if (!infinite && invoker.cylinderAmmo == 1)
@@ -4870,15 +4857,11 @@ class ServiceRevolver : Weapon
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 2
-        {
-            A_WeaponOffset(0, 35, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         RVOL Q 4
-        {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         Goto Ready;
@@ -4904,9 +4887,7 @@ class ServiceRevolver : Weapon
         // M4A1-style burst rhythm: show the pre-shot A frame for one tic,
         // then the B firing frame; repeat for each cartridge.
         RVOL A 1
-        {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         RVOL B 1
@@ -4917,16 +4898,11 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.7, 0.3, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
-            A_Recoil(1.4);
-
-            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
+            A_Recoil(1.4);            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -2.4);
         }
         RVOL A 1
-        {
-            A_WeaponOffset(0, 33, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.8);
         }
         RVOL B 1
@@ -4937,16 +4913,11 @@ class ServiceRevolver : Weapon
             A_FireBullets(1.8, 0.7, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
-            A_Recoil(1.7);
-
-            A_WeaponOffset(0, 40, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_Recoil(1.7);            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL A 1
-        {
-            A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         RVOL B 1
@@ -4957,24 +4928,17 @@ class ServiceRevolver : Weapon
             A_FireBullets(3.0, 1.0, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_Recoil(2.1);
-
-            A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
+            A_Recoil(2.1);            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.8);
             if (!infinite && invoker.cylinderAmmo <= 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 3
-        {
-            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.3);
         }
         RVOL Q 4
-        {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         Goto Ready;
@@ -5615,7 +5579,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!weapon || weapon.bDontBob)
             return (0, 0);
 
+        // Never apply custom weapon bob while the engine is switching weapons.
+        // Otherwise the old PSprite's moving bob is layered over A_Lower/A_Raise.
+        if (player.PendingWeapon != WP_NOCHANGE)
+            return (0, 0);
+
         double speed = Vel.XY.Length();
+        // The revolver's idle state is deliberately static. Its recoil/reload
+        // states already animate the weapon, so stationary gait phase must not
+        // make the sprite tremble vertically between shots.
+        if (weapon is "ServiceRevolver" && speed < 0.45)
+            return (0, 0);
         double speed01 = clamp(speed / 18.0, 0.0, 1.0);
         double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
         double phase = tlhAnimStepPhase +
