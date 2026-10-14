@@ -5048,6 +5048,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool wasOnGround;
     bool akimboButtonHeld;
 
+    // Player-corpse smell reaction, owned by the active player pawn.
+    Actor tlhCorpseReactionTarget;
+    int tlhCorpseReactionStayTics;
+    int tlhCorpseReactionSoundTics;
+    bool tlhCorpseReactionPlayed;
+
     // Centralized dual-wield state. Activation comes from the custom KEYCONF
     // netevent, so R keeps its existing gameplay behavior completely untouched.
     bool tlhDualWieldActive;
@@ -5309,6 +5315,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
         }
 
+        // Drive corpse reactions directly from the living local pawn.
+        // This does not depend on the HUD handler's consoleplayer cache.
+        UpdateTLHCorpseSmellReaction();
+
         // Tactical armor ceiling is TLH_MAX_ARMOR. Individual game modes can lower it.
         let arm = BasicArmor(FindInventory("BasicArmor"));
         if (arm)
@@ -5491,6 +5501,103 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         UpdateTLHProceduralMotion(onGround, bt, obt);
 
         wasOnGround = onGround;
+    }
+
+    // ========================================================================
+    // PLAYER CORPSE SMELL REACTION
+    // ========================================================================
+    void UpdateTLHCorpseSmellReaction()
+    {
+        if (!player || player.playerstate != PST_LIVE || Health <= 0)
+            return;
+
+        // Wait out a reaction before considering another sound. Tics are used
+        // instead of checking actor-owned sound channels, since this is a 2D
+        // local reaction that is not attached to the corpse.
+        if (tlhCorpseReactionSoundTics > 0)
+        {
+            tlhCorpseReactionSoundTics--;
+            return;
+        }
+
+        Actor closestCorpse = null;
+        double closestDistSq = 72.0 * 72.0;
+
+        ThinkerIterator corpseIt = ThinkerIterator.Create("Actor");
+        Actor candidate;
+        while ((candidate = Actor(corpseIt.Next())) != null)
+        {
+            if (candidate == self || !(candidate is "PlayerPawn") || candidate.Health > 0)
+                continue;
+
+            double dz = abs(candidate.Pos.Z - Pos.Z);
+            if (dz > 64.0)
+                continue;
+
+            double dx = candidate.Pos.X - Pos.X;
+            double dy = candidate.Pos.Y - Pos.Y;
+            double distSq = dx * dx + dy * dy;
+
+            if (distSq <= closestDistSq)
+            {
+                closestDistSq = distSq;
+                closestCorpse = candidate;
+            }
+        }
+
+        if (!closestCorpse)
+        {
+            tlhCorpseReactionTarget = null;
+            tlhCorpseReactionStayTics = 0;
+            tlhCorpseReactionPlayed = false;
+            return;
+        }
+
+        if (closestCorpse != tlhCorpseReactionTarget)
+        {
+            tlhCorpseReactionTarget = closestCorpse;
+            tlhCorpseReactionStayTics = 0;
+            tlhCorpseReactionPlayed = false;
+        }
+
+        if (tlhCorpseReactionPlayed)
+            return;
+
+        tlhCorpseReactionStayTics++;
+        if (tlhCorpseReactionStayTics < 42) // about 1.2 seconds
+            return;
+
+        // Keep IDs literal so the sound linker can resolve them at compile/load.
+        int pick = random(1, 5);
+        double soundLength = 0.0;
+        switch (pick)
+        {
+            case 1:
+                S_StartSound("REAC01", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC01");
+                break;
+            case 2:
+                S_StartSound("REAC02", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC02");
+                break;
+            case 3:
+                S_StartSound("REAC03", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC03");
+                break;
+            case 4:
+                S_StartSound("REAC04", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC04");
+                break;
+            default:
+                S_StartSound("REAC05", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC05");
+                break;
+        }
+
+        tlhCorpseReactionSoundTics = soundLength > 0.0
+            ? max(1, int(soundLength * 35.0) + 2)
+            : 70;
+        tlhCorpseReactionPlayed = true;
     }
 
     // ========================================================================
@@ -7089,13 +7196,6 @@ class TacticalHUDHandler : EventHandler
     double hudAltitude;
     bool hudOnGround;
 
-    // Local player reaction to a nearby dead PlayerPawn. One line per approach;
-    // the selected line is allowed to finish before another can be triggered.
-    Actor tlhReacCorpse;
-    int tlhReacStayTics;
-    int tlhReacSoundTics;
-    bool tlhReacPlayedNearCorpse;
-
     // Target-under-crosshair cache. Sampled in WorldTick, drawn in UI context.
     Actor tlhAimTarget;
     String tlhAimTargetName;
@@ -7651,86 +7751,6 @@ class TacticalHUDHandler : EventHandler
         tlhFacePreviousHealth = currentHealth;
     }
 
-    void UpdatePlayerCorpseReaction(Actor p, Actor nearestCorpse)
-    {
-        // S_GetLength reports seconds. Convert to game tics so REAC sounds never
-        // overlap, even if the player stays beside the corpse.
-        if (tlhReacSoundTics > 0)
-        {
-            tlhReacSoundTics--;
-            return;
-        }
-
-        if (!p || !p.player || p.Health <= 0 || p.player.playerstate != PST_LIVE)
-        {
-            tlhReacCorpse = null;
-            tlhReacStayTics = 0;
-            tlhReacPlayedNearCorpse = false;
-            return;
-        }
-
-        if (!nearestCorpse)
-        {
-            tlhReacCorpse = null;
-            tlhReacStayTics = 0;
-            tlhReacPlayedNearCorpse = false;
-            return;
-        }
-
-        if (nearestCorpse != tlhReacCorpse)
-        {
-            tlhReacCorpse = nearestCorpse;
-            tlhReacStayTics = 0;
-            tlhReacPlayedNearCorpse = false;
-        }
-
-        if (tlhReacPlayedNearCorpse)
-            return;
-
-        // About 1.2 seconds of continuous proximity before reacting.
-        tlhReacStayTics++;
-        if (tlhReacStayTics < 42)
-            return;
-
-        // Use literal sound IDs and the global sound API. A_StartSound with
-        // CHANF_LOCAL on the player pawn can be filtered by CheckLocalView(),
-        // and a dynamically formatted String may fail to resolve as a Sound ID.
-        // The sound itself is 2D, so it is audible even when the corpse is silent.
-        int reactionIndex = random(1, 5);
-        double soundLength = 0.0;
-
-        switch (reactionIndex)
-        {
-            case 1:
-                S_StartSound("REAC01", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
-                soundLength = S_GetLength("REAC01");
-                break;
-            case 2:
-                S_StartSound("REAC02", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
-                soundLength = S_GetLength("REAC02");
-                break;
-            case 3:
-                S_StartSound("REAC03", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
-                soundLength = S_GetLength("REAC03");
-                break;
-            case 4:
-                S_StartSound("REAC04", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
-                soundLength = S_GetLength("REAC04");
-                break;
-            default:
-                S_StartSound("REAC05", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
-                soundLength = S_GetLength("REAC05");
-                break;
-        }
-
-        if (soundLength > 0.0)
-            tlhReacSoundTics = max(1, int(soundLength * 35.0) + 2);
-        else
-            tlhReacSoundTics = 70; // fallback if the sound length cannot be queried
-
-        tlhReacPlayedNearCorpse = true;
-    }
-
     override void WorldTick(){
         // --------------------------------------------------------------------
         // Sample all HUD data in play context.
@@ -7915,28 +7935,8 @@ class TacticalHUDHandler : EventHandler
 
         ThinkerIterator it = ThinkerIterator.Create("Actor");
         Actor mo;
-        Actor nearestPlayerCorpse = null;
-        double nearestPlayerCorpseDistanceSquared = 64.0 * 64.0;
-
         while ((mo = Actor(it.Next())) != null)
         {
-            // React only to actual player bodies, never ordinary monster corpses.
-            if (mo != p && mo is "PlayerPawn" && mo.Health <= 0)
-            {
-                double corpseDZ = abs(mo.Pos.Z - p.Pos.Z);
-                if (corpseDZ <= 48.0)
-                {
-                    double corpseDX = mo.Pos.X - p.Pos.X;
-                    double corpseDY = mo.Pos.Y - p.Pos.Y;
-                    double corpseDistanceSquared = corpseDX * corpseDX + corpseDY * corpseDY;
-                    if (corpseDistanceSquared <= nearestPlayerCorpseDistanceSquared)
-                    {
-                        nearestPlayerCorpseDistanceSquared = corpseDistanceSquared;
-                        nearestPlayerCorpse = mo;
-                    }
-                }
-            }
-
             if (mo.bIsMonster && mo.Health > 0)
             {
                 hudLiveEnemies++;
@@ -7987,7 +7987,6 @@ class TacticalHUDHandler : EventHandler
             }
         }
 
-        UpdatePlayerCorpseReaction(p, nearestPlayerCorpse);
     }
 
 
