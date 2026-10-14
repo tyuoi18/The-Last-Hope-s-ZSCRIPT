@@ -7692,15 +7692,41 @@ class TacticalHUDHandler : EventHandler
         if (tlhReacStayTics < 42)
             return;
 
+        // Use literal sound IDs and the global sound API. A_StartSound with
+        // CHANF_LOCAL on the player pawn can be filtered by CheckLocalView(),
+        // and a dynamically formatted String may fail to resolve as a Sound ID.
+        // The sound itself is 2D, so it is audible even when the corpse is silent.
         int reactionIndex = random(1, 5);
-        String reactionSound = String.Format("REAC%02d", reactionIndex);
-        p.A_StartSound(reactionSound, CHAN_VOICE, CHANF_LOCAL);
+        double soundLength = 0.0;
 
-        double soundLength = S_GetLength(reactionSound);
+        switch (reactionIndex)
+        {
+            case 1:
+                S_StartSound("REAC01", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC01");
+                break;
+            case 2:
+                S_StartSound("REAC02", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC02");
+                break;
+            case 3:
+                S_StartSound("REAC03", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC03");
+                break;
+            case 4:
+                S_StartSound("REAC04", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC04");
+                break;
+            default:
+                S_StartSound("REAC05", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                soundLength = S_GetLength("REAC05");
+                break;
+        }
+
         if (soundLength > 0.0)
             tlhReacSoundTics = max(1, int(soundLength * 35.0) + 2);
         else
-            tlhReacSoundTics = 70; // fallback: two seconds if length is unavailable
+            tlhReacSoundTics = 70; // fallback if the sound length cannot be queried
 
         tlhReacPlayedNearCorpse = true;
     }
@@ -7895,8 +7921,7 @@ class TacticalHUDHandler : EventHandler
         while ((mo = Actor(it.Next())) != null)
         {
             // React only to actual player bodies, never ordinary monster corpses.
-            if (mo != p && mo is "PlayerPawn" && mo.Health <= 0 &&
-                (mo.bCorpse || (mo.player && mo.player.playerstate == PST_DEAD)))
+            if (mo != p && mo is "PlayerPawn" && mo.Health <= 0)
             {
                 double corpseDZ = abs(mo.Pos.Z - p.Pos.Z);
                 if (corpseDZ <= 48.0)
