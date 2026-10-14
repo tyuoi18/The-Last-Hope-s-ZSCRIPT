@@ -4742,45 +4742,22 @@ class ServiceRevolver : Weapon
             if (invoker.triggerLatched || invoker.altTriggerLatched)
                 readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
 
-            // A_WeaponReady normally resets the PSprite to WEAPONTOP every tic.
-            // The revolver animates its own offsets, so disable that native reset
-            // and let the explicit recovery states restore the neutral pose.
+            // Primitive look sway: subtle and smoothed by TacticalPlayer's
+            // existing look-inertia variables. WRF_NoBob keeps A_WeaponReady
+            // from overwriting these offsets immediately afterward.
+            let tp = TacticalPlayer(player.mo);
+            double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
+            double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
+            A_OverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
             A_WeaponReady(readyFlags);
         }
         Loop;
 
     Deselect:
-        // Auto-switch may interrupt any recoil, fan-fire, or reload frame.
-        // Clear input latches, then reset the actual PSprite and interpolation
-        // history before A_Lower so the old pose cannot pull it back upward.
-        RVOL Q 0
-        {
-            invoker.triggerLatched = false;
-            invoker.altTriggerLatched = false;
-            invoker.reloadLatched = false;
-
-            PSprite weaponPSP = player ? player.GetPSprite(PSP_WEAPON) : null;
-            if (weaponPSP)
-            {
-                weaponPSP.x = 0;
-                weaponPSP.y = WEAPONTOP;
-                weaponPSP.rotation = 0;
-                weaponPSP.ResetInterpolation();
-            }
-        }
         RVOL Q 1 A_Lower;
         Loop;
 
     Select:
-        // A_Raise resets the PSprite when it begins bringing the weapon up.
-        // Avoid writing a second, competing y coordinate during the transition.
-        RVOL Q 0
-        {
-            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
         RVOL Q 1 A_Raise;
         Loop;
 
@@ -5671,6 +5648,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double lookX = tlhAnimLookX * 0.90;
         double lookY = -tlhAnimLookY * 0.48;
 
+        // Primitive weapon sway: a small smoothed offset opposing view motion.
+        // It is deliberately subtle so the weapon follows the view without
+        // feeling like a second camera-bob system.
+        double simpleSwayX = clamp(tlhAnimLookX * 1.35, -2.0, 2.0);
+        double simpleSwayY = clamp(-tlhAnimLookY * 0.90, -1.25, 1.25);
+
         // Layer 4: braking/settling. This is the visual memory of the body
         // continuing to move for a fraction of a second after the player stops.
         double sprintSettle = speed01 * speed01 * 0.34;
@@ -5692,12 +5675,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double x =
             (walkX * 0.92 + velocitySwayX + tlhAnimSwayX +
-             tlhAnimInertiaX + lookX + stopX + recoilX + idleX + airX) * weight;
+             tlhAnimInertiaX + lookX + simpleSwayX + stopX +
+             recoilX + idleX + airX) * weight;
 
         double y =
             (walkY * 0.90 + velocitySwayY + tlhAnimSwayY +
-             tlhAnimInertiaY + lookY + sprintSettle + stopY +
-             recoilY + landingY + damageY + idleY + airY) * weight;
+             tlhAnimInertiaY + lookY + simpleSwayY + sprintSettle +
+             stopY + recoilY + landingY + damageY + idleY + airY) * weight;
 
         // Reduce the visual amplitude while airborne and while crouched.
         x *= intensity * rangeX * (1.0 - 0.32 * airBlend);
@@ -7105,6 +7089,13 @@ class TacticalHUDHandler : EventHandler
     double hudAltitude;
     bool hudOnGround;
 
+    // Local player reaction to a nearby dead PlayerPawn. One line per approach;
+    // the selected line is allowed to finish before another can be triggered.
+    Actor tlhReacCorpse;
+    int tlhReacStayTics;
+    int tlhReacSoundTics;
+    bool tlhReacPlayedNearCorpse;
+
     // Target-under-crosshair cache. Sampled in WorldTick, drawn in UI context.
     Actor tlhAimTarget;
     String tlhAimTargetName;
@@ -7660,6 +7651,60 @@ class TacticalHUDHandler : EventHandler
         tlhFacePreviousHealth = currentHealth;
     }
 
+    void UpdatePlayerCorpseReaction(Actor p, Actor nearestCorpse)
+    {
+        // S_GetLength reports seconds. Convert to game tics so REAC sounds never
+        // overlap, even if the player stays beside the corpse.
+        if (tlhReacSoundTics > 0)
+        {
+            tlhReacSoundTics--;
+            return;
+        }
+
+        if (!p || !p.player || p.Health <= 0 || p.player.playerstate != PST_LIVE)
+        {
+            tlhReacCorpse = null;
+            tlhReacStayTics = 0;
+            tlhReacPlayedNearCorpse = false;
+            return;
+        }
+
+        if (!nearestCorpse)
+        {
+            tlhReacCorpse = null;
+            tlhReacStayTics = 0;
+            tlhReacPlayedNearCorpse = false;
+            return;
+        }
+
+        if (nearestCorpse != tlhReacCorpse)
+        {
+            tlhReacCorpse = nearestCorpse;
+            tlhReacStayTics = 0;
+            tlhReacPlayedNearCorpse = false;
+        }
+
+        if (tlhReacPlayedNearCorpse)
+            return;
+
+        // About 1.2 seconds of continuous proximity before reacting.
+        tlhReacStayTics++;
+        if (tlhReacStayTics < 42)
+            return;
+
+        int reactionIndex = random(1, 5);
+        String reactionSound = String.Format("REAC%02d", reactionIndex);
+        p.A_StartSound(reactionSound, CHAN_VOICE, CHANF_LOCAL);
+
+        double soundLength = S_GetLength(reactionSound);
+        if (soundLength > 0.0)
+            tlhReacSoundTics = max(1, int(soundLength * 35.0) + 2);
+        else
+            tlhReacSoundTics = 70; // fallback: two seconds if length is unavailable
+
+        tlhReacPlayedNearCorpse = true;
+    }
+
     override void WorldTick(){
         // --------------------------------------------------------------------
         // Sample all HUD data in play context.
@@ -7844,8 +7889,29 @@ class TacticalHUDHandler : EventHandler
 
         ThinkerIterator it = ThinkerIterator.Create("Actor");
         Actor mo;
+        Actor nearestPlayerCorpse = null;
+        double nearestPlayerCorpseDistanceSquared = 64.0 * 64.0;
+
         while ((mo = Actor(it.Next())) != null)
         {
+            // React only to actual player bodies, never ordinary monster corpses.
+            if (mo != p && mo is "PlayerPawn" && mo.Health <= 0 &&
+                (mo.bCorpse || (mo.player && mo.player.playerstate == PST_DEAD)))
+            {
+                double corpseDZ = abs(mo.Pos.Z - p.Pos.Z);
+                if (corpseDZ <= 48.0)
+                {
+                    double corpseDX = mo.Pos.X - p.Pos.X;
+                    double corpseDY = mo.Pos.Y - p.Pos.Y;
+                    double corpseDistanceSquared = corpseDX * corpseDX + corpseDY * corpseDY;
+                    if (corpseDistanceSquared <= nearestPlayerCorpseDistanceSquared)
+                    {
+                        nearestPlayerCorpseDistanceSquared = corpseDistanceSquared;
+                        nearestPlayerCorpse = mo;
+                    }
+                }
+            }
+
             if (mo.bIsMonster && mo.Health > 0)
             {
                 hudLiveEnemies++;
@@ -7895,6 +7961,8 @@ class TacticalHUDHandler : EventHandler
                     tlhVisorProjectiles.Push(mo);
             }
         }
+
+        UpdatePlayerCorpseReaction(p, nearestPlayerCorpse);
     }
 
 
