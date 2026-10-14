@@ -4733,9 +4733,8 @@ class ServiceRevolver : Weapon
         Loop;
 
     Deselect:
-        // Reset both position and rotation before the engine lowers the weapon.
-        // Fire no longer animates the PSprite position, so an interrupted shot
-        // cannot leave a stale offset behind during an automatic weapon switch.
+        // Restore the default weapon pose once before A_Lower runs. This matters
+        // when auto-switch interrupts the last-shot recoil frames.
         RVOL Q 0
         {
             A_WeaponOffset(0, 32);
@@ -4783,15 +4782,15 @@ class ServiceRevolver : Weapon
         }
         RVOL Q 5
         {
-
-
-
+            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 2, 39, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -4.0);
         }
         RVOL Q 8
         {
-
-
-
+            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 4, 43, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -9.0);
         }
         RVOL Q 10
         {
@@ -4817,15 +4816,15 @@ class ServiceRevolver : Weapon
         }
         RVOL Q 7
         {
-
-
-
+            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 1, 36, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL Q 5
         {
-
-
-
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_Print(String.Format("REVOLVER: %d/6", invoker.cylinderAmmo));
         }
         Goto Ready;
@@ -4861,7 +4860,9 @@ class ServiceRevolver : Weapon
             A_SetPitch(pitch - 3.6, SPF_INTERPOLATE);
             A_Recoil(3.8);
 
-
+            A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
 
             if (!infinite && invoker.cylinderAmmo == 1)
                 A_Print("REVOLVER: LAST ROUND");
@@ -4870,15 +4871,15 @@ class ServiceRevolver : Weapon
         }
         RVOL C 2
         {
-
-
-
+            A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         RVOL Q 4
         {
-
-
-
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
         }
         Goto Ready;
 
@@ -4904,9 +4905,9 @@ class ServiceRevolver : Weapon
         // then the B firing frame; repeat for each cartridge.
         RVOL A 1
         {
-
-
-
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
         }
         RVOL B 1
         {
@@ -4918,14 +4919,15 @@ class ServiceRevolver : Weapon
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
             A_Recoil(1.4);
 
-
-
+            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -2.4);
         }
         RVOL A 1
         {
-
-
-
+            A_WeaponOffset(0, 33, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -0.8);
         }
         RVOL B 1
         {
@@ -4937,14 +4939,15 @@ class ServiceRevolver : Weapon
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
             A_Recoil(1.7);
 
-
-
+            A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL A 1
         {
-
-
-
+            A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         RVOL B 1
         {
@@ -4956,22 +4959,23 @@ class ServiceRevolver : Weapon
             A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
             A_Recoil(2.1);
 
-
-
+            A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -3.8);
             if (!infinite && invoker.cylinderAmmo <= 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 3
         {
-
-
-
+            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -1.3);
         }
         RVOL Q 4
         {
-
-
-
+            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, 0);
         }
         Goto Ready;
 
