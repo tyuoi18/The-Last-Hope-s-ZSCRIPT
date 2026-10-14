@@ -4670,15 +4670,26 @@ class ServiceRevolver : Weapon
 
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
+        // The chambered cylinder is custom state; AmmoUse1 is zero so the
+        // engine's default weapon-ammo test alone cannot represent it.
         bool infinite = sv_infiniteammo ||
             (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
 
-        if (infinite || cylinderAmmo > 0 || (Owner && Owner.CountInv("Clip") > 0))
+        if (infinite || cylinderAmmo > 0)
             return true;
 
-        // Force the base class to check for one reserve round so the engine can
-        // select another weapon when both the cylinder and reserve are empty.
-        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 1);
+        // An empty cylinder with reserve rounds is reloadable, not dry.
+        // Keep the weapon selected so the player can press R to top it up.
+        if (Owner && Owner.CountInv("Clip") > 0)
+            return true;
+
+        // Both the cylinder and reserve are empty. Explicitly request a new
+        // weapon rather than relying on AmmoUse1 == 0 and the base ammo path.
+        // This also covers both the primary shot and Fan-the-Hammer alt-fire.
+        if (autoSwitch && Owner && Owner.player)
+            PlayerPawn(Owner).PickNewWeapon(null);
+
+        return false;
     }
 
     States
@@ -4720,23 +4731,28 @@ class ServiceRevolver : Weapon
             if (!(player.cmd.buttons & BT_ALTATTACK))
                 invoker.altTriggerLatched = false;
 
-            int readyFlags = 0;
+            int readyFlags = WRF_NoBob;
             if (!invoker.reloadLatched)
                 readyFlags |= WRF_ALLOWRELOAD;
             if (invoker.triggerLatched || invoker.altTriggerLatched)
                 readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
 
-            // Keep the standard weapon bob. A_WeaponReady resets the overlay
-            // offset every tic, so layering custom sinusoidal offsets here causes jitter.
+            // A_WeaponReady normally resets the PSprite to WEAPONTOP every tic.
+            // The revolver animates its own offsets, so disable that native reset
+            // and let the explicit recovery states restore the neutral pose.
             A_WeaponReady(readyFlags);
         }
         Loop;
 
     Deselect:
-        // Let the engine lower the weapon from its current pose. Do not snap
-        // its y coordinate back to WEAPONTOP: auto-switch can interrupt any
-        // recoil/reload frame, and A_Lower must continue from that frame.
-        RVOL Q 0 A_OverlayRotate(PSP_WEAPON, 0);
+        // Normalize the weapon PSprite before lowering it. Offset calls used by
+        // recoil/reload are absolute, and a switch can interrupt them mid-frame.
+        // Clear interpolation so the interrupted pose cannot blend back upward.
+        RVOL Q 0
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, WEAPONTOP);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
         RVOL Q 1 A_Lower;
         Loop;
 
