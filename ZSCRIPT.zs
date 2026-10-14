@@ -4687,7 +4687,12 @@ class ServiceRevolver : Weapon
         // weapon rather than relying on AmmoUse1 == 0 and the base ammo path.
         // This also covers both the primary shot and Fan-the-Hammer alt-fire.
         if (autoSwitch && Owner && Owner.player)
+        {
+            // Use the same engine path as Weapon.CheckAmmo(). Do not set
+            // PendingWeapon directly: PickNewWeapon performs the normal
+            // inventory/slot priority selection and handles empty loadouts.
             PlayerPawn(Owner).PickNewWeapon(null);
+        }
 
         return false;
     }
@@ -4746,10 +4751,14 @@ class ServiceRevolver : Weapon
 
     Deselect:
         // Auto-switch may interrupt any recoil, fan-fire, or reload frame.
-        // Normalize the actual PSprite and clear its interpolation history
-        // before A_Lower, so it cannot blend toward the interrupted old pose.
+        // Clear input latches, then reset the actual PSprite and interpolation
+        // history before A_Lower so the old pose cannot pull it back upward.
         RVOL Q 0
         {
+            invoker.triggerLatched = false;
+            invoker.altTriggerLatched = false;
+            invoker.reloadLatched = false;
+
             PSprite weaponPSP = player ? player.GetPSprite(PSP_WEAPON) : null;
             if (weaponPSP)
             {
