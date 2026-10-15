@@ -1,4 +1,4 @@
-// Player corpse reaction voice lines.
+// Player corpse reaction SFX.
 // Audio lumps must exist in the WAD with these exact names.
 REAC01 REAC01
 REAC02 REAC02
