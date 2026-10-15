@@ -997,7 +997,7 @@ class DashFist : Fist replaces Fist
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZUNG A 0
@@ -1082,7 +1082,7 @@ class HookChainsaw : Chainsaw replaces Chainsaw
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         SAWG C 0
@@ -1181,7 +1181,7 @@ class RecoilPistol : Pistol replaces Pistol
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         PISG A 0
@@ -1559,7 +1559,7 @@ class OfficerVulkanPistol : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         PISG A 0
@@ -2038,7 +2038,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         SHTG A 0
@@ -2200,7 +2200,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         SHT2 A 0
@@ -2545,7 +2545,7 @@ class SemiAutoShotgun : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZHTG A 0
@@ -2790,7 +2790,7 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         TCHG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
@@ -3138,7 +3138,7 @@ class HeavyChaingun : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         CHGG A 0
@@ -3275,7 +3275,7 @@ class TacticalM4A1 : DoomWeapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZHGG A 0
@@ -3709,7 +3709,7 @@ class M60MachineGun : DoomWeapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         MSYA A 0
@@ -3977,7 +3977,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         RISG A 0
@@ -4127,7 +4127,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         PLSG A 0
@@ -4278,7 +4278,7 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZFGG A 0
@@ -4417,7 +4417,7 @@ class AMR99RailRifle : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZLSG A 0
@@ -4540,7 +4540,7 @@ class HellfireProjector : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZISG A 0
@@ -4632,7 +4632,7 @@ class AirstrikeDesignator : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZISG A 0
@@ -4751,7 +4751,7 @@ class ServiceRevolver : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         RVOL Q 0
@@ -5030,7 +5030,7 @@ class StreetSweeperShotgun : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         SHTG A 0
@@ -7137,7 +7137,7 @@ class TLHCompactSMG : Weapon
     States
     {
     Ready:
-        PISG A 0 Goto TLHPickupReadyShim;
+        PISG A 0;
 
     TLHPickupReadyShim:
         ZHGG A 1 A_WeaponReady;
