@@ -2520,6 +2520,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
 
 class SemiAutoShotgun : Weapon
 {
+    // This weapon uses the supplied single-frame sprite ZSGDA0 for HUD and world pickup.
     bool burstMode;
 
     Default
@@ -2548,13 +2549,13 @@ class SemiAutoShotgun : Weapon
         PISG A 0;
 
     TLHPickupReadyShim:
-        ZHTG A 0
+        ZSGD A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.32);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        ZHTG A 1
+        ZSGD A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -2563,22 +2564,22 @@ class SemiAutoShotgun : Weapon
         }
         Loop;
     Deselect:
-        ZHTG A 1 A_Lower;
+        ZSGD A 1 A_Lower;
         Loop;
     Select:
-        ZHTG A 1 A_Raise;
+        ZSGD A 1 A_Raise;
         Loop;
 
     Reload:
-        ZHTG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZHTG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        ZHTG A 0
+        ZSGD A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZSGD A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        ZSGD A 0
         {
             if (invoker.burstMode) return ResolveState("SetSemi");
             return ResolveState("SetBurst");
         }
     SetBurst:
-        ZHTG A 8
+        ZSGD A 8
         {
             invoker.burstMode = true;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
@@ -2586,7 +2587,7 @@ class SemiAutoShotgun : Weapon
         }
         Goto FinishReload;
     SetSemi:
-        ZHTG A 8
+        ZSGD A 8
         {
             invoker.burstMode = false;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
@@ -2594,18 +2595,18 @@ class SemiAutoShotgun : Weapon
         }
         Goto FinishReload;
     FinishReload:
-        ZHTG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        ZHTG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        ZSGD A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        ZSGD A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        ZHTG A 0
+        ZSGD A 0
         {
             if (invoker.burstMode) return ResolveState("FireBurst");
             return ResolveState(null);
         }
-        ZHTG A 2;
-        ZHTG B 3
+        ZSGD A 2;
+        ZSGD A 3
         {
             A_GunFlash();
             A_FireBullets(7.0, 4.0, 8, 5, "BulletPuff");
@@ -2614,17 +2615,17 @@ class SemiAutoShotgun : Weapon
             A_Recoil(2.5);
             A_Quake(1.4, 3.0, 0, 100);
         }
-        ZHTG C 2;
+        ZSGD A 2;
         Goto Ready;
 
     FireBurst:
-        ZHTG A 0
+        ZSGD A 0
         {
             if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Shell") >= 3) return ResolveState("DoBurst");
             return ResolveState("Ready");
         }
     DoBurst:
-        ZHTG B 2
+        ZSGD A 2
         {
             A_TakeInventory("Shell", 3, TIF_NOTAKEINFINITE);
             A_GunFlash();
@@ -2633,25 +2634,25 @@ class SemiAutoShotgun : Weapon
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Recoil(2.5);
         }
-        ZHTG B 2
+        ZSGD A 2
         {
             A_GunFlash();
             A_FireBullets(8.0, 4.0, 7, 5, "BulletPuff", 0);
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
-        ZHTG B 2
+        ZSGD A 2
         {
             A_GunFlash();
             A_FireBullets(8.0, 4.0, 7, 5, "BulletPuff", 0);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZHTG C 5;
-        ZHTG A 5;
+        ZSGD A 5;
+        ZSGD A 5;
         Goto Ready;
 
     AltFire:
-        ZHTG A 2;
-        ZHTG B 4
+        ZSGD A 2;
+        ZSGD A 4
         {
             A_FireProjectile("FlakGrenade");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
@@ -2659,14 +2660,14 @@ class SemiAutoShotgun : Weapon
             A_Recoil(5);
             A_Quake(4, 8, 0, 150);
         }
-        ZHTG C 3;
-        ZHTG B 3;
-        ZHTG A 4;
+        ZSGD A 3;
+        ZSGD A 3;
+        ZSGD A 4;
         Goto Ready;
 
     Zoom:
-        ZHTG A 2;
-        ZHTG B 3
+        ZSGD A 2;
+        ZSGD A 3
         {
             A_FireProjectile("ShotgunSlug");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
@@ -2674,9 +2675,9 @@ class SemiAutoShotgun : Weapon
             A_Recoil(5);
             A_Quake(4, 8, 0, 150);
         }
-        ZHTG C 3;
-        ZHTG B 3;
-        ZHTG A 4;
+        ZSGD A 3;
+        ZSGD A 3;
+        ZSGD A 4;
         Goto Ready;
 
     Flash:
@@ -2685,7 +2686,7 @@ class SemiAutoShotgun : Weapon
         Goto LightDone;
 
     Spawn:
-        ZHOT A -1;
+        ZSGD A -1;
         Stop;
     }
 
@@ -4982,7 +4983,7 @@ class ServiceRevolver : Weapon
         Goto Ready;
 
     Spawn:
-        RVOL Q -1;
+        RVOL G -1;
         Stop;
     }
 }
