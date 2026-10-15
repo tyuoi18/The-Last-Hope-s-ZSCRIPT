@@ -3118,12 +3118,8 @@ class HeavyChaingun : Weapon
         PISG A 0;
 
     TLHPickupReadyShim:
-        CHGG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-        }
+        // Keep the IWAD CHGG sprite on the stock PSprite path.
+        // The valid zero-tic PISG frame above is only the pickup-validation shim.
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
@@ -3136,12 +3132,7 @@ class HeavyChaingun : Weapon
         Loop;
 
     Select:
-        CHGG A 1
-        {
-            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_Raise();
-        }
+        CHGG A 1 A_Raise();
         Loop;
 
     Reload:
