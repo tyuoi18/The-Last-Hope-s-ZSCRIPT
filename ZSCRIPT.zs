@@ -997,6 +997,9 @@ class DashFist : Fist replaces Fist
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZUNG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
@@ -1079,6 +1082,9 @@ class HookChainsaw : Chainsaw replaces Chainsaw
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         SAWG C 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
@@ -1175,6 +1181,9 @@ class RecoilPistol : Pistol replaces Pistol
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         PISG A 0
         {
             if (invoker.dualWield)
@@ -1550,6 +1559,9 @@ class OfficerVulkanPistol : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         PISG A 0
         {
             if (invoker.dualWield)
@@ -2026,6 +2038,9 @@ class RecoilShotgun : Shotgun replaces Shotgun
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         SHTG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.92, 1.0);
@@ -2185,6 +2200,9 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         SHT2 A 0
         {
             if (invoker.akimboState == 1)
@@ -2527,6 +2545,9 @@ class SemiAutoShotgun : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZHTG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.32);
@@ -2769,6 +2790,9 @@ class TLHChaingun : Chaingun replaces Chaingun
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         TCHG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         Loop;
 
@@ -3114,6 +3138,9 @@ class HeavyChaingun : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         CHGG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
@@ -3248,6 +3275,9 @@ class TacticalM4A1 : DoomWeapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZHGG A 0
         {
             if (invoker.dualWield)
@@ -3679,6 +3709,9 @@ class M60MachineGun : DoomWeapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         MSYA A 0
         {
             if (invoker.stability <= 0)
@@ -3944,6 +3977,9 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         RISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
@@ -4091,6 +4127,9 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         PLSG A 0
         {
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
@@ -4239,6 +4278,9 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZFGG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
@@ -4375,6 +4417,9 @@ class AMR99RailRifle : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZLSG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.84, 0.92);
@@ -4495,6 +4540,9 @@ class HellfireProjector : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.72, 0.76);
@@ -4584,6 +4632,9 @@ class AirstrikeDesignator : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.54, 0.54);
@@ -4700,6 +4751,9 @@ class ServiceRevolver : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         RVOL Q 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
@@ -4976,6 +5030,9 @@ class StreetSweeperShotgun : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         SHTG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
@@ -5338,6 +5395,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         int bt = player.cmd.buttons;
         int obt = player.oldbuttons;
         ResetTLHDualForWeaponSwitch();
+        RestoreTLHOwnedWeaponTranslations();
 
         int gameMode = GetGameMode();
 
@@ -5573,23 +5631,23 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         switch (pick)
         {
             case 1:
-                S_StartSound("REAC01", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                S_StartSound("REAC01", CHAN_BODY, CHANF_UI, 1.0, ATTN_NONE);
                 soundLength = S_GetLength("REAC01");
                 break;
             case 2:
-                S_StartSound("REAC02", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                S_StartSound("REAC02", CHAN_BODY, CHANF_UI, 1.0, ATTN_NONE);
                 soundLength = S_GetLength("REAC02");
                 break;
             case 3:
-                S_StartSound("REAC03", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                S_StartSound("REAC03", CHAN_BODY, CHANF_UI, 1.0, ATTN_NONE);
                 soundLength = S_GetLength("REAC03");
                 break;
             case 4:
-                S_StartSound("REAC04", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                S_StartSound("REAC04", CHAN_BODY, CHANF_UI, 1.0, ATTN_NONE);
                 soundLength = S_GetLength("REAC04");
                 break;
             default:
-                S_StartSound("REAC05", CHAN_VOICE, CHANF_UI, 1.0, ATTN_NONE);
+                S_StartSound("REAC05", CHAN_BODY, CHANF_UI, 1.0, ATTN_NONE);
                 soundLength = S_GetLength("REAC05");
                 break;
         }
@@ -5598,6 +5656,25 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             ? max(1, int(soundLength * 35.0) + 2)
             : 70;
         tlhCorpseReactionPlayed = true;
+    }
+
+    // Restore each owned weapon's class-default translation. WorldThingSpawned
+    // deliberately clears translation from ground pickups so drops keep their
+    // original palette; equipped weapons regain the intended HUD recolor here.
+    void RestoreTLHOwnedWeaponTranslations()
+    {
+        Inventory item = Inv;
+        while (item)
+        {
+            Inventory nextItem = item.Inv;
+            if (item is "Weapon" && item.Owner == self)
+            {
+                let classDefault = GetDefaultByType(item.GetClass());
+                if (classDefault)
+                    item.Translation = classDefault.Translation;
+            }
+            item = nextItem;
+        }
     }
 
     // ========================================================================
@@ -5829,7 +5906,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // This is the procedural part: the same mapping follows Ready, Fire,
         // Reload, Select, Deselect and the dual-wield overlay automatically.
         if (!isFlashPSP && (isWeaponPSP || isDualPSP))
-            psp.Translation = weapon.Translation;
+        {
+            let weaponDefault = GetDefaultByType(weapon.GetClass());
+            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
+        }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
                           (isFlashPSP ? tlhAnimLastFlashPSPState : tlhAnimLastDualPSPState);
@@ -7057,6 +7137,9 @@ class TLHCompactSMG : Weapon
     States
     {
     Ready:
+        PISG A 0 Goto TLHPickupReadyShim;
+
+    TLHPickupReadyShim:
         ZHGG A 1 A_WeaponReady;
         Loop;
 
@@ -7278,6 +7361,12 @@ class TacticalHUDHandler : EventHandler
 
     override void WorldThingSpawned(WorldEvent e){
         if (!e.Thing) return;
+
+        // World pickups must use their original sprite palette. The class
+        // defaults still carry the custom first-person translation.
+        let worldWeapon = Weapon(e.Thing);
+        if (worldWeapon && !worldWeapon.Owner)
+            worldWeapon.Translation = 0;
 
         if (e.Thing is "HellfireProjector")
             e.Thing.Scale = (0.56, 0.56);
