@@ -3102,19 +3102,6 @@ class HeavyChaingun : Weapon
         Weapon.WeaponScaleY 0.95;
         Inventory.PickupMessage "Picked up the Heavy Chaingun.";
 
-        // Darker gunmetal remap: mute warm/colored ramps while retaining
-        // enough gray variation to keep the weapon readable.
-        Translation
-            "0:31=64:79",
-            "32:47=80:95",
-            "48:79=64:79",
-            "80:95=64:79",
-            "96:111=80:95",
-            "112:127=80:95",
-            "128:167=64:79",
-            "168:175=80:95",
-            "176:191=80:95",
-            "192:255=64:79";
     }
 
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
@@ -3122,17 +3109,6 @@ class HeavyChaingun : Weapon
         if (fireMode == PrimaryFire && burstMode)
             return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
         return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
-    }
-
-    override void DoEffect()
-    {
-        Super.DoEffect();
-        if (Owner && Owner.player && Owner.player.ReadyWeapon == self)
-        {
-            let psp = Owner.player.GetPSprite(PSP_WEAPON);
-            if (psp)
-                psp.bPlayerTranslated = false;
-        }
     }
 
     States
@@ -5006,7 +4982,7 @@ class ServiceRevolver : Weapon
         Goto Ready;
 
     Spawn:
-        RVOL G -1;
+        RVOL Q -1;
         Stop;
     }
 }
