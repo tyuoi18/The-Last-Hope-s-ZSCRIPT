@@ -2694,8 +2694,8 @@ class SemiAutoShotgun : Weapon
 
 // ==========================================
 // TLH TACTICAL CHAINGUN - OVERHEAT SYSTEM
-// Uses vanilla CHGG/CHGF for its first-person HUD and the vanilla MGUN pickup sprite.
-// Shares the same ground sprite with HeavyChaingun.
+// Uses TLH-provided CHGG/CHGF sprite lumps for the first-person HUD.
+// Shares the TLH-provided MGUN ground-pickup sprite with HeavyChaingun.
 // ==========================================
 
 class TLHChaingun : Chaingun replaces Chaingun
@@ -3080,15 +3080,12 @@ class TLHChaingun : Chaingun replaces Chaingun
 // ============================================================================
 // ============================================================================
 /* HEAVY CHAINGUN
-   Weapon HUD uses the TLH-provided CHGG sprite family (CHGGA0/CHGGB0).
-   Flash uses TLH's CHGF family; ground pickup uses TLH's MGUN sprite.
+   HUD: CHGG A/B (CHGGA0/CHGGB0), flash: CHGF A/B, pickup: MGUN A.
+   Textures.wad may group TLH's copies inside one SS_START ... SS_END section.
+   Those markers only identify sprite namespace membership; they do not pin
+   a lump to a particular WAD or bypass GZDoom's resource loading order.
    M4A1 keeps its separate ZHGG/ZGUN sprites.
 */
-// HEAVY CHAINGUN SPRITE RESOURCE NOTE:
-// These state labels resolve through GZDoom's global sprite namespace.
-// In Textures.wad, the TLH-owned CHGG/CHGF/MGUN lumps should sit inside
-// one SS_START ... SS_END section. The markers belong to the WAD, not ZScript;
-// keep the state labels below as CHGG, CHGF and MGUN.
 class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
@@ -3103,6 +3100,7 @@ Default
         Weapon.AmmoGive1 40;
         Weapon.AmmoType2 "RocketAmmo";
         Weapon.AmmoUse2 1;
+        Weapon.AmmoGive2 4;
         Weapon.Kickback 160;
         Inventory.PickupMessage "Picked up the Heavy Chaingun.";
 
@@ -6318,7 +6316,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                     impulse *= 1.45;
                 else if (cls == "FastRecoilSSG")
                     impulse *= 1.70;
-                else if (cls == "M60MachineGun")
+                else if (cls == "M60MachineGun" || cls == "HeavyChaingun")
                     impulse *= 1.25;
                 else if (cls == "RecoilRocketLauncher" || cls == "HellfireProjector")
                     impulse *= 2.00;
@@ -7981,6 +7979,7 @@ class TacticalHUDHandler : EventHandler
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
             else if (hudWeaponName == "TLHChaingun") hudWeaponName = "TACTICAL CHAINGUN";
+            else if (hudWeaponName == "HeavyChaingun") hudWeaponName = "HEAVY CHAINGUN";
             else if (hudWeaponName == "TLHCompactSMG") hudWeaponName = "M12 COMPACT SMG";
             else if (hudWeaponName == "M60MachineGun") hudWeaponName = "M60 MACHINE GUN";
             else if (hudWeaponName == "RecoilRocketLauncher") hudWeaponName = "ROCKET LAUNCHER";
@@ -8647,6 +8646,15 @@ class TacticalHUDHandler : EventHandler
             profileY = 1.06;
             accentStrength = 1.08;
         }
+        else if (cls == "HeavyChaingun")
+        {
+            // Heavy gunmetal body with muted red hardware accents.
+            primary = 0x515A58;
+            secondary = 0x843C39;
+            profileX = 1.04;
+            profileY = 1.12;
+            accentStrength = 0.92;
+        }
         else if (cls == "AMR99RailRifle")
         {
             // Lightened gray body + electric-blue BFG green-range accent.
@@ -8730,16 +8738,15 @@ class TacticalHUDHandler : EventHandler
         bool flip = false;
         Vector2 stateScale = (1.0, 1.0);
 
-        // The tactical chaingun uses Doom II's original CHGG sprite family.
-        // Keep a vanilla HUD preview available even when the transient PSprite
-        // cache is empty during weapon changes or on engines that skip sampling.
+        // Both TLH chainguns use the CHGG sprite family for the visor preview.
+        // Keep a static A-frame fallback while the transient PSprite cache is empty.
         if (hudWeaponTextureValid && hudWeaponTextureClass == cls)
         {
             tex = hudWeaponTexture;
             flip = hudWeaponFlip;
             stateScale = hudWeaponStateScale;
         }
-        else if (cls == "TLHChaingun")
+        else if (cls == "TLHChaingun" || cls == "HeavyChaingun")
         {
             tex = TexMan.CheckForTexture("CHGGA0", TexMan.Type_Sprite);
         }
