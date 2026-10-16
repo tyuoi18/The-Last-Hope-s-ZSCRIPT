@@ -3114,11 +3114,11 @@ Default
     States
     {
     Ready:
-        CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
+        TLHG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
-        CHGG A 1
+        TLHG A 1
         {
             invoker.burstMode = false;
             A_Lower();
@@ -3126,28 +3126,28 @@ Default
         Loop;
 
     Select:
-        CHGG A 1 A_Raise();
+        TLHG A 1 A_Raise();
         Loop;
 
     Reload:
-        CHGG A 3 A_WeaponOffset(0, 40, WOF_INTERPOLATE);
-        CHGG A 4
+        TLHG A 3 A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+        TLHG A 4
         {
             invoker.burstMode = !invoker.burstMode;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
             A_Print(invoker.burstMode ? "HEAVY CHAINGUN: CONTROLLED BURST" : "HEAVY CHAINGUN: FULL AUTO");
         }
-        CHGG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        TLHG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        CHGG A 0
+        TLHG A 0
         {
             if (invoker.burstMode)
                 return ResolveState("BurstFire");
             return ResolveState(null);
         }
-        CHGG A 2
+        TLHG A 2
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
@@ -3155,34 +3155,34 @@ Default
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
             A_Quake(0.35, 0.8, 0, 35);
         }
-        CHGG B 1;
-        CHGG A 0 A_ReFire;
+        TLHG B 1;
+        TLHG A 0 A_ReFire;
         Goto Ready;
 
     BurstFire:
-        CHGG A 1
+        TLHG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
-        CHGG B 1;
-        CHGG A 1
+        TLHG B 1;
+        TLHG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
-        CHGG B 1;
-        CHGG A 1
+        TLHG B 1;
+        TLHG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
-        CHGG B 4;
+        TLHG B 4;
         Goto Ready;
 
     AltFire:
-        CHGG B 3
+        TLHG B 3
         {
             A_FireProjectile("M203Grenade");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
@@ -3190,16 +3190,16 @@ Default
             A_SetPitch(pitch - 2.2, SPF_INTERPOLATE);
             A_Quake(1.2, 3.0, 0, 70);
         }
-        CHGG A 8;
+        TLHG A 8;
         Goto Ready;
 
     Flash:
-        CHGF A 2 Bright A_Light1;
-        CHGF B 2 Bright A_Light2;
+        TLHF A 2 Bright A_Light1;
+        TLHF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        MGUN A -1;
+        TLHU A -1;
         Stop;
     }
 }
