@@ -3084,7 +3084,7 @@ class TLHChaingun : Chaingun replaces Chaingun
    HUD: CHGG/CHGF (vanilla family), recolored to darker gunmetal and stretched vertically.
    Pickup: vanilla MGUN sprite, shared with the replaced vanilla Chaingun. M4A1 keeps ZHGG/ZGUN.
 */
-class HeavyChaingun : Weapon
+class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
 
@@ -3099,9 +3099,6 @@ class HeavyChaingun : Weapon
         Weapon.AmmoType2 "RocketAmmo";
         Weapon.AmmoUse2 1;
         Weapon.Kickback 160;
-        // Use the engine's native PSprite scaling path to avoid state-time overlay mutations.
-        Weapon.WeaponScaleX 0.82;
-        Weapon.WeaponScaleY 1.32;
         Inventory.PickupMessage "Picked up the Heavy Chaingun.";
 
     }
@@ -3117,10 +3114,6 @@ class HeavyChaingun : Weapon
     States
     {
     Ready:
-        // This zero-tic IWAD frame keeps GZDoom's weapon pickup visibility check valid.
-        PISG A 0;
-
-    TLHPickupReadyShim:
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
@@ -3133,7 +3126,14 @@ class HeavyChaingun : Weapon
         Loop;
 
     Select:
-        CHGG A 1 A_Raise();
+        CHGG A 1
+        {
+            // Apply presentation only after the real weapon PSprite exists.
+            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
+            A_Raise();
+        }
         Loop;
 
     Reload:
