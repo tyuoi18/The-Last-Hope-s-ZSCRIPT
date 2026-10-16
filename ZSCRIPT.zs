@@ -3107,14 +3107,6 @@ Default
 
     }
 
-    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
-    {
-        if (fireMode == PrimaryFire && burstMode)
-            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
-        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
-    }
-
-
     States
     {
     Ready:
@@ -3147,8 +3139,20 @@ Default
     Fire:
         TLHG A 0
         {
+            // Keep weapon selection/Ready independent from the custom burst logic.
+            // Only enter a three-shot burst when the reserve can support the volley.
             if (invoker.burstMode)
+            {
+                bool infiniteAmmo = sv_infiniteammo ||
+                    (player && player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+                if (!infiniteAmmo &&
+                    (!player || !player.mo || player.mo.CountInv("Clip") < 3))
+                    return ResolveState("Ready");
+
                 return ResolveState("BurstFire");
+            }
+
             return ResolveState(null);
         }
         TLHG A 2
