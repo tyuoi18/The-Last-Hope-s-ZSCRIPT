@@ -3087,20 +3087,8 @@ class TLHChaingun : Chaingun replaces Chaingun
 class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
-    bool spriteLookupReported;
 
-    // ZScript cannot mount an IWAD, but it can inspect/read sprite lumps
-    // already loaded by GZDoom from the IWAD and PWAD resource stack.
-    bool HasLoadedSpriteLump(String lumpName)
-    {
-        int lump = Wads.CheckNumForName(lumpName, Wads.ns_sprites);
-        if (lump < 0)
-            return false;
-
-        return Wads.ReadLump(lump).Length() > 0;
-    }
-
-    Default
+Default
     {
         Weapon.SlotNumber 4;
         Weapon.SlotPriority 4.8;
@@ -3126,14 +3114,6 @@ class HeavyChaingun : DoomWeapon
     States
     {
     Ready:
-        // Apply the HUD transform only once the weapon has finished raising.
-        // GZDoom's native Chaingun keeps Select separate from overlay handling.
-        CHGG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-        }
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
@@ -3146,35 +3126,7 @@ class HeavyChaingun : DoomWeapon
         Loop;
 
     Select:
-        CHGG A 1
-        {
-            // Report once per weapon instance which native-style sprite lumps
-            // are actually present in GZDoom's already-loaded sprite namespace.
-            if (!invoker.spriteLookupReported)
-            {
-                bool hudA = invoker.HasLoadedSpriteLump("CHGGA0");
-                bool hudB = invoker.HasLoadedSpriteLump("CHGGB0");
-                bool flashA = invoker.HasLoadedSpriteLump("CHGFA0");
-                bool flashB = invoker.HasLoadedSpriteLump("CHGFB0");
-                bool pickup = invoker.HasLoadedSpriteLump("MGUNA0");
-
-                if (hudA && hudB && flashA && flashB && pickup)
-                    A_Print("HEAVY CHAINGUN: CHGG/CHGF/MGUN sprite lumps found in loaded resources.");
-                else
-                {
-                    A_Print("HEAVY CHAINGUN: one or more required sprite lumps are missing.");
-                    if (!hudA) A_Print("Missing sprite lump: CHGGA0");
-                    if (!hudB) A_Print("Missing sprite lump: CHGGB0");
-                    if (!flashA) A_Print("Missing sprite lump: CHGFA0");
-                    if (!flashB) A_Print("Missing sprite lump: CHGFB0");
-                    if (!pickup) A_Print("Missing sprite lump: MGUNA0");
-                }
-
-                invoker.spriteLookupReported = true;
-            }
-
-            A_Raise();
-        }
+        CHGG A 1 A_Raise();
         Loop;
 
     Reload:
