@@ -3084,6 +3084,11 @@ class TLHChaingun : Chaingun replaces Chaingun
    Flash uses TLH's CHGF family; ground pickup uses TLH's MGUN sprite.
    M4A1 keeps its separate ZHGG/ZGUN sprites.
 */
+// HEAVY CHAINGUN SPRITE RESOURCE NOTE:
+// These state labels resolve through GZDoom's global sprite namespace.
+// In Textures.wad, the TLH-owned CHGG/CHGF/MGUN lumps should sit inside
+// one SS_START ... SS_END section. The markers belong to the WAD, not ZScript;
+// keep the state labels below as CHGG, CHGF and MGUN.
 class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
