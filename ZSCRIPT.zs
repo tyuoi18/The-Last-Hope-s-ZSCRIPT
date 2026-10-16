@@ -3099,8 +3099,9 @@ class HeavyChaingun : Weapon
         Weapon.AmmoType2 "RocketAmmo";
         Weapon.AmmoUse2 1;
         Weapon.Kickback 160;
-        Weapon.WeaponScaleX 0.85;
-        Weapon.WeaponScaleY 0.95;
+        // Use the engine's native PSprite scaling path to avoid state-time overlay mutations.
+        Weapon.WeaponScaleX 0.82;
+        Weapon.WeaponScaleY 1.32;
         Inventory.PickupMessage "Picked up the Heavy Chaingun.";
 
     }
@@ -3113,26 +3114,13 @@ class HeavyChaingun : Weapon
     }
 
 
-    override void DoEffect()
-    {
-        Super.DoEffect();
-        if (Owner && Owner.player && Owner.player.ReadyWeapon == self)
-        {
-            let psp = Owner.player.GetPSprite(PSP_WEAPON);
-            if (psp)
-                psp.bPlayerTranslated = false;
-        }
-    }
-
     States
     {
     Ready:
-        CHGG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-        }
+        // This zero-tic IWAD frame keeps GZDoom's weapon pickup visibility check valid.
+        PISG A 0;
+
+    TLHPickupReadyShim:
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
@@ -3145,12 +3133,7 @@ class HeavyChaingun : Weapon
         Loop;
 
     Select:
-        CHGG A 1
-        {
-            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_Raise();
-        }
+        CHGG A 1 A_Raise();
         Loop;
 
     Reload:
