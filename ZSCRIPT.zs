@@ -2685,8 +2685,8 @@ class SemiAutoShotgun : Weapon
         Goto LightDone;
 
     Spawn:
-        // ZSGDA0 is the ground pickup sprite only; HUD states above remain ZHTG.
-        ZSGD A -1;
+        // ZSHDA0 is the ground pickup sprite only; HUD states above remain ZHTG.
+        ZSHD A -1;
         Stop;
     }
 
@@ -9436,10 +9436,22 @@ class TacticalZombieDrop : Actor
             bool isFirstMap = (level.levelnum == 1 || level.mapname ~== "MAP01" || level.mapname ~== "E1M1");
             Actor drop;
 
-            if (!isFirstMap && random(1, 100) <= 5)
-                drop = Spawn("OfficerVulkanPistol", Pos);
+            if (!isFirstMap)
+            {
+                // Keep the same 5% total firearm-drop chance after MAP01:
+                // 3% Service Revolver, 2% Officer Vulkan Pistol.
+                int roll = random(1, 100);
+                if (roll <= 3)
+                    drop = Spawn("ServiceRevolver", Pos);
+                else if (roll <= 5)
+                    drop = Spawn("OfficerVulkanPistol", Pos);
+                else
+                    drop = Spawn("Clip", Pos);
+            }
             else
+            {
                 drop = Spawn("Clip", Pos);
+            }
 
             if (drop)
             {
