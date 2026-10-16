@@ -3114,6 +3114,14 @@ class HeavyChaingun : DoomWeapon
     States
     {
     Ready:
+        // Apply the HUD transform only once the weapon has finished raising.
+        // GZDoom's native Chaingun keeps Select separate from overlay handling.
+        CHGG A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
+        }
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
@@ -3126,14 +3134,7 @@ class HeavyChaingun : DoomWeapon
         Loop;
 
     Select:
-        CHGG A 1
-        {
-            // Apply presentation only after the real weapon PSprite exists.
-            A_OverlayScale(PSP_WEAPON, 0.82, 1.32);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_Raise();
-        }
+        CHGG A 1 A_Raise();
         Loop;
 
     Reload:
