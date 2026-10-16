@@ -3080,13 +3080,9 @@ class TLHChaingun : Chaingun replaces Chaingun
 // ============================================================================
 // ============================================================================
 /* HEAVY CHAINGUN
-   Uses TLH-unique sprite IDs so the engine cannot resolve these frames from Doom II
-   or another WAD with colliding names.
-   HUD: TLHG A/B -> TLHGA0/TLHGB0.
-   Flash: TLHF A/B -> TLHFA0/TLHFB0.
-   Pickup: TLHU A -> TLHUA0.
-   Rename the TLH-owned sprite lumps in Textures.wad to these names.
-   M4A1 keeps ZHGG/ZGUN.
+   Weapon HUD uses the TLH-provided CHGG sprite family (CHGGA0/CHGGB0).
+   Flash uses TLH's CHGF family; ground pickup uses TLH's MGUN sprite.
+   M4A1 keeps its separate ZHGG/ZGUN sprites.
 */
 class HeavyChaingun : DoomWeapon
 {
@@ -3110,11 +3106,11 @@ Default
     States
     {
     Ready:
-        TLHG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
+        CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
-        TLHG A 1
+        CHGG A 1
         {
             invoker.burstMode = false;
             A_Lower();
@@ -3122,22 +3118,22 @@ Default
         Loop;
 
     Select:
-        TLHG A 1 A_Raise();
+        CHGG A 1 A_Raise();
         Loop;
 
     Reload:
-        TLHG A 3 A_WeaponOffset(0, 40, WOF_INTERPOLATE);
-        TLHG A 4
+        CHGG A 3 A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+        CHGG A 4
         {
             invoker.burstMode = !invoker.burstMode;
             A_StartSound("weapons/shotgr", CHAN_WEAPON);
             A_Print(invoker.burstMode ? "HEAVY CHAINGUN: CONTROLLED BURST" : "HEAVY CHAINGUN: FULL AUTO");
         }
-        TLHG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
-        TLHG A 0
+        CHGG A 0
         {
             // Keep weapon selection/Ready independent from the custom burst logic.
             // Only enter a three-shot burst when the reserve can support the volley.
@@ -3155,7 +3151,7 @@ Default
 
             return ResolveState(null);
         }
-        TLHG A 2
+        CHGG A 2
         {
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
@@ -3163,34 +3159,34 @@ Default
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
             A_Quake(0.35, 0.8, 0, 35);
         }
-        TLHG B 1;
-        TLHG A 0 A_ReFire;
+        CHGG B 1;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     BurstFire:
-        TLHG A 1
+        CHGG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
-        TLHG B 1;
-        TLHG A 1
+        CHGG B 1;
+        CHGG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
-        TLHG B 1;
-        TLHG A 1
+        CHGG B 1;
+        CHGG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
         }
-        TLHG B 4;
+        CHGG B 4;
         Goto Ready;
 
     AltFire:
-        TLHG B 3
+        CHGG B 3
         {
             A_FireProjectile("M203Grenade");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
@@ -3198,16 +3194,16 @@ Default
             A_SetPitch(pitch - 2.2, SPF_INTERPOLATE);
             A_Quake(1.2, 3.0, 0, 70);
         }
-        TLHG A 8;
+        CHGG A 8;
         Goto Ready;
 
     Flash:
-        TLHF A 2 Bright A_Light1;
-        TLHF B 2 Bright A_Light2;
+        CHGF A 2 Bright A_Light1;
+        CHGF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        TLHU A -1;
+        MGUN A -1;
         Stop;
     }
 }
