@@ -5171,7 +5171,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
         Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
-        // Slot 4 includes the M4A1, TLH Tactical Chaingun, vanilla-sprite Heavy Chaingun, compact SMG and M60. No HeavyMinigun alias.
+        // Slot 4 includes the M4A1, TLH Tactical Chaingun, TLH CHGG-sprite Heavy Chaingun, compact SMG and M60. No HeavyMinigun alias.
         Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
 
@@ -6144,6 +6144,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 1.02; scaleY = 1.06; offsetY = 0.8; sway = 0.82;
         }
+        else if (cls == "HeavyChaingun")
+        {
+            // Reserved profile for consistency if procedural PSprite motion is re-enabled.
+            scaleX = 0.98; scaleY = 1.14; offsetY = 1.2; sway = 0.64;
+        }
         else if (cls == "M60MachineGun")
         {
             scaleX = 0.99; scaleY = 1.12; offsetY = 1.4; sway = 0.68;
@@ -6200,6 +6205,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Very heavy weapons move less but hit harder when they recoil.
         if (cls == "M60MachineGun") return 0.66;
+        if (cls == "HeavyChaingun") return 0.64;
         if (cls == "RecoilRocketLauncher") return 0.62;
         if (cls == "RecoilPlasmaRifle") return 0.70;
         if (cls == "RecoilBFG9000") return 0.55;
