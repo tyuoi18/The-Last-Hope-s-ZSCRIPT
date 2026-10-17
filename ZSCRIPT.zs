@@ -8205,6 +8205,14 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         if (!weapon) return;
 
         String cls = weapon.GetClassName();
+
+        // TEMPORARY SAFETY BYPASS: do not draw the HeavyChaingun's CHGG sprite
+        // through the custom helmet HUD. This isolates the reported crash to
+        // the HUD preview path while leaving the actual first-person weapon,
+        // firing states, ammo, and world pickup unchanged.
+        if (cls == "HeavyChaingun")
+            return;
+
         Color primary = 0xB8C0C2;
         Color secondary = 0x596164;
         double profileX = 1.0;
