@@ -3,9 +3,9 @@
 // CUSTOM DUAL-WIELD BIND / PROCEDURAL WEAPON PRESENTATION / HELMET INTERIOR HUD
 //
 // R remains untouched. Weapon-switch safety avoids destroying an active weapon.
-// Procedural PSprite callbacks are omitted; native weapon states remain active.
-// R remains completely untouched. Dual Wield is activated through the custom
-// KEYCONF netevent. Weapon identity is provided by procedural PSprite transforms in ZScript.
+// Native weapon states remain authoritative; TacticalPlayer applies reversible
+// procedural PSprite transforms for visual motion. Dual Wield is activated
+// through the custom KEYCONF netevent.
 // Hellfire uses the Rocket Launcher sprite family at reduced HUD/drop scale.
 // ============================================================================
 
@@ -4703,17 +4703,12 @@ class ServiceRevolver : Weapon
         if (Owner && Owner.CountInv("Clip") > 0)
             return true;
 
-        // Both the cylinder and reserve are empty. Explicitly request a new
-        // weapon rather than relying on AmmoUse1 == 0 and the base ammo path.
-        // This also covers both the primary shot and Fan-the-Hammer alt-fire.
-        if (autoSwitch && Owner && Owner.player)
-        {
-            // Use the same engine path as Weapon.CheckAmmo(). Do not set
-            // PendingWeapon directly: PickNewWeapon performs the normal
-            // inventory/slot priority selection and handles empty loadouts.
-            PlayerPawn(Owner).PickNewWeapon(null);
-        }
-
+        // Both cylinder and reserve are empty. Do not call PickNewWeapon()
+        // from CheckAmmo(): this runs inside the weapon firing path and can
+        // interrupt the active PSprite state transition, leaving the weapon
+        // stuck between Ready/Deselect and causing procedural motion jitter.
+        // Keep the empty revolver selected; the player can switch normally.
+        // (autoSwitch is intentionally ignored for this custom-cylinder weapon.)
         return false;
     }
 
@@ -4879,7 +4874,7 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.6, SPF_INTERPOLATE);
-            A_Recoil(3.8);            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
 
             if (!infinite && invoker.cylinderAmmo == 1)
@@ -4925,11 +4920,11 @@ class ServiceRevolver : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite) invoker.cylinderAmmo--;
+            if (!infinite && invoker.cylinderAmmo > 0) invoker.cylinderAmmo--;
             A_FireBullets(0.7, 0.3, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
-            A_Recoil(1.4);            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -2.4);
         }
         RVOL A 1
@@ -4940,11 +4935,11 @@ class ServiceRevolver : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite) invoker.cylinderAmmo--;
+            if (!infinite && invoker.cylinderAmmo > 0) invoker.cylinderAmmo--;
             A_FireBullets(1.8, 0.7, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
-            A_Recoil(1.7);            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL A 1
@@ -4955,11 +4950,11 @@ class ServiceRevolver : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite) invoker.cylinderAmmo--;
+            if (!infinite && invoker.cylinderAmmo > 0) invoker.cylinderAmmo--;
             A_FireBullets(3.0, 1.0, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_Recoil(2.1);            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.8);
             if (!infinite && invoker.cylinderAmmo <= 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
