@@ -5187,6 +5187,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhAnimParkourVel;
     double tlhAnimSlideViewOffset;
 
+    // Subtle first-person tactical view sway. ViewPos is an offset, not pawn
+    // movement, so the player collision and weapon aiming remain unaffected.
+    double tlhAnimCameraRoll;
+    double tlhAnimCameraOffsetForward;
+    double tlhAnimCameraOffsetSide;
+
     // Custom Fortnite-like over-the-shoulder camera, controlled by GZDoom's
     // native chasecam toggle. The native flag is consumed once to prevent the
     // engine's centered chase camera from fighting TLH's custom camera.
@@ -5788,11 +5794,95 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // The PSprite transform function existed but was never called. Apply
         // its reversible procedural layer to each live weapon-related overlay.
         // This includes the normal weapon, muzzle flash and dual-wield layer.
+        UpdateTLHFirstPersonCameraMotion(onGround);
         ApplyTLHWeaponPSpriteMotion(player.FindPSprite(PSP_WEAPON));
         ApplyTLHWeaponPSpriteMotion(player.FindPSprite(PSP_FLASH));
         ApplyTLHWeaponPSpriteMotion(player.FindPSprite(TLH_AKIMBO_LAYER));
 
         wasOnGround = onGround;
+    }
+
+    // A restrained tactical camera: small lateral bank while strafing, a tiny
+    // lead in the direction of travel, and a damped return when input changes.
+    // The view transform is visual only; it never alters aim yaw/pitch or pawn
+    // velocity. Roll is part of GZDoom's rendered viewpoint, while SetViewPos
+    // applies a local camera offset without moving the collision actor.
+    void UpdateTLHFirstPersonCameraMotion(bool onGroundNow)
+    {
+        if (!player || player.playerstate != PST_LIVE)
+        {
+            tlhAnimCameraRoll = 0.0;
+            tlhAnimCameraOffsetForward = 0.0;
+            tlhAnimCameraOffsetSide = 0.0;
+            roll = 0.0;
+            SetViewPos((0.0, 0.0, 0.0), 0);
+            return;
+        }
+
+        // Never layer first-person head movement over the custom chase camera
+        // or a scripted/cutscene camera.
+        if (player.camera != self || tlhChaseCameraActive)
+        {
+            roll = 0.0;
+            SetViewPos((0.0, 0.0, 0.0), 0);
+            return;
+        }
+
+        double forwardX = cos(angle);
+        double forwardY = sin(angle);
+        double rightX = sin(angle);
+        double rightY = -cos(angle);
+
+        double forwardSpeed = Vel.X * forwardX + Vel.Y * forwardY;
+        double sideSpeed = Vel.X * rightX + Vel.Y * rightY;
+
+        double forwardInput = clamp(double(player.cmd.forwardMove) / 256.0, -1.0, 1.0);
+        double sideInput = clamp(double(player.cmd.sideMove) / 256.0, -1.0, 1.0);
+
+        // Bank just a couple degrees into lateral movement. Velocity keeps the
+        // effect after releasing the key for a brief weighty settle.
+        double lateralSpeed01 = clamp(sideSpeed / 22.0, -1.0, 1.0);
+        double targetRoll = clamp(-lateralSpeed01 * 1.10 - sideInput * 0.42,
+            -1.8, 1.8);
+
+        if (!onGroundNow)
+            targetRoll *= 0.62;
+        if (tlhSliding)
+            targetRoll = clamp(targetRoll * 1.12, -2.0, 2.0);
+
+        double rollBlend = abs(targetRoll) > abs(tlhAnimCameraRoll) ? 0.22 : 0.13;
+        tlhAnimCameraRoll += (targetRoll - tlhAnimCameraRoll) * rollBlend;
+        roll = tlhAnimCameraRoll;
+
+        // Very small local X/Y offsets make the view follow direction changes.
+        // A slow blend prevents abrupt camera snapping when quickly changing
+        // from forward movement to strafing or reversing direction.
+        double targetForwardOffset = clamp(forwardSpeed * 0.030, -0.70, 0.70)
+            + clamp(-tlhAnimInertiaY * 0.18, -0.25, 0.25);
+        double targetSideOffset = clamp(sideSpeed * 0.032, -0.65, 0.65)
+            + clamp(tlhAnimInertiaX * 0.16, -0.22, 0.22);
+
+        if (tlhSliding)
+        {
+            targetForwardOffset *= 1.15;
+            targetSideOffset *= 1.10;
+        }
+        if (!onGroundNow)
+        {
+            targetForwardOffset *= 0.70;
+            targetSideOffset *= 0.70;
+        }
+
+        tlhAnimCameraOffsetForward +=
+            (targetForwardOffset - tlhAnimCameraOffsetForward) * 0.18;
+        tlhAnimCameraOffsetSide +=
+            (targetSideOffset - tlhAnimCameraOffsetSide) * 0.18;
+
+        SetViewPos((
+            tlhAnimCameraOffsetForward,
+            tlhAnimCameraOffsetSide,
+            0.0
+        ), 0);
     }
 
     // Contextual vault: low ray hits a nearby obstacle while the upper ray is
@@ -6065,6 +6155,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             (tlhSliding ? 0.42 : 0.22);
         cameraBob += tlhAnimSlideViewOffset;
         cameraBob += tlhAnimParkourKick * 0.30;
+
+        // Acceleration and braking shift the head just a fraction of a unit.
+        // Combined with the camera's lateral bank this gives direction changes
+        // a tactile weight without introducing exaggerated FPS head-bob.
+        cameraBob += clamp(-tlhAnimInertiaY * 0.28, -0.42, 0.42);
+        cameraBob += clamp(-tlhAnimInertiaX * 0.10, -0.20, 0.20);
 
         // Landing and damage are spring values, so they overshoot and settle
         // naturally instead of teleporting the camera by a fixed amount.
