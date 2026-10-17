@@ -2834,6 +2834,11 @@ Default
                 A_Print("HEAVY CHAINGUN: BARREL HOT");
             }
 
+            if (invoker.heat >= CriticalHeat)
+                return ResolveState("FireHot");
+            if (invoker.heat >= WarmHeat)
+                return ResolveState("FireWarm");
+
             // Keep weapon selection/Ready independent from the custom burst logic.
             // Only enter a three-shot burst when the reserve can support the volley.
             if (invoker.burstMode)
@@ -2890,6 +2895,50 @@ Default
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
         CHGG B 4;
+        Goto Ready;
+
+    FireWarm:
+        CHGG A 3
+        {
+            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - 0.75, SPF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, 0.0, 41.0, WOF_INTERPOLATE);
+            A_OverlayRotate(PSP_WEAPON, -0.85);
+            invoker.heat += 3;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+        }
+        CHGG B 1;
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    FireHot:
+        CHGG A 4
+        {
+            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
+            A_OverlayOffset(PSP_WEAPON, FRandom(-0.7, 0.7), 42.0 + FRandom(-1.0, 1.0), 0);
+            A_OverlayRotate(PSP_WEAPON, FRandom(-1.15, -0.45));
+            invoker.heat += 4;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+        }
+        CHGG B 1;
+        CHGG A 0 A_ReFire;
         Goto Ready;
 
     Overheated:
