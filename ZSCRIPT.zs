@@ -2693,11 +2693,69 @@ class SemiAutoShotgun : Weapon
 }
 
 // ============================================================================
+// VANILLA CHAINGUN FLASH FIX
+// Keep the original DOOM II CHGG/CHGF/MGUN sprite families and familiar cadence,
+// but explicitly trigger the weapon flash on each shot.
+// ============================================================================
+class TLHChaingun : DoomWeapon replaces Chaingun
+{
+    Default
+    {
+        Weapon.SlotNumber 4;
+        Weapon.SlotPriority 4.0;
+        Weapon.SelectionOrder 400;
+        Weapon.AmmoType1 "Clip";
+        Weapon.AmmoUse1 1;
+        Weapon.AmmoGive1 20;
+        Weapon.Kickback 100;
+        AttackSound "weapons/chngun";
+    }
+
+    States
+    {
+    Ready:
+        CHGG A 1 A_WeaponReady;
+        Loop;
+
+    Deselect:
+        CHGG A 1 A_Lower;
+        Loop;
+
+    Select:
+        CHGG A 1 A_Raise;
+        Loop;
+
+    Fire:
+        CHGG A 4
+        {
+            A_GunFlash();
+            A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
+        }
+        CHGG B 4
+        {
+            A_GunFlash();
+            A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
+        }
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    Flash:
+        CHGF A 3 Bright A_Light1;
+        CHGF B 3 Bright A_Light2;
+        Goto LightDone;
+
+    Spawn:
+        MGUN A -1;
+        Stop;
+    }
+}
+
+// ============================================================================
 // HEAVY CHAINGUN - clean rebuild
-// Independent, deliberately conventional DoomWeapon implementation.
-// Uses only stock DOOM II sprites: CHGG (weapon), CHGF (muzzle flash), MGUN (pickup).
-// No heat system, custom Tick(), procedural PSprite transforms, burst mode,
-// secondary fire, or class-specific HUD state.
+// Independent, conventional DoomWeapon implementation.
+// Uses stock DOOM II sprites only. Its identity is sustained, faster suppressive
+// fire: higher cadence and damage than the M4A1, with more spread and recoil.
+// No procedural weapon-HUD drawing, heat system, or custom Tick().
 // ============================================================================
 class HeavyChaingun : DoomWeapon
 {
@@ -2709,7 +2767,7 @@ class HeavyChaingun : DoomWeapon
         Weapon.AmmoType1 "Clip";
         Weapon.AmmoUse1 1;
         Weapon.AmmoGive1 40;
-        Weapon.Kickback 160;
+        Weapon.Kickback 190;
         AttackSound "weapons/chngun";
         Inventory.PickupMessage "Picked up the Heavy Chaingun.";
     }
@@ -2729,14 +2787,22 @@ class HeavyChaingun : DoomWeapon
         Loop;
 
     Fire:
-        CHGG A 4 A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
-        CHGG B 4 A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
+        CHGG A 2
+        {
+            A_GunFlash();
+            A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
+        }
+        CHGG B 2
+        {
+            A_GunFlash();
+            A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
+        }
         CHGG A 0 A_ReFire;
         Goto Ready;
 
     Flash:
-        CHGF A 5 Bright A_Light1;
-        CHGF B 5 Bright A_Light2;
+        CHGF A 3 Bright A_Light1;
+        CHGF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
