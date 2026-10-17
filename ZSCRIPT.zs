@@ -2692,21 +2692,15 @@ class SemiAutoShotgun : Weapon
 
 }
 
-// ==========================================
-// HeavyChaingun is the only custom chaingun class in TLH.
-// It uses only the original DOOM II chaingun sprites: CHGG, CHGF and MGUN.
-// The stock Chaingun class remains available separately.
 // ============================================================================
-/* HEAVY CHAINGUN
-   Keeps the former TLH tactical-chaingun heat/overheat mechanics and fire-mode toggle, using only original DOOM II sprites: HUD CHGG A/B, flash CHGF A/B, pickup MGUN A.
-   M4A1 keeps its separate ZHGG/ZGUN sprites.
- */
+// HEAVY CHAINGUN - clean rebuild
+// Independent, deliberately conventional DoomWeapon implementation.
+// Uses only stock DOOM II sprites: CHGG (weapon), CHGF (muzzle flash), MGUN (pickup).
+// No heat system, custom Tick(), procedural PSprite transforms, burst mode,
+// secondary fire, or class-specific HUD state.
+// ============================================================================
 class HeavyChaingun : DoomWeapon
 {
-    // Kept for compatibility with the existing HUD. Heat mechanics are
-    // disabled in this diagnostic baseline, so this remains zero.
-    int heat;
-
     Default
     {
         Weapon.SlotNumber 4;
@@ -2716,12 +2710,9 @@ class HeavyChaingun : DoomWeapon
         Weapon.AmmoUse1 1;
         Weapon.AmmoGive1 40;
         Weapon.Kickback 160;
+        AttackSound "weapons/chngun";
         Inventory.PickupMessage "Picked up the Heavy Chaingun.";
     }
-
-    // Diagnostic baseline: vanilla sprites and only the basic weapon loop.
-    // Heat, burst mode, custom Tick, HUD transforms and secondary fire are
-    // intentionally disabled for this test. Add them back one at a time.
 
     States
     {
@@ -2738,18 +2729,14 @@ class HeavyChaingun : DoomWeapon
         Loop;
 
     Fire:
-        CHGG A 2
-        {
-            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
-            A_StartSound("weapons/chngun", CHAN_WEAPON);
-        }
-        CHGG B 1;
+        CHGG A 4 A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
+        CHGG B 4;
         CHGG A 0 A_ReFire;
         Goto Ready;
 
     Flash:
-        CHGF A 2 Bright A_Light1;
-        CHGF B 2 Bright A_Light2;
+        CHGF A 5 Bright A_Light1;
+        CHGF B 5 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
@@ -4713,7 +4700,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
         Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
-        // Slot 4 includes the M4A1, HeavyChaingun, compact SMG and M60. No HeavyMinigun alias.
+        // Slot 4 includes the M4A1, rebuilt HeavyChaingun, compact SMG and M60.
         Player.WeaponSlot 4, "TacticalM4A1", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
 
@@ -6776,7 +6763,6 @@ class TacticalHUDHandler : EventHandler
     int hudShell;
     int hudRocket;
     int hudCell;
-    int hudWeaponHeat;
     int hudLiveEnemies;
     int hudTotalEnemies;
     int hudKills;
@@ -7350,7 +7336,6 @@ class TacticalHUDHandler : EventHandler
         hudShell = 0;
         hudRocket = 0;
         hudCell = 0;
-        hudWeaponHeat = 0;
         hudFOV = 90.0;
         hudMoveSpeed = 0.0;
         hudVerticalSpeed = 0.0;
@@ -7483,11 +7468,6 @@ class TacticalHUDHandler : EventHandler
                 }
             }
 
-            if (ready is "HeavyChaingun")
-            {
-                let chaingun = HeavyChaingun(ready);
-                if (chaingun) hudWeaponHeat = chaingun.heat;
-            }
 if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "ServiceRevolver") hudWeaponName = "SERVICE REVOLVER";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
@@ -8154,15 +8134,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             profileY = 1.16;
             accentStrength = 0.78;
         }
-        else if (cls == "HeavyChaingun")
-        {
-            // Gunmetal body; red details stay red and are only slightly lifted.
-            primary = 0x596260;
-            secondary = 0x8D3A3A;
-            profileX = 1.02;
-            profileY = 1.06;
-            accentStrength = 1.08;
-        }
         else if (cls == "AMR99RailRifle")
         {
             // Lightened gray body + electric-blue BFG green-range accent.
@@ -8405,24 +8376,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Text("DOWN", 570, 328, dim, 0.21);
         TextR(String.Format("%03d", hudKills), 609, 328, warn, 0.23);
 
-        if (tlhVisorWeaponClass == "HeavyChaingun")
-        {
-            Text("HEAT", 518, 338, dim, 0.21);
-            TextR(String.Format("%03d", int(clamp(double(hudWeaponHeat) / 3.0, 0.0, 100.0))),
-                570, 338,
-                hudWeaponHeat >= 250 ? Font.CR_RED :
-                hudWeaponHeat >= 180 ? Font.CR_YELLOW : Font.CR_WHITE,
-                0.23);
-            SegBar(574, 340, 35, hudWeaponHeat, 300, 5,
-                hudWeaponHeat >= 250 ? 0xC65B55 :
-                hudWeaponHeat >= 180 ? warn : main);
-        }
-        else
-        {
-            Text("LINK", 518, 338, dim, 0.21);
-            TextR(tlhHUDDualActive ? "AKIMBO" : "NORMAL", 609, 338,
-                tlhHUDDualActive ? Font.CR_GREEN : dim, 0.21);
-        }
+        Text("LINK", 518, 338, dim, 0.21);
+        TextR(tlhHUDDualActive ? "AKIMBO" : "NORMAL", 609, 338,
+            tlhHUDDualActive ? Font.CR_GREEN : dim, 0.21);
     }
 
     // ========================================================================
