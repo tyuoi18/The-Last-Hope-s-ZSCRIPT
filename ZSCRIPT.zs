@@ -2202,8 +2202,9 @@ class OfficerVulkanPistol : Weapon
         PISF B 3 Bright A_Light2;
         Goto LightDone;
 
+    // Vanilla DOOM II pistol pickup sprite; the held weapon remains unchanged.
     Spawn:
-        ZIST A -1;
+        PIST A -1;
         Stop;
     }
 
