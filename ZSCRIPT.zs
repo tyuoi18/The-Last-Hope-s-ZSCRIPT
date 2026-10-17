@@ -2916,7 +2916,7 @@ Default
                 A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
                 return ResolveState("Overheated");
             }
-            return ResolveState(null);
+            return null;
         }
         CHGG B 1;
         CHGG A 0 A_ReFire;
@@ -2939,7 +2939,7 @@ Default
                 A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
                 return ResolveState("Overheated");
             }
-            return ResolveState(null);
+            return null;
         }
         CHGG B 1;
         CHGG A 0 A_ReFire;
@@ -2954,7 +2954,7 @@ Default
                 invoker.overheated = false;
                 return ResolveState("Ready");
             }
-            return ResolveState(null);
+            return null;
         }
         Loop;
 
