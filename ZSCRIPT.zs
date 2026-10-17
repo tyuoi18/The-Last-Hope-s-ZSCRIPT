@@ -2693,395 +2693,13 @@ class SemiAutoShotgun : Weapon
 }
 
 // ==========================================
-// TLH TACTICAL CHAINGUN - OVERHEAT SYSTEM
-// Uses TLH-provided CHGG/CHGF sprite lumps for the first-person HUD.
-// Shares the TLH-provided MGUN ground-pickup sprite with HeavyChaingun.
-// ==========================================
-
-class TLHChaingun : Chaingun replaces Chaingun
-{
-    int heat;
-    bool overheated;
-    bool warningShown;
-    bool criticalShown;
-    bool burstMode;
-
-    const MaxHeat = 300;
-    const RecoverHeat = 45;
-    const WarmHeat = 180;
-    const CriticalHeat = 250;
-
-    Default
-    {
-        Weapon.SlotNumber 4;
-        Weapon.SelectionOrder 405;
-        Weapon.Kickback 85;
-        Weapon.AmmoType1 "Clip";
-        Weapon.AmmoGive1 40;
-        Weapon.AmmoUse1 1;
-
-        Inventory.PickupMessage "I found the Tactical Chaingun!";
-
-        // Palette remap in ZScript. All major color families are pushed into
-        // a dark gunmetal range. Doom red/light-red ramps are remapped to a
-        // slightly stronger red instead of being washed into gray.
-        Translation
-            "0:31=64:79",             // black/dark -> graphite
-            "32:47=176:191",          // red -> slightly stronger red
-            "48:79=64:79",             // warm/brown -> graphite
-            "80:95=80:95",            // dark neutral -> dark gray
-            "96:111=80:95",           // gray -> darker gray
-            "112:127=80:95",          // green -> dark gray
-            "128:167=64:79",          // colored midtones -> graphite
-            "168:175=176:191",         // deep red -> stronger red
-            "176:191=176:191",         // light red -> stronger red
-            "192:255=64:79";           // remaining colors -> graphite
-    }
-
-    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
-    {
-        if (fireMode == PrimaryFire && burstMode)
-            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
-        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
-    }
-
-    // ------------------------------------------------------------------------
-    // Thermal feedback is visualized in the YARBIS HUD only.
-    // Weapon sprites remain normal, opaque and free of color-add shading.
-    // ------------------------------------------------------------------------
-
-    override void Tick()
-    {
-        Super.Tick();
-
-        if (!Owner || !Owner.player)
-            return;
-
-        bool firing = (Owner.player.ReadyWeapon == self && (Owner.player.cmd.buttons & BT_ATTACK));
-
-        if (overheated)
-        {
-            if (heat > 0)
-                heat -= 3;
-        }
-        else if (!firing)
-        {
-            if (heat > 0)
-                heat -= 2;
-        }
-        else
-        {
-            // Cooling is intentionally disabled while holding the trigger.
-            // This makes sustained fire actually build heat.
-        }
-
-        if (heat < 0) heat = 0;
-
-        if (warningShown && heat <= 76)
-            warningShown = false;
-
-        if (criticalShown && heat <= 112)
-            criticalShown = false;
-
-        if (overheated && heat <= RecoverHeat)
-            overheated = false;
-
-    }
-
-    States
-    {
-    Ready:
-        PISG A 0;
-
-    TLHPickupReadyShim:
-        CHGG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
-        Loop;
-
-    Deselect:
-        CHGG A 1 A_Lower;
-        Loop;
-
-    Select:
-        CHGG A 1 A_Raise;
-        Loop;
-
-    Fire:
-        CHGG A 0
-        {
-            if (invoker.overheated)
-                return ResolveState("Overheated");
-
-            if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("Ready");
-
-            if (invoker.heat >= MaxHeat)
-            {
-                invoker.overheated = true;
-                A_StartSound("weapons/sshotl", CHAN_WEAPON);
-                A_Print("CHAINGUN: OVERHEATED - VENTING");
-                return ResolveState("Overheated");
-            }
-
-            if (invoker.heat >= CriticalHeat)
-                return ResolveState("FireHot");
-
-            if (invoker.heat >= WarmHeat)
-                return ResolveState("FireWarm");
-
-            if (invoker.burstMode)
-                return ResolveState("FireBurst");
-
-            return ResolveState("FireNormal");
-        }
-
-    FireNormal:
-        CHGG A 2
-        {
-            A_FireCGun();
-            invoker.heat += 2;
-            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
-
-            A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.65);
-        }
-        CHGG B 1;
-        CHGG A 0
-        {
-            A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.25);
-
-            if (invoker.heat >= MaxHeat)
-            {
-                invoker.overheated = true;
-                A_StartSound("weapons/sshotl", CHAN_WEAPON);
-                A_Print("CHAINGUN: OVERHEATED - VENTING");
-                return ResolveState("Overheated");
-            }
-
-            if (invoker.heat >= WarmHeat && !invoker.warningShown)
-            {
-                invoker.warningShown = true;
-                A_StartSound("weapons/sshotc", CHAN_WEAPON);
-                A_Print("CHAINGUN: BARREL HOT");
-            }
-
-            return ResolveState(null);
-        }
-        CHGG A 0 A_ReFire;
-        Goto Ready;
-
-    FireWarm:
-        CHGG A 3
-        {
-            A_FireCGun();
-            invoker.heat += 3;
-            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
-
-            A_OverlayOffset(PSP_WEAPON, 0.0, 41.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.85);
-
-            if (invoker.heat >= CriticalHeat && !invoker.criticalShown)
-            {
-                invoker.criticalShown = true;
-                A_StartSound("weapons/sshotc", CHAN_WEAPON);
-                A_Print("CHAINGUN: CRITICAL HEAT");
-            }
-        }
-        CHGG B 1;
-        CHGG A 0
-        {
-            A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.30);
-
-            if (invoker.heat >= MaxHeat)
-            {
-                invoker.overheated = true;
-                A_StartSound("weapons/sshotl", CHAN_WEAPON);
-                A_Print("CHAINGUN: OVERHEATED - VENTING");
-                return ResolveState("Overheated");
-            }
-
-            return ResolveState(null);
-        }
-        CHGG A 0 A_ReFire;
-        Goto Ready;
-
-    FireHot:
-        CHGG A 4
-        {
-            A_FireCGun();
-            invoker.heat += 4;
-            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
-
-            A_OverlayOffset(PSP_WEAPON, FRandom(-0.7, 0.7), 42.0 + FRandom(-1.0, 1.0), 0);
-            A_OverlayRotate(PSP_WEAPON, FRandom(-1.15, -0.45));
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-
-            if (invoker.heat >= CriticalHeat && !invoker.criticalShown)
-            {
-                invoker.criticalShown = true;
-                A_StartSound("weapons/sshotc", CHAN_WEAPON);
-                A_Print("CHAINGUN: CRITICAL HEAT");
-            }
-        }
-        CHGG B 1;
-        CHGG A 0
-        {
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-            A_OverlayOffset(PSP_WEAPON, 0.0, 34.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0.35);
-
-            if (invoker.heat >= MaxHeat)
-            {
-                invoker.overheated = true;
-                A_StartSound("weapons/sshotl", CHAN_WEAPON);
-                A_Print("CHAINGUN: OVERHEATED - VENTING");
-                return ResolveState("Overheated");
-            }
-
-            return ResolveState(null);
-        }
-        CHGG A 0 A_ReFire;
-        Goto Ready;
-
-    FireBurst:
-        CHGG A 2
-        {
-            A_FireCGun();
-            invoker.heat += 2;
-            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
-            A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.70);
-        }
-        CHGG B 1;
-        CHGG A 2
-        {
-            A_FireCGun();
-            invoker.heat += 2;
-            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
-            A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.70);
-        }
-        CHGG B 1;
-        CHGG A 2
-        {
-            A_FireCGun();
-            invoker.heat += 2;
-            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
-            A_OverlayOffset(PSP_WEAPON, 0.0, 40.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.70);
-        }
-        CHGG B 1;
-        CHGG A 8;
-        Goto Ready;
-
-    Overheated:
-        CHGG A 2
-        {
-            A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
-
-            double pulse = 0.78 + 0.22 * abs(sin(level.time * 11.4591559));
-            double shake = 0.75 + double(invoker.heat) / 100.0;
-
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-            A_OverlayOffset(PSP_WEAPON, FRandom(-shake, shake), 32.0 + FRandom(-shake, shake), 0);
-            A_OverlayRotate(PSP_WEAPON, FRandom(-1.5, 1.5));
-
-            // While overheated, the weapon can only be reloaded or
-            // switched. Firing is deliberately disabled.
-            A_WeaponReady(WRF_ALLOWRELOAD | WRF_NOPRIMARY | WRF_NOSECONDARY);
-
-            if (!invoker.overheated || invoker.heat <= RecoverHeat)
-            {
-                invoker.overheated = false;
-                A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
-                A_OverlayAlpha(PSP_WEAPON, 1.0);
-                A_OverlayRotate(PSP_WEAPON, 0);
-                return ResolveState("Ready");
-            }
-
-            return ResolveState(null);
-        }
-        Loop;
-
-    Reload:
-        CHGG A 0
-        {
-            // R while overheated = emergency vent.
-            if (invoker.overheated)
-                return ResolveState("ManualVent");
-
-            if (invoker.burstMode)
-                return ResolveState("SetAuto");
-
-            return ResolveState("SetBurst");
-        }
-
-    SetBurst:
-        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        CHGG A 6
-        {
-            invoker.burstMode = true;
-            A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Print("CHAINGUN: CONTROLLED BURST");
-        }
-        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-        Goto Ready;
-
-    SetAuto:
-        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
-        CHGG A 6
-        {
-            invoker.burstMode = false;
-            A_StartSound("weapons/sshotl", CHAN_WEAPON);
-            A_Print("CHAINGUN: FULL AUTO");
-        }
-        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-        Goto Ready;
-
-    ManualVent:
-        CHGG A 4
-        {
-            int oldHeat = invoker.heat;
-            invoker.heat -= 55;
-            if (invoker.heat < 0) invoker.heat = 0;
-
-            A_StartSound("weapons/sawidle", CHAN_WEAPON);
-            A_Print(String.Format("CHAINGUN: VENTING %d%% → %d%%", oldHeat, invoker.heat));
-        }
-        CHGG A 5
-        {
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-            A_OverlayOffset(PSP_WEAPON, FRandom(-0.5, 0.5), 33.0, 0);
-            A_OverlayRotate(PSP_WEAPON, FRandom(-0.8, 0.8));
-        }
-        CHGG A 5
-        {
-            A_OverlayRenderStyle(PSP_WEAPON, STYLE_Normal);
-            A_OverlayAlpha(PSP_WEAPON, 1.0);
-            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
-        Goto Ready;
-
-    Flash:
-        CHGF A 2 Bright A_Light1;
-        CHGF B 2 Bright A_Light2;
-        Goto LightDone;
-
-    Spawn:
-        MGUN A -1;
-        Stop;
-    }
-
-}
-
-
-// ============================================================================
+// HeavyChaingun is the only custom chaingun class in TLH.
+// It uses only the original DOOM II chaingun sprites: CHGG, CHGF and MGUN.
+// The stock Chaingun class remains available separately.
 // ============================================================================
 /* HEAVY CHAINGUN
    HUD: CHGG A/B (CHGGA0/CHGGB0), flash: CHGF A/B, pickup: MGUN A.
-   Textures.wad may group TLH's copies inside one SS_START ... SS_END section.
+   Textures.wad may group the original DOOM II sprites inside one SS_START ... SS_END section.
    Those markers only identify sprite namespace membership; they do not pin
    a lump to a particular WAD or bypass GZDoom's resource loading order.
    M4A1 keeps its separate ZHGG/ZGUN sprites.
@@ -5166,8 +4784,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
         Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
-        // Slot 4 includes the M4A1, TLH Tactical Chaingun, TLH CHGG-sprite Heavy Chaingun, compact SMG and M60. No HeavyMinigun alias.
-        Player.WeaponSlot 4, "TacticalM4A1", "TLHChaingun", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
+        // Slot 4 includes the M4A1, HeavyChaingun, compact SMG and M60. No HeavyMinigun alias.
+        Player.WeaponSlot 4, "TacticalM4A1", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
 
         Player.WeaponSlot 6, "RecoilPlasmaRifle";
@@ -5209,7 +4827,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             // Slot 4
             GiveInventory("TacticalM4A1", 1, true);
-            GiveInventory("TLHChaingun", 1, true);
             GiveInventory("HeavyChaingun", 1, true);
             GiveInventory("TLHCompactSMG", 1, true);
             GiveInventory("M60MachineGun", 1, true);
@@ -6135,10 +5752,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 1.02; scaleY = 1.08; offsetY = 0.4; sway = 0.86;
         }
-        else if (cls == "TLHChaingun")
-        {
-            scaleX = 1.02; scaleY = 1.06; offsetY = 0.8; sway = 0.82;
-        }
         else if (cls == "HeavyChaingun")
         {
             // Reserved profile for consistency if procedural PSprite motion is re-enabled.
@@ -6196,7 +5809,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (cls == "RecoilShotgun" || cls == "FastRecoilSSG" || cls == "SemiAutoShotgun") return 0.92;
 
         // Carbines and compact automatics settle quickly.
-        if (cls == "TacticalM4A1" || cls == "TLHChaingun") return 0.82;
+        if (cls == "TacticalM4A1") return 0.82;
 
         // Very heavy weapons move less but hit harder when they recoil.
         if (cls == "M60MachineGun") return 0.66;
@@ -6705,7 +6318,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             else if (r == 1) GiveModeWeaponLocal("OfficerVulkanPistol");
             else if (r == 2) GiveModeWeaponLocal("RecoilShotgun");
             else if (r == 3) GiveModeWeaponLocal("TacticalM4A1");
-            else if (r == 4) GiveModeWeaponLocal("TLHChaingun");
+            else if (r == 4) GiveModeWeaponLocal("HeavyChaingun");
             else if (r == 5) GiveModeWeaponLocal("M60MachineGun");
             else if (r == 6) GiveModeWeaponLocal("RecoilRocketLauncher");
             else GiveModeWeaponLocal("AMR99RailRifle");
@@ -6844,7 +6457,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (FindInventory("StreetSweeperShotgun")) count++;
         if (FindInventory("FastRecoilSSG")) count++;
         if (FindInventory("TacticalM4A1")) count++;
-        if (FindInventory("TLHChaingun")) count++;
+        if (FindInventory("HeavyChaingun")) count++;
         if (FindInventory("M60MachineGun")) count++;
         if (FindInventory("RecoilRocketLauncher")) count++;
         if (FindInventory("RecoilPlasmaRifle")) count++;
@@ -6890,9 +6503,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (pick == 1) selected = "TacticalM4A1";
             else pick--;
         }
-        if (selected == "" && FindInventory("TLHChaingun"))
+        if (selected == "" && FindInventory("HeavyChaingun"))
         {
-            if (pick == 1) selected = "TLHChaingun";
+            if (pick == 1) selected = "HeavyChaingun";
             else pick--;
         }
         if (selected == "" && FindInventory("M60MachineGun"))
@@ -7239,7 +6852,6 @@ class TacticalHUDHandler : EventHandler
     int hudShell;
     int hudRocket;
     int hudCell;
-    int hudWeaponHeat;
     int hudLiveEnemies;
     int hudTotalEnemies;
     int hudKills;
@@ -7445,26 +7057,7 @@ class TacticalHUDHandler : EventHandler
             }
         }
 
-        // M12 Compact SMG: uncommon alternate pickup from a spawned Tactical Chaingun.
-        if (e.Thing is "TLHChaingun")
-        {
-            let inv = Inventory(e.Thing);
-            if (inv && !inv.Owner && random(1, 100) <= 8)
-            {
-                Vector3 spawnPos = e.Thing.Pos;
-                uint spawnFlags = e.Thing.SpawnFlags;
-                e.Thing.Destroy();
-
-                let smgPickup = Actor.Spawn("TLHCompactSMG", spawnPos);
-                if (smgPickup)
-                {
-                    smgPickup.SpawnFlags = spawnFlags;
-                    smgPickup.Vel = (FRandom(-2, 2), FRandom(-2, 2), FRandom(2, 4));
-                }
-            }
-        }
-
-        // Backpack rarity:
+                // Backpack rarity:
         // 15% -> Military Backpack
         //  2% -> Loadout Backpack
         // The rolls are mutually exclusive, so Loadout is deliberately much
@@ -7832,7 +7425,7 @@ class TacticalHUDHandler : EventHandler
         hudShell = 0;
         hudRocket = 0;
         hudCell = 0;
-        hudWeaponHeat = 0;
+        
         hudFOV = 90.0;
         hudMoveSpeed = 0.0;
         hudVerticalSpeed = 0.0;
@@ -7964,14 +7557,7 @@ class TacticalHUDHandler : EventHandler
                     hudRevolverReserve = hudClip;
                 }
             }
-
-            if (ready is "TLHChaingun")
-            {
-                let cg = TLHChaingun(ready);
-                if (cg) hudWeaponHeat = cg.heat;
-            }
-
-            if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
+if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "ServiceRevolver") hudWeaponName = "SERVICE REVOLVER";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
@@ -7979,7 +7565,6 @@ class TacticalHUDHandler : EventHandler
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
-            else if (hudWeaponName == "TLHChaingun") hudWeaponName = "TACTICAL CHAINGUN";
             else if (hudWeaponName == "HeavyChaingun") hudWeaponName = "HEAVY CHAINGUN";
             else if (hudWeaponName == "TLHCompactSMG") hudWeaponName = "M12 COMPACT SMG";
             else if (hudWeaponName == "M60MachineGun") hudWeaponName = "M60 MACHINE GUN";
@@ -8638,7 +8223,7 @@ class TacticalHUDHandler : EventHandler
             profileY = 1.16;
             accentStrength = 0.78;
         }
-        else if (cls == "TLHChaingun")
+        else if (cls == "HeavyChaingun")
         {
             // Gunmetal body; red details stay red and are only slightly lifted.
             primary = 0x596260;
@@ -8646,15 +8231,6 @@ class TacticalHUDHandler : EventHandler
             profileX = 1.02;
             profileY = 1.06;
             accentStrength = 1.08;
-        }
-        else if (cls == "HeavyChaingun")
-        {
-            // Heavy gunmetal body with muted red hardware accents.
-            primary = 0x515A58;
-            secondary = 0x843C39;
-            profileX = 1.04;
-            profileY = 1.12;
-            accentStrength = 0.92;
         }
         else if (cls == "AMR99RailRifle")
         {
@@ -8739,7 +8315,7 @@ class TacticalHUDHandler : EventHandler
         bool flip = false;
         Vector2 stateScale = (1.0, 1.0);
 
-        // Both TLH chainguns use the CHGG sprite family for the visor preview.
+        // HeavyChaingun uses the original DOOM II CHGG sprite family for the visor preview.
         // Keep a static A-frame fallback while the transient PSprite cache is empty.
         if (hudWeaponTextureValid && hudWeaponTextureClass == cls)
         {
@@ -8747,7 +8323,7 @@ class TacticalHUDHandler : EventHandler
             flip = hudWeaponFlip;
             stateScale = hudWeaponStateScale;
         }
-        else if (cls == "TLHChaingun" || cls == "HeavyChaingun")
+        else if (cls == "HeavyChaingun")
         {
             tex = TexMan.CheckForTexture("CHGGA0", TexMan.Type_Sprite);
         }
@@ -8897,25 +8473,6 @@ class TacticalHUDHandler : EventHandler
             hudLiveEnemies > 0 ? Font.CR_RED : main, 0.27);
         Text("DOWN", 570, 328, dim, 0.21);
         TextR(String.Format("%03d", hudKills), 609, 328, warn, 0.23);
-
-        if (tlhVisorWeaponClass == "TLHChaingun")
-        {
-            Text("HEAT", 518, 338, dim, 0.21);
-            TextR(String.Format("%03d", int(clamp(double(hudWeaponHeat) / 3.0, 0.0, 100.0))),
-                570, 338,
-                hudWeaponHeat >= 250 ? Font.CR_RED :
-                hudWeaponHeat >= 180 ? Font.CR_YELLOW : Font.CR_WHITE,
-                0.23);
-            SegBar(574, 340, 35, hudWeaponHeat, 300, 5,
-                hudWeaponHeat >= 250 ? 0xC65B55 :
-                hudWeaponHeat >= 180 ? warn : main);
-        }
-        else
-        {
-            Text("LINK", 518, 338, dim, 0.21);
-            TextR(tlhHUDDualActive ? "AKIMBO" : "NORMAL", 609, 338,
-                tlhHUDDualActive ? Font.CR_GREEN : dim, 0.21);
-        }
     }
 
     // ========================================================================
@@ -9513,7 +9070,7 @@ class TacticalChaingunDrop : Actor
                 if (r <= 5)
                     drop = Spawn("M60MachineGun", Pos);
                 else if (r <= 15)
-                    drop = Spawn("TLHChaingun", Pos);
+                    drop = Spawn("HeavyChaingun", Pos);
                 else if (r <= 20)
                     drop = Spawn("OfficerVulkanPistol", Pos);
                 else
