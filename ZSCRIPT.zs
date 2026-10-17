@@ -3042,7 +3042,7 @@ class HeavyChaingun : DoomWeapon
         }
         CHGG B 2
         {
-            A_GunFlash();
+            // Do not restart the flash here: let CHGF A and CHGF B both render.
             A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
             A_SetPitch(pitch - 0.12, SPF_INTERPOLATE);
         }
