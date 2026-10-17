@@ -5823,6 +5823,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // or a scripted/cutscene camera.
         if (player.camera != self || tlhChaseCameraActive)
         {
+            tlhAnimCameraRoll = 0.0;
+            tlhAnimCameraOffsetForward = 0.0;
+            tlhAnimCameraOffsetSide = 0.0;
             roll = 0.0;
             SetViewPos((0.0, 0.0, 0.0), 0);
             return;
@@ -5858,6 +5861,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // A slow blend prevents abrupt camera snapping when quickly changing
         // from forward movement to strafing or reversing direction.
         double targetForwardOffset = clamp(forwardSpeed * 0.030, -0.70, 0.70)
+            + forwardInput * 0.10
             + clamp(-tlhAnimInertiaY * 0.18, -0.25, 0.25);
         double targetSideOffset = clamp(sideSpeed * 0.032, -0.65, 0.65)
             + clamp(tlhAnimInertiaX * 0.16, -0.22, 0.22);
