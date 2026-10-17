@@ -5824,9 +5824,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return (0, 0);
 
         double speed = Vel.XY.Length();
-        // The revolver has authored recoil/reload offsets of its own. Do not
-        // layer the player's procedural bob over those offsets, while moving or
-        // standing still; that second transform is what causes vertical jitter.
+        // The revolver combines classic movement bob into its own Ready-state
+        // offset. Do not apply a second player-level transform over its authored
+        // recoil/reload offsets, which previously caused vertical jitter.
         if (weapon is "ServiceRevolver")
             return (0, 0);
         double speed01 = clamp(speed / 18.0, 0.0, 1.0);
@@ -5852,8 +5852,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
         double idleBlend = clamp(1.0 - speed01 * 2.2, 0.0, 1.0);
 
-        // Layer 1: gait. The half-frequency term keeps the gun from looking
-        // mechanically symmetrical on every single footstep.
+        // Layer 1: classic DOOM II gait. The second harmonic adds the familiar
+        // vertical bounce without the old extra half-frequency sway.
         double walkX = gait * classicBob;
         double walkY = gaitDouble * classicBob * (0.32 + 0.08 * crouchFactor);
 
