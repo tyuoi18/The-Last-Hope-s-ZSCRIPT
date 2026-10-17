@@ -2698,12 +2698,38 @@ class SemiAutoShotgun : Weapon
 // The stock Chaingun class remains available separately.
 // ============================================================================
 /* HEAVY CHAINGUN
-   Uses only original DOOM II sprites: HUD CHGG A/B, flash CHGF A/B, pickup MGUN A.
+   Keeps the former TLH tactical-chaingun heat/overheat mechanics and fire-mode toggle, using only original DOOM II sprites: HUD CHGG A/B, flash CHGF A/B, pickup MGUN A.
    M4A1 keeps its separate ZHGG/ZGUN sprites.
  */
 class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
+    int heat;
+    bool overheated;
+    bool warningShown;
+    bool criticalShown;
+
+    const MaxHeat = 300;
+    const RecoverHeat = 45;
+    const WarmHeat = 180;
+    const CriticalHeat = 250;
+
+    override void Tick()
+    {
+        Super.Tick();
+        if (!Owner || !Owner.player) return;
+
+        bool firing = (Owner.player.ReadyWeapon == self &&
+            (Owner.player.cmd.buttons & BT_ATTACK));
+
+        if (overheated) heat -= 3;
+        else if (!firing && heat > 0) heat -= 2;
+
+        if (heat < 0) heat = 0;
+        if (warningShown && heat <= 76) warningShown = false;
+        if (criticalShown && heat <= 112) criticalShown = false;
+        if (overheated && heat <= RecoverHeat) overheated = false;
+    }
 
 Default
     {
@@ -2740,19 +2766,74 @@ Default
         Loop;
 
     Reload:
-        CHGG A 3 A_WeaponOffset(0, 40, WOF_INTERPOLATE);
+        CHGG A 0
+        {
+            if (invoker.overheated)
+                return ResolveState("ManualVent");
+            return ResolveState(invoker.burstMode ? "SetAuto" : "SetBurst");
+        }
+
+    SetBurst:
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
         CHGG A 4
         {
-            invoker.burstMode = !invoker.burstMode;
-            A_StartSound("weapons/shotgr", CHAN_WEAPON);
-            A_Print(invoker.burstMode ? "HEAVY CHAINGUN: CONTROLLED BURST" : "HEAVY CHAINGUN: FULL AUTO");
+            invoker.burstMode = true;
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Print("HEAVY CHAINGUN: CONTROLLED BURST");
         }
-        CHGG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    SetAuto:
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 4
+        {
+            invoker.burstMode = false;
+            A_StartSound("weapons/sshotl", CHAN_WEAPON);
+            A_Print("HEAVY CHAINGUN: FULL AUTO");
+        }
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    ManualVent:
+        CHGG A 4
+        {
+            int oldHeat = invoker.heat;
+            invoker.heat -= 55;
+            if (invoker.heat < 0) invoker.heat = 0;
+            A_StartSound("weapons/sawidle", CHAN_WEAPON);
+            A_Print(String.Format("HEAVY CHAINGUN: VENTING %d -> %d", oldHeat, invoker.heat));
+        }
+        CHGG A 5;
         Goto Ready;
 
     Fire:
         CHGG A 0
         {
+            if (invoker.overheated)
+                return ResolveState("Overheated");
+
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+
+            if (invoker.heat >= CriticalHeat && !invoker.criticalShown)
+            {
+                invoker.criticalShown = true;
+                A_StartSound("weapons/sshotc", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: CRITICAL HEAT");
+            }
+            else if (invoker.heat >= WarmHeat && !invoker.warningShown)
+            {
+                invoker.warningShown = true;
+                A_StartSound("weapons/sshotc", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: BARREL HOT");
+            }
+
             // Keep weapon selection/Ready independent from the custom burst logic.
             // Only enter a three-shot burst when the reserve can support the volley.
             if (invoker.burstMode)
@@ -2776,6 +2857,8 @@ Default
             // Camera kick only; A_Recoil would physically push the player backward.
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
             A_Quake(0.35, 0.8, 0, 35);
+            invoker.heat += invoker.heat >= WarmHeat ? 3 : 2;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
         CHGG B 1;
         CHGG A 0 A_ReFire;
@@ -2787,21 +2870,39 @@ Default
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            invoker.heat += 2;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
         CHGG B 1;
         CHGG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            invoker.heat += 2;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
         CHGG B 1;
         CHGG A 1
         {
             A_FireBullets(2.5, 2.5, 1, 15, "BulletPuff");
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            invoker.heat += 2;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
         CHGG B 4;
         Goto Ready;
+
+    Overheated:
+        CHGG A 2
+        {
+            A_WeaponReady(WRF_ALLOWRELOAD | WRF_NOPRIMARY | WRF_NOSECONDARY);
+            if (!invoker.overheated || invoker.heat <= RecoverHeat)
+            {
+                invoker.overheated = false;
+                return ResolveState("Ready");
+            }
+        }
+        Loop;
 
     AltFire:
         CHGG B 3
