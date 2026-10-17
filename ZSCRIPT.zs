@@ -2995,19 +2995,28 @@ class HeavyChaingun : DoomWeapon
     Deselect:
         CHGG A 0
         {
+            // Run the reset exactly once. Never loop back through this zero-tic
+            // frame, or A_Lower gets its position reset every tic and weapon
+            // switching can softlock with the HCG bobbing vertically.
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState("DeselectLower");
         }
+    DeselectLower:
         CHGG A 1 A_Lower;
         Loop;
+
     Select:
         CHGG A 0
         {
+            // Initialize the drawn pose once, then let A_Raise finish normally.
             A_OverlayScale(PSP_WEAPON, 1.04, 1.08);
             A_OverlayOffset(PSP_WEAPON, 0, 36);
             A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState("SelectRaise");
         }
+    SelectRaise:
         CHGG A 1 A_Raise;
         Loop;
 
