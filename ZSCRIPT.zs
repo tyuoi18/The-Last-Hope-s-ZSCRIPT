@@ -4845,7 +4845,8 @@ class ServiceRevolver : Weapon
             // Classic DOOM II movement bob is combined into this single offset.
             // Do not layer BobWeapon() over the revolver's custom action offsets.
             double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
-            double bobPhase = double(player.BobTimer) * (18.0 * bobSpeed);
+            double bobPhase = tp ? tp.tlhAnimStepPhase :
+                double(level.time) * 6.0 * bobSpeed;
             double bobStrength = sqrt(max(player.bob, 0.0)) * 1.10;
             double classicBobX = sin(bobPhase) * bobStrength;
             double classicBobY = sin(bobPhase * 2.0) * bobStrength * 0.38;
@@ -5831,10 +5832,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return (0, 0);
         double speed01 = clamp(speed / 18.0, 0.0, 1.0);
         double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
-        // Match DOOM II's movement-driven rhythm rather than the old layered
-        // half-frequency sway. BobTimer tracks the classic walk cycle; player.bob
-        // supplies its movement-dependent amplitude, while ticfrac keeps it smooth.
-        double phase = (double(player.BobTimer) + ticfrac) * (18.0 * bobSpeed);
+        // Reuse TLH's existing movement phase: PlayerInfo's native BobTimer
+        // is not exposed to ZScript in GZDoom 4.14.2. ticfrac smooths the
+        // phase between tics without creating a second gait clock.
+        double phase = tlhAnimStepPhase +
+            ((6.0 + speed01 * 12.0) * bobSpeed * ticfrac);
         double classicBob = sqrt(max(player.bob, 0.0)) * 1.10;
         double gait = sin(phase);
         double gaitDouble = sin(phase * 2.0);
