@@ -5174,6 +5174,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool wasOnGround;
     bool akimboButtonHeld;
 
+    // Movement states for slide-cancel and context-sensitive parkour.
+    bool tlhSliding;
+    int tlhSlideTicks;
+    bool tlhWallJumpUsed;
+    int tlhWallJumpCooldown;
+    int tlhParkourCooldown;
+    int tlhParkourVaultTicks;
+
+    // First-person camera/weapon response to slide, vaults and wall jumps.
+    double tlhAnimParkourKick;
+    double tlhAnimParkourVel;
+    double tlhAnimSlideViewOffset;
+
     // Custom Fortnite-like over-the-shoulder camera, controlled by GZDoom's
     // native chasecam toggle. The native flag is consumed once to prevent the
     // engine's centered chase camera from fighting TLH's custom camera.
@@ -5613,12 +5626,60 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             akimboButtonHeld = false;
 
         // ------------------------------------------------------------
-        // Double jump
+        // Parkour timers / grounded reset
+        // ------------------------------------------------------------
+        if (tlhWallJumpCooldown > 0)
+            tlhWallJumpCooldown--;
+        if (tlhParkourCooldown > 0)
+            tlhParkourCooldown--;
+        if (tlhParkourVaultTicks > 0)
+            tlhParkourVaultTicks--;
+
+        if (onGround)
+            tlhWallJumpUsed = false;
+
+        // ------------------------------------------------------------
+        // Slide cancel, contextual vault, wall jump and double jump
         // ------------------------------------------------------------
         if ((bt & BT_JUMP) && !(obt & BT_JUMP))
         {
-            if (gameMode != 1 && !onGround && jumpCount == 0 && waterlevel == 0 && !isSlamming)
+            if (tlhSliding && onGround && gameMode != 1)
             {
+                // Cancel the slide into a momentum-preserving jump. The
+                // shortened cooldown rewards timing without allowing spam.
+                tlhSliding = false;
+                tlhSlideTicks = 0;
+                slideCooldown = 8;
+                Vel.Z = max(Vel.Z, 10.8);
+                Thrust(clamp(Vel.XY.Length() * 0.16, 5.0, 10.0), angle);
+                tlhAnimParkourVel += 3.0;
+                jumpCount = 0;
+                A_StartSound("weapons/sshotc", CHAN_BODY);
+            }
+            else if (onGround && gameMode != 1 && !isSlamming && !tlhSliding &&
+                     Vel.XY.Length() > 8.0 && player.cmd.forwardMove > 0 &&
+                     TryTLHParkourVault())
+            {
+                // Auto-vault only when a low obstacle blocks the torso but
+                // the upper body has clear space beyond it.
+                tlhParkourCooldown = 8;
+                tlhParkourVaultTicks = 10;
+                Vel.Z = max(Vel.Z, 9.0);
+                Thrust(9.0, angle);
+                tlhAnimParkourVel += 2.8;
+                jumpCount = 0;
+                A_StartSound("weapons/sshotc", CHAN_BODY);
+            }
+            else if (!onGround && gameMode != 1 && !isSlamming &&
+                     waterlevel == 0 && TryTLHWallJump())
+            {
+                // TryTLHWallJump consumes the jump and applies the impulse.
+            }
+            else if (gameMode != 1 && !onGround && jumpCount == 0 &&
+                     waterlevel == 0 && !isSlamming)
+            {
+                // Existing double jump remains available when no wall jump
+                // or vault consumed the input.
                 Vel.Z = 12.0;
                 jumpCount = 1;
                 A_StartSound("weapons/sshotc", CHAN_BODY);
@@ -5670,14 +5731,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // ------------------------------------------------------------
         if (gameMode != 1 && (bt & BT_CROUCH) && !(obt & BT_CROUCH))
         {
-            if (onGround && Vel.XY.Length() > 2.0 && slideCooldown == 0)
+            if (onGround && Vel.XY.Length() > 8.0 && slideCooldown == 0)
             {
-                Thrust(25, angle);
-                slideCooldown = 35;
+                tlhSliding = true;
+                tlhSlideTicks = 24;
+                slideCooldown = 42;
+                Thrust(12.0 + clamp(Vel.XY.Length() * 0.14, 0.0, 6.0), angle);
+                tlhAnimParkourVel += 0.45;
                 A_StartSound("weapons/sshoto", CHAN_BODY);
             }
             else if (!onGround && !isSlamming)
             {
+                // Preserve the existing ground-pound move.
                 Vel.XY = (0, 0);
                 Vel.Z = -50.0;
                 isSlamming = true;
@@ -5685,10 +5750,29 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
 
-        if (slideCooldown > 15 && onGround)
+        if (gameMode == 1 || !onGround)
         {
-            if ((level.maptime & 3) == 0)
+            tlhSliding = false;
+            tlhSlideTicks = 0;
+        }
+        else if (tlhSliding)
+        {
+            if (tlhSlideTicks > 0)
+                tlhSlideTicks--;
+
+            // Low friction keeps the slide readable while gradually bleeding
+            // speed; normal input still allows a little steering.
+            Vel.XY *= 0.985;
+
+            if (tlhSlideTicks <= 0 || Vel.XY.Length() < 5.0)
+            {
+                tlhSliding = false;
+                tlhSlideTicks = 0;
+            }
+            else if ((level.maptime & 3) == 0)
+            {
                 Spawn("SlideSmoke", Pos - (0, 0, 20));
+            }
         }
 
         if (slideCooldown > 0)
@@ -5698,10 +5782,93 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (m60 && m60.braced && onGround)
             Vel.XY *= 0.84;
 
-        // Feed the procedural camera/weapon animation state once per tic.
+        // Feed procedural camera/weapon animation state once per tic.
         UpdateTLHProceduralMotion(onGround, bt, obt);
 
+        // The PSprite transform function existed but was never called. Apply
+        // its reversible procedural layer to each live weapon-related overlay.
+        // This includes the normal weapon, muzzle flash and dual-wield layer.
+        ApplyTLHWeaponPSpriteMotion(player.FindPSprite(PSP_WEAPON));
+        ApplyTLHWeaponPSpriteMotion(player.FindPSprite(PSP_FLASH));
+        ApplyTLHWeaponPSpriteMotion(player.FindPSprite(TLH_AKIMBO_LAYER));
+
         wasOnGround = onGround;
+    }
+
+    // Contextual vault: low ray hits a nearby obstacle while the upper ray is
+    // clear. This prevents the player from being boosted into full-height walls.
+    bool TryTLHParkourVault()
+    {
+        if (!player || waterlevel > 0 || tlhParkourCooldown > 0)
+            return false;
+
+        Vector3 forwardDir = (cos(angle), sin(angle), 0.0);
+        Vector3 lowOrigin = Pos + (0, 0, max(8.0, Height * 0.36));
+        Vector3 highOrigin = Pos + (0, 0, max(16.0, Height * 0.78));
+
+        let lowTracer = new("TLHFortniteCameraTracer");
+        let highTracer = new("TLHFortniteCameraTracer");
+        if (!lowTracer || !highTracer)
+            return false;
+
+        bool lowBlocked = lowTracer.Trace(lowOrigin, CurSector, forwardDir,
+            34.0, TRACE_ReportPortals);
+        if (!lowBlocked || lowTracer.results.distance > 31.0)
+            return false;
+
+        bool highBlocked = highTracer.Trace(highOrigin, CurSector, forwardDir,
+            31.0, TRACE_ReportPortals);
+
+        return !highBlocked;
+    }
+
+    // Wall jump is allowed once per airborne sequence. The side traces reuse
+    // the same geometry-only tracer as the chase camera, so monsters do not
+    // accidentally count as walls.
+    bool TryTLHWallJump()
+    {
+        if (tlhWallJumpUsed || tlhWallJumpCooldown > 0 || waterlevel > 0 || isSlamming)
+            return false;
+
+        Vector3 rightDir = (sin(angle), -cos(angle), 0.0);
+        Vector3 leftDir = (-sin(angle), cos(angle), 0.0);
+        Vector3 origin = Pos + (0, 0, max(12.0, Height * 0.52));
+
+        let rightTracer = new("TLHFortniteCameraTracer");
+        let leftTracer = new("TLHFortniteCameraTracer");
+        if (!rightTracer || !leftTracer)
+            return false;
+
+        bool rightBlocked = rightTracer.Trace(origin, CurSector, rightDir,
+            Radius + 9.0, TRACE_ReportPortals);
+        bool leftBlocked = leftTracer.Trace(origin, CurSector, leftDir,
+            Radius + 9.0, TRACE_ReportPortals);
+
+        if (!rightBlocked && !leftBlocked)
+            return false;
+
+        // Jump away from the closest wall. If wedged between both sides,
+        // choose the side with slightly more clearance.
+        bool pushLeft;
+        if (rightBlocked && !leftBlocked)
+            pushLeft = true;
+        else if (leftBlocked && !rightBlocked)
+            pushLeft = false;
+        else
+            pushLeft = rightTracer.results.distance <= leftTracer.results.distance;
+
+        Vel.Z = max(Vel.Z, 11.0);
+        Thrust(9.5, pushLeft ? angle + 90.0 : angle - 90.0);
+        if (player.cmd.forwardMove != 0)
+            Thrust(3.0, angle);
+
+        jumpCount = 1;
+        tlhWallJumpUsed = true;
+        tlhWallJumpCooldown = 10;
+        tlhParkourVaultTicks = 10;
+        tlhAnimParkourVel += 2.5;
+        A_StartSound("weapons/sshotc", CHAN_BODY);
+        return true;
     }
 
     // ========================================================================
@@ -5891,6 +6058,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             cameraBob = sin(double(level.time) * 0.13 * TLH_RAD_TO_DEG) * 0.06;
         }
 
+        // A brief low head position makes the slide feel body-driven instead
+        // of merely moving the weapon sprite. The offset eases out after exit.
+        double slideViewTarget = tlhSliding ? -6.5 : 0.0;
+        tlhAnimSlideViewOffset += (slideViewTarget - tlhAnimSlideViewOffset) *
+            (tlhSliding ? 0.42 : 0.22);
+        cameraBob += tlhAnimSlideViewOffset;
+        cameraBob += tlhAnimParkourKick * 0.30;
+
         // Landing and damage are spring values, so they overshoot and settle
         // naturally instead of teleporting the camera by a fixed amount.
         cameraBob -= tlhAnimLandingKick * 0.34;
@@ -6002,10 +6177,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
              tlhAnimInertiaX + lookX + simpleSwayX + stopX +
              recoilX + idleX + airX) * weight;
 
+        double slideDrop = tlhSliding ? (3.0 + speed01 * 1.5) : 0.0;
+        double parkourLag = clamp(tlhAnimParkourKick * 0.42, -3.0, 4.0) +
+            (tlhParkourVaultTicks > 0 ? 1.8 : 0.0);
+
         double weaponBobY =
             (walkY * 0.90 + velocitySwayY + tlhAnimSwayY +
              tlhAnimInertiaY + lookY + simpleSwayY + sprintSettle +
-             stopY + recoilY + landingY + damageY + idleY + airY) * weight;
+             stopY + recoilY + landingY + damageY + idleY + airY +
+             slideDrop + parkourLag) * weight;
 
         // Reduce the visual amplitude while airborne and while crouched.
         weaponBobX *= intensity * rangeX * (1.0 - 0.32 * airBlend);
@@ -6034,6 +6214,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         Weapon weapon = player.ReadyWeapon;
         if (psp.Caller != weapon)
+            return;
+
+        // ServiceRevolver owns its own tuned Ready/reload motion. Applying a
+        // second transform here previously risked reintroducing vertical jitter.
+        if (weapon is "ServiceRevolver")
             return;
 
         bool isWeaponPSP = (psp.ID == PSP_WEAPON);
@@ -6172,6 +6357,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
              recoilRoll + landingRoll + stopRoll + bodyTilt + airTilt) *
             visualSway * weaponFactor * (0.78 + 0.22 * weight);
 
+        // The weapon lags slightly behind the torso during low slides and
+        // upward parkour impulses, with heavier side roll on quick transitions.
+        totalRoll += (tlhSliding ? 1.10 : 0.0) +
+            clamp(tlhAnimParkourKick * 0.18, -1.2, 1.6);
+
         // Heavy weapons resist rotational movement more than pistols.
         String cls = weapon.GetClassName();
         if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
@@ -6205,12 +6395,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double damageY = tlhAnimDamageKick * (isWeaponPSP ? 0.12 : 0.05);
         double drawY = tlhAnimDrawKick * (isWeaponPSP ? 0.72 : 0.28);
         double drawX = -tlhAnimDrawKick * (isWeaponPSP ? 0.06 : 0.02);
+        double slideDrop = tlhSliding ? (isWeaponPSP ? 3.8 : 1.3) : 0.0;
+        double parkourLag = clamp(tlhAnimParkourKick *
+            (isWeaponPSP ? 0.48 : 0.20), -3.0, 4.5) +
+            (tlhParkourVaultTicks > 0 ? (isWeaponPSP ? 2.2 : 0.8) : 0.0);
 
         double totalX = visualOffsetX + swayX + recoilX + drawX;
         if (isDualPSP)
             totalX *= handSign;
         double totalY = visualOffsetY + swayY + crouchY + airFloatY +
-                        recoilY + landingY + damageY + drawY;
+                        recoilY + landingY + damageY + drawY +
+                        slideDrop + parkourLag;
 
         totalX = clamp(totalX, -12.0, 12.0);
         totalY = clamp(totalY, -18.0, 18.0);
@@ -6579,6 +6774,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         tlhAnimDrawVel -= tlhAnimDrawKick * 0.28;
         tlhAnimDrawVel *= 0.62;
         tlhAnimDrawKick = clamp(tlhAnimDrawKick, 0.0, 6.0);
+
+        // Damped body/camera response after a slide cancel, vault or wall jump.
+        tlhAnimParkourKick += tlhAnimParkourVel;
+        tlhAnimParkourVel -= tlhAnimParkourKick * 0.24;
+        tlhAnimParkourVel *= 0.62;
+        tlhAnimParkourKick = clamp(tlhAnimParkourKick, -10.0, 10.0);
     }
 
     int GetGameMode()
@@ -6672,7 +6873,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (bt & BT_BACK) Thrust(0.45, angle + 180);
             if (bt & BT_MOVELEFT) Thrust(0.65, angle - 90);
             if (bt & BT_MOVERIGHT) Thrust(0.65, angle + 90);
-            if (slideCooldown > 0) slideCooldown--;
         }
         // 10 - Pistol Start is applied by InitializeGameModeLocal().
         else if (mode == 10)
