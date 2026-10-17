@@ -2703,6 +2703,10 @@ class SemiAutoShotgun : Weapon
  */
 class HeavyChaingun : DoomWeapon
 {
+    // Kept for compatibility with the existing HUD. Heat mechanics are
+    // disabled in this diagnostic baseline, so this remains zero.
+    int heat;
+
     Default
     {
         Weapon.SlotNumber 4;
