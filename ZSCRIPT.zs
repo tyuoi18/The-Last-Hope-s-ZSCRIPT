@@ -795,6 +795,8 @@ class NukeMissile : Rocket
     Death:
         MISL B 10 Bright
         {
+            if (target && target.player)
+                target.A_SetBlend(0xFFFFFF, 0.96, 1);
             A_Explode(500, 512);
             A_StartSound("cyber/death", CHAN_BODY);
             A_Quake(8, 25, 0, 1000);
@@ -999,6 +1001,9 @@ class BFGBeam : FastProjectile
     Death:
         BFE1 A 1 Bright
         {
+            if (target && target.player)
+                target.A_SetBlend(0xFFFFFF, 0.90, 1);
+            A_StartSound("weapons/bfgx", CHAN_BODY, CHANF_DEFAULT, 0.80);
             A_Explode(70, 96);
             A_RadiusThrust(360, 96, RTF_NOIMPACTDAMAGE);
             A_Quake(3, 6, 0, 240);
@@ -1007,6 +1012,25 @@ class BFGBeam : FastProjectile
                     random(-8, 24), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
         }
         BFE1 BCDEF 2 Bright;
+        Stop;
+    }
+}
+
+// Native Doom II BFG projectile: preserve its original death animation and spray,
+// adding a single high-contrast frame only when this powerful shot impacts.
+class TLHBFGImpactBall : BFGBall replaces BFGBall
+{
+    States
+    {
+    Death:
+        BFE1 A 0 Bright
+        {
+            if (target && target.player)
+                target.A_SetBlend(0xFFFFFF, 0.92, 1);
+        }
+        BFE1 AB 8 Bright;
+        BFE1 C 8 Bright A_BFGSpray;
+        BFE1 DEF 8 Bright;
         Stop;
     }
 }
@@ -1038,6 +1062,8 @@ class BFGSlowOrb : BFGBall
     Death:
         BFE1 A 2 Bright
         {
+            if (target && target.player)
+                target.A_SetBlend(0xFFFFFF, 0.94, 1);
             A_Explode(220, 224);
             A_RadiusThrust(-1400, 256, RTF_NOIMPACTDAMAGE);
             A_Quake(8, 24, 0, 800);
@@ -2878,11 +2904,13 @@ class TLHChaingun : DoomWeapon replaces Chaingun
         CHGG A 4
         {
             A_GunFlash();
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
         }
         CHGG B 4
         {
             A_GunFlash();
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
         }
         CHGG A 0 A_ReFire;
@@ -3037,12 +3065,14 @@ class HeavyChaingun : DoomWeapon
         CHGG A 2
         {
             A_GunFlash();
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
             A_SetPitch(pitch - 0.12, SPF_INTERPOLATE);
         }
         CHGG B 2
         {
             // Do not restart the flash here: let CHGF A and CHGF B both render.
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
             A_SetPitch(pitch - 0.12, SPF_INTERPOLATE);
         }
@@ -3053,6 +3083,7 @@ class HeavyChaingun : DoomWeapon
         CHGG A 4
         {
             A_GunFlash();
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite)
@@ -3753,6 +3784,8 @@ class M60MachineGun : DoomWeapon
             double recoil = invoker.CurrentRecoil();
 
             A_FireBullets(spread, spread * 0.38, 1, dmg, "BulletPuff");
+            if ((int(level.time) % 3) == 0)
+                A_StartSound("weapons/chngun", CHAN_WEAPON, CHANF_DEFAULT, 0.80);
 
             invoker.stability -= invoker.braced ? 1 : 2;
             if (invoker.stability < 45)
@@ -3781,6 +3814,8 @@ class M60MachineGun : DoomWeapon
             double recoil = invoker.CurrentRecoil();
 
             A_FireBullets(spread, spread * 0.28, 1, dmg, "BulletPuff");
+            if ((int(level.time) % 3) == 0)
+                A_StartSound("weapons/chngun", CHAN_WEAPON, CHANF_DEFAULT, 0.80);
 
             invoker.stability -= invoker.braced ? 1 : 2;
             if (invoker.stability < 55)
@@ -4296,6 +4331,8 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
             if (!(sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))))
                 A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_Explode(90, 176, XF_EXPLICITDAMAGETYPE, false, 176);
+            if (player && player.mo)
+                player.mo.A_SetBlend(0xFFFFFF, 0.94, 1);
             A_RadiusThrust(900, 176, RTF_NOIMPACTDAMAGE);
             A_Recoil(8);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
@@ -4804,7 +4841,16 @@ class ServiceRevolver : Weapon
             let tp = TacticalPlayer(player.mo);
             double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
             double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
-            A_OverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
+
+            // Classic DOOM II movement bob is combined into this single offset.
+            // Do not layer BobWeapon() over the revolver's custom action offsets.
+            double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
+            double bobPhase = double(player.BobTimer) * (18.0 * bobSpeed);
+            double bobStrength = sqrt(max(player.bob, 0.0)) * 1.10;
+            double classicBobX = sin(bobPhase) * bobStrength;
+            double classicBobY = sin(bobPhase * 2.0) * bobStrength * 0.38;
+            A_OverlayOffset(PSP_WEAPON, swayX + classicBobX,
+                32.0 + swayY + classicBobY, WOF_INTERPOLATE);
             A_WeaponReady(readyFlags);
         }
         Loop;
@@ -5785,12 +5831,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return (0, 0);
         double speed01 = clamp(speed / 18.0, 0.0, 1.0);
         double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
-        double phase = tlhAnimStepPhase +
-            ((6.0 + speed01 * 12.0) * bobSpeed * ticfrac);
-
+        // Match DOOM II's movement-driven rhythm rather than the old layered
+        // half-frequency sway. BobTimer tracks the classic walk cycle; player.bob
+        // supplies its movement-dependent amplitude, while ticfrac keeps it smooth.
+        double phase = (double(player.BobTimer) + ticfrac) * (18.0 * bobSpeed);
+        double classicBob = sqrt(max(player.bob, 0.0)) * 1.10;
         double gait = sin(phase);
         double gaitDouble = sin(phase * 2.0);
-        double gaitHalf = sin(phase * 0.5 + 22.0);
         double weight = GetTLHWeaponMotionWeight(weapon);
 
         double rangeX = weapon.BobRangeX;
@@ -5807,14 +5854,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Layer 1: gait. The half-frequency term keeps the gun from looking
         // mechanically symmetrical on every single footstep.
-        double walkX =
-            gait * (1.05 + 2.35 * speed01) +
-            gaitHalf * (0.18 + 0.42 * speed01);
-
-        double walkY =
-            gaitDouble * (0.62 + 1.55 * speed01) +
-            gait * (0.12 * speed01) -
-            gait * (0.20 * (1.0 - crouchFactor));
+        double walkX = gait * classicBob;
+        double walkY = gaitDouble * classicBob * (0.32 + 0.08 * crouchFactor);
 
         // Layer 2: velocity and acceleration sway.
         double worldForwardX = cos(angle);
