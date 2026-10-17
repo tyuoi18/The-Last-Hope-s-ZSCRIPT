@@ -7315,6 +7315,11 @@ class TacticalHUDHandler : EventHandler
     }
 
     override void WorldTick(){
+        // Defensive guard: the HUD must not sample level state outside an
+        // initialized map. This prevents a script-side null access, not native
+        // engine crashes or faults originating outside ZScript.
+        if (!level) return;
+
         // --------------------------------------------------------------------
         // Sample all HUD data in play context.
         // ThinkerIterator is used for the live hostile count, so dynamically
@@ -8564,6 +8569,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
     override void RenderOverlay(RenderEvent e)
     {
+        // Render callbacks may be invoked during transitions; bail out if the
+        // event or local player context is not valid.
+        if (!e) return;
         if (consoleplayer < 0 || consoleplayer >= MAXPLAYERS) return;
 
         let p = players[consoleplayer].mo;
