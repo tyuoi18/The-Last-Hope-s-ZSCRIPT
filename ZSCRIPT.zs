@@ -5105,7 +5105,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhCorpseReactionPlayed;
 
     // Centralized dual-wield state. Activation comes from the custom KEYCONF
-    // netevent, so R keeps its existing gameplay behavior completely untouched.
+    // netevent and does not remap R; each weapon still owns its Reload mechanic.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
 
