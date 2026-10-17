@@ -2730,7 +2730,7 @@ class HeavyChaingun : DoomWeapon
 
     Fire:
         CHGG A 4 A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
-        CHGG B 4;
+        CHGG B 4 A_FireBullets(5.6, 5.6, 1, 5, "BulletPuff");
         CHGG A 0 A_ReFire;
         Goto Ready;
 
