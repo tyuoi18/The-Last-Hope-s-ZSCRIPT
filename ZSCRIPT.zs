@@ -2,7 +2,7 @@
 // TLH v45.9 - estabilidad de cambio de arma
 // CUSTOM DUAL-WIELD BIND / PROCEDURAL WEAPON PRESENTATION / HELMET INTERIOR HUD
 //
-// R remains untouched. Weapon-switch safety avoids destroying an active weapon.
+// Dual-wield remains on its custom KEYCONF netevent; Reload is still weapon-specific.
 // Native weapon states remain authoritative; TacticalPlayer applies reversible
 // procedural PSprite transforms for visual motion. Dual Wield is activated
 // through the custom KEYCONF netevent.
@@ -810,22 +810,34 @@ class GravityOrb : PlasmaBall
     Default
     {
         Speed 15;
-        Damage 5;
+        Damage 8;
         Scale 1.2;
         RenderStyle "Add";
+        Alpha 0.92;
     }
 
     States
     {
     Spawn:
-        PLSS A 0 A_StartSound("vile/active", CHAN_WEAPON, CHANF_DEFAULT, 0.2);
-        PLSS AB 2 Bright
+        PLSS A 2 Bright;
+        PLSS B 2 Bright
         {
-            A_RadiusThrust(-500, 256, RTF_NOIMPACTDAMAGE);
+            A_RadiusThrust(-650, 280, RTF_NOIMPACTDAMAGE);
+            A_Explode(4, 112);
+            if (random(0, 2) == 0)
+                A_SpawnItemEx("TLHEnergySpark", random(-12, 12), random(-12, 12),
+                    random(-8, 12), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
         }
         Loop;
     Death:
-        PLSE ABCDE 4 Bright;
+        PLSE A 0 Bright
+        {
+            A_RadiusThrust(-950, 224, RTF_NOIMPACTDAMAGE);
+            A_Quake(4, 10, 0, 320);
+            A_StartSound("weapons/bfgf", CHAN_BODY, CHANF_DEFAULT, 0.65);
+            A_SpawnItemEx("PlasmaNova", 0, 0, 0, 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        PLSE ABCDE 3 Bright;
         Stop;
     }
 }
@@ -835,9 +847,76 @@ class EMPPlasma : PlasmaBall
     Default
     {
         Speed 35;
-        Damage 10;
+        Damage 14;
         RenderStyle "Add";
-        Alpha 0.9;
+        Alpha 0.95;
+        Scale 0.9;
+    }
+
+    States
+    {
+    Spawn:
+        PLSS A 3 Bright;
+        PLSS B 3 Bright
+        {
+            A_Explode(3, 72);
+            if (random(0, 2) == 0)
+                A_SpawnItemEx("TLHEnergySpark", random(-6, 6), random(-6, 6),
+                    random(-4, 8), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        Loop;
+    Death:
+        PLSE A 2 Bright
+        {
+            A_Explode(65, 144);
+            A_RadiusThrust(650, 144, RTF_NOIMPACTDAMAGE);
+            A_StartSound("weapons/bfgf", CHAN_WEAPON, CHANF_DEFAULT, 0.55);
+            A_Quake(3, 8, 0, 320);
+            for (int i = 0; i < 8; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-36, 36), random(-36, 36),
+                    random(-8, 30), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        PLSE BCDE 2 Bright;
+        Stop;
+    }
+}
+
+
+// ============================================================================
+// PLASMA IMPACT VFX / ION SPREAD
+// ============================================================================
+class TLHEnergySpark : Actor
+{
+    Default
+    {
+        +NOINTERACTION
+        +NOBLOCKMAP
+        +NOGRAVITY
+        +NOCLIP
+        RenderStyle "Add";
+        Alpha 0.82;
+        Scale 0.30;
+    }
+
+    States
+    {
+    Spawn:
+        PLSE A 1 Bright;
+        PLSE B 1 Bright;
+        PLSE C 2 Bright A_FadeOut(0.28);
+        PLSE D 2 Bright A_FadeOut(0.38);
+        Stop;
+    }
+}
+
+class IonPlasmaBolt : PlasmaBall
+{
+    Default
+    {
+        Speed 28;
+        DamageFunction(random(12, 18));
+        Scale 0.72;
+        RenderStyle "Add";
     }
 
     States
@@ -846,13 +925,46 @@ class EMPPlasma : PlasmaBall
         PLSS AB 1 Bright;
         Loop;
     Death:
-        PLSE A 2 Bright
+        PLSE A 1 Bright
         {
-            A_Explode(40, 96);
-            A_StartSound("weapons/bfgf", CHAN_WEAPON);
-            A_Quake(2, 5, 0, 300);
+            A_Explode(14, 64);
+            A_StartSound("weapons/bfgf", CHAN_BODY, CHANF_DEFAULT, 0.35);
+            for (int i = 0; i < 3; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-14, 14), random(-14, 14),
+                    random(-6, 18), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
         }
         PLSE BCDE 2 Bright;
+        Stop;
+    }
+}
+
+class PlasmaNova : Actor
+{
+    Default
+    {
+        +NOINTERACTION
+        +NOBLOCKMAP
+        +NOGRAVITY
+        +NOCLIP
+        RenderStyle "Add";
+        Alpha 0.92;
+        Scale 1.35;
+    }
+
+    States
+    {
+    Spawn:
+        TNT1 A 0 NoDelay
+        {
+            A_Explode(60, 160);
+            A_RadiusThrust(-650, 176, RTF_NOIMPACTDAMAGE);
+            A_Quake(4, 10, 0, 340);
+            A_StartSound("weapons/bfgf", CHAN_BODY, CHANF_DEFAULT, 0.55);
+            for (int i = 0; i < 14; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-68, 68), random(-68, 68),
+                    random(-8, 44), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        BFE1 ABCDEF 2 Bright;
         Stop;
     }
 }
@@ -864,19 +976,37 @@ class BFGBeam : FastProjectile
         Speed 200;
         Radius 4;
         Height 4;
-        Damage 100;
+        Damage 160;
         +RIPPER
         RenderStyle "Add";
-        Scale 0.5;
+        Scale 0.58;
     }
 
     States
     {
     Spawn:
-        BFS1 AB 1 Bright;
+        BFS1 A 3 Bright
+        {
+            A_SpawnItemEx("TLHEnergySpark", random(-3, 3), random(-3, 3),
+                random(-3, 3), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        BFS1 B 3 Bright
+        {
+            A_SpawnItemEx("TLHEnergySpark", random(-3, 3), random(-3, 3),
+                random(-3, 3), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
         Loop;
     Death:
-        BFE1 ABCDEF 3 Bright;
+        BFE1 A 1 Bright
+        {
+            A_Explode(70, 96);
+            A_RadiusThrust(360, 96, RTF_NOIMPACTDAMAGE);
+            A_Quake(3, 6, 0, 240);
+            for (int i = 0; i < 6; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-28, 28), random(-28, 28),
+                    random(-8, 24), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        BFE1 BCDEF 2 Bright;
         Stop;
     }
 }
@@ -889,15 +1019,34 @@ class BFGSlowOrb : BFGBall
         Speed 10;
         Damage 200;
         Scale 1.5;
+        RenderStyle "Add";
     }
 
     States
     {
     Spawn:
-        BFS1 AB 5 Bright;
+        BFS1 A 4 Bright;
+        BFS1 B 4 Bright
+        {
+            A_Explode(6, 96);
+            A_RadiusThrust(-700, 192, RTF_NOIMPACTDAMAGE);
+            if (random(0, 2) == 0)
+                A_SpawnItemEx("TLHEnergySpark", random(-20, 20), random(-20, 20),
+                    random(-8, 18), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
         Loop;
     Death:
-        BFE1 ABCDEF 6 Bright;
+        BFE1 A 2 Bright
+        {
+            A_Explode(220, 224);
+            A_RadiusThrust(-1400, 256, RTF_NOIMPACTDAMAGE);
+            A_Quake(8, 24, 0, 800);
+            A_StartSound("cyber/death", CHAN_BODY, CHANF_DEFAULT, 0.65);
+            for (int i = 0; i < 18; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-84, 84), random(-84, 84),
+                    random(-12, 48), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        BFE1 BCDEF 4 Bright;
         Stop;
     }
 }
@@ -2757,8 +2906,57 @@ class TLHChaingun : DoomWeapon replaces Chaingun
 // fire: higher cadence and damage than the M4A1, with more spread and recoil.
 // No procedural weapon-HUD drawing, heat system, or custom Tick().
 // ============================================================================
+
+// ============================================================================
+// HEAVY CHAINGUN AMMUNITION / VISIBLE IMPACTS
+// ============================================================================
+class HeavyPiercingRound : FastProjectile
+{
+    Default
+    {
+        Speed 220;
+        Radius 2;
+        Height 2;
+        DamageFunction(22);
+        Projectile;
+        +RIPPER
+        +BLOODSPLATTER
+        RenderStyle "Add";
+        Scale 0.30;
+    }
+
+    States
+    {
+    Spawn:
+        PLSS A 1 Bright;
+        Loop;
+    Death:
+        PLSE A 1 Bright
+        {
+            A_Explode(8, 32);
+            for (int i = 0; i < 4; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-10, 10), random(-10, 10),
+                    random(-6, 12), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        PLSE BCDE 2 Bright;
+        Stop;
+    }
+}
+
+class HeavyPrecisionSlug : HeavyPiercingRound
+{
+    Default
+    {
+        Speed 280;
+        DamageFunction(30);
+        Scale 0.24;
+    }
+}
+
 class HeavyChaingun : DoomWeapon
 {
+    bool overdriveMode;
+
     Default
     {
         Weapon.SlotNumber 4;
@@ -2775,29 +2973,190 @@ class HeavyChaingun : DoomWeapon
     States
     {
     Ready:
-        CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
+        CHGG A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 1.04, 1.08);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(PSP_WEAPON, 0, 33);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState("HeavyIdle");
+        }
+    HeavyIdle:
+        CHGG A 1
+        {
+            double sway = sin(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.42;
+            A_OverlayOffset(PSP_WEAPON, sway, 33 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.16, 0);
+            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.18);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
+        }
         Loop;
 
     Deselect:
+        CHGG A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
         CHGG A 1 A_Lower;
         Loop;
-
     Select:
+        CHGG A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 1.04, 1.08);
+            A_OverlayOffset(PSP_WEAPON, 0, 36);
+            A_OverlayRotate(PSP_WEAPON, 0);
+        }
         CHGG A 1 A_Raise;
         Loop;
 
     Fire:
+        CHGG A 0
+        {
+            if (invoker.overdriveMode)
+            {
+                bool infinite = sv_infiniteammo ||
+                    (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+                if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 2))
+                    return ResolveState("Ready");
+                return ResolveState("FireOverdrive");
+            }
+            return ResolveState("FireSuppression");
+        }
+    FireSuppression:
         CHGG A 2
         {
             A_GunFlash();
             A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
+            A_SetPitch(pitch - 0.12, SPF_INTERPOLATE);
         }
         CHGG B 2
         {
             A_GunFlash();
             A_FireBullets(7.2, 7.2, 1, 6, "BulletPuff");
+            A_SetPitch(pitch - 0.12, SPF_INTERPOLATE);
         }
         CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    FireOverdrive:
+        CHGG A 4
+        {
+            A_GunFlash();
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite)
+                A_TakeInventory("Clip", 2, TIF_NOTAKEINFINITE);
+            A_FireProjectile("HeavyPiercingRound", random(-0.7, 0.7), false);
+            A_SetPitch(pitch - 0.85, SPF_INTERPOLATE);
+            A_Quake(1, 3, 0, 120);
+            A_OverlayOffset(PSP_WEAPON, 0, 40);
+        }
+        CHGG B 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 44);
+            A_Quake(2, 5, 0, 180);
+        }
+        CHGG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 33);
+        }
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    AltFire:
+        CHGG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (infinite || (player.mo && player.mo.CountInv("Clip") >= 6))
+                return ResolveState("BreachBurst");
+            return ResolveState("Ready");
+        }
+    BreachBurst:
+        CHGG A 4 A_StartSound("weapons/sshotc", CHAN_WEAPON);
+        CHGG B 2
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            A_GunFlash();
+            if (!infinite)
+                A_TakeInventory("Clip", 6, TIF_NOTAKEINFINITE);
+            A_FireProjectile("HeavyPiercingRound", -5.0, false);
+            A_FireProjectile("HeavyPiercingRound", 0.0, false);
+            A_FireProjectile("HeavyPiercingRound", 5.0, false);
+            A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
+            A_Quake(4, 10, 0, 320);
+            A_OverlayOffset(PSP_WEAPON, 0, 43);
+        }
+        CHGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 46);
+            A_Quake(2, 5, 0, 220);
+        }
+        CHGG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 33);
+        }
+        CHGG A 9;
+        Goto Ready;
+
+    Zoom:
+        CHGG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (infinite || (player.mo && player.mo.CountInv("Clip") >= 5))
+                return ResolveState("PrecisionBurst");
+            return ResolveState("Ready");
+        }
+    PrecisionBurst:
+        CHGG A 4 A_StartSound("weapons/sshotc", CHAN_WEAPON);
+        CHGG B 3
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            A_GunFlash();
+            if (!infinite)
+                A_TakeInventory("Clip", 5, TIF_NOTAKEINFINITE);
+            A_FireProjectile("HeavyPrecisionSlug", -0.7, false);
+            A_FireProjectile("HeavyPrecisionSlug", 0.0, false);
+            A_FireProjectile("HeavyPrecisionSlug", 0.7, false);
+            A_SetPitch(pitch - 2.8, SPF_INTERPOLATE);
+            A_Quake(3, 8, 0, 280);
+            A_OverlayOffset(PSP_WEAPON, 0, 43);
+        }
+        CHGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 46);
+            A_Quake(2, 5, 0, 220);
+        }
+        CHGG A 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 33);
+        }
+        CHGG A 10;
+        Goto Ready;
+
+    Reload:
+        CHGG A 0
+        {
+            invoker.overdriveMode = !invoker.overdriveMode;
+            if (invoker.overdriveMode)
+            {
+                A_StartSound("weapons/sshotc", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: ARMOR-PIERCING OVERDRIVE");
+                A_Quake(2, 5, 0, 180);
+            }
+            else
+            {
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: SUPPRESSION MODE");
+            }
+            return ResolveState(null);
+        }
+        CHGG A 7;
         Goto Ready;
 
     Flash:
@@ -3697,7 +4056,6 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     {
     Ready:
         PISG A 0;
-
     TLHPickupReadyShim:
         PLSG A 0
         {
@@ -3716,7 +4074,6 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
-
     Deselect:
         PLSG A 0
         {
@@ -3725,7 +4082,6 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         }
         PLSG A 1 A_Lower;
         Loop;
-
     Select:
         PLSG A 0
         {
@@ -3742,12 +4098,12 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             if (invoker.empMode)
             {
                 A_StartSound("weapons/sshotc", CHAN_WEAPON);
-                A_Print("PLASMA RIFLE: EMP MODE");
+                A_Print("PLASMA RIFLE: EMP FIELD ENABLED");
             }
             else
             {
                 A_StartSound("weapons/sshotl", CHAN_WEAPON);
-                A_Print("PLASMA RIFLE: STANDARD");
+                A_Print("PLASMA RIFLE: STANDARD PLASMA");
             }
             return ResolveState(null);
         }
@@ -3759,10 +4115,8 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         {
             if (invoker.empMode)
                 return ResolveState("FireEMP");
-
             return ResolveState(null);
         }
-        // Standard plasma bolts cycle at 3 tics per shot (~700 RPM at 35 tics/sec).
         PLSG A 2
         {
             A_WeaponOffset(0, 35, WOF_INTERPOLATE);
@@ -3775,21 +4129,42 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     FireEMP:
         PLSG A 5
         {
+            A_GunFlash();
             A_FireProjectile("EMPPlasma");
-            A_SetPitch(pitch - 1.5, SPF_INTERPOLATE);
-            A_Quake(1, 3, 0, 100);
+            A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
+            A_Quake(2, 5, 0, 180);
+            A_OverlayOffset(PSP_WEAPON, 0, 37);
         }
-        PLSG B 20 A_ReFire;
+        PLSG B 3
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 40);
+        }
+        PLSG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_ReFire();
+        }
+        PLSG B 13;
         Goto Ready;
 
     AltFire:
-        PLSG A 5;
-        PLSG B 5
+        PLSG A 4 A_StartSound("weapons/sshotc", CHAN_WEAPON);
+        PLSG B 4
         {
             A_FireProjectile("GravityOrb");
-            A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 3.5, SPF_INTERPOLATE);
+            A_Quake(3, 7, 0, 240);
+            A_OverlayOffset(PSP_WEAPON, 0, 37);
         }
-        PLSG B 10;
+        PLSG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 41);
+        }
+        PLSG B 5
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_ReFire();
+        }
         Goto Ready;
 
     Zoom:
@@ -3797,37 +4172,43 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 7))
+            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 9))
                 return ResolveState("Ready");
             return ResolveState("PlasmaSpread");
         }
     PlasmaSpread:
         PLSG A 4 A_StartSound("weapons/sshoto", CHAN_WEAPON);
-        PLSG B 4
+        PLSG B 3 Bright
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite)
-                A_TakeInventory("Cell", 7, TIF_NOTAKEINFINITE);
-            for (int i = -3; i <= 3; i++)
-            {
-                A_FireProjectile("PlasmaBall", i * 5, false);
-            }
-            A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
+                A_TakeInventory("Cell", 9, TIF_NOTAKEINFINITE);
+            for (int i = -4; i <= 4; i++)
+                A_FireProjectile("IonPlasmaBolt", i * 4.0, false);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Quake(3, 8, 0, 280);
+            A_OverlayOffset(PSP_WEAPON, 0, 40);
         }
-        PLSG B 15;
+        PLSG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 43);
+        }
+        PLSG B 5
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+        }
+        PLSG B 9 A_ReFire;
         Goto Ready;
 
     Flash:
         PLSF A 2 Bright A_Light1;
         PLSF B 2 Bright A_Light2;
         Goto LightDone;
-
     Spawn:
         PLAS A -1;
         Stop;
     }
-
 }
 
 class RecoilBFG9000 : BFG9000 replaces BFG9000
@@ -3848,7 +4229,6 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
     {
     Ready:
         PISG A 0;
-
     TLHPickupReadyShim:
         ZFGG A 0
         {
@@ -3858,7 +4238,8 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
         }
         ZFGG A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35,
+                32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -3871,84 +4252,132 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
         Loop;
 
     Fire:
-        ZFGG A 20 A_BFGSound;
-        ZFGG B 10 A_GunFlash;
-        ZFGG B 10
+        ZFGG A 12 A_BFGSound;
+        ZFGG B 4 A_GunFlash;
+        ZFGG B 3
         {
             A_FireBFG();
-            A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
-            A_Quake(5, 15, 0, 500);
+            A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
+            A_Quake(7, 20, 0, 600);
+            A_OverlayOffset(PSP_WEAPON, 0, 45);
         }
-        ZFGG B 20 A_ReFire;
+        ZFGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 47);
+        }
+        ZFGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+        }
+        ZFGG B 16 A_ReFire;
         Goto Ready;
 
     AltFire:
         ZFGG A 0
         {
-            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Cell") >= 10) return ResolveState("DoBFGBurst");
+            if ((sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))) ||
+                (player.mo && player.mo.CountInv("Cell") >= 10))
+                return ResolveState("DoBFGBurst");
             return ResolveState("Ready");
         }
     DoBFGBurst:
-        ZFGG A 10;
-        ZFGG B 5
+        ZFGG A 6 A_BFGSound;
+        ZFGG B 4
         {
-            A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
-            A_Explode(50, 128, XF_EXPLICITDAMAGETYPE, false, 128);
-            A_Recoil(-5);
-            Thrust(15, pitch - 90);
-            A_SetPitch(pitch - 6.0, SPF_INTERPOLATE);
-            A_Quake(4, 10, 0, 200);
+            if (!(sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))))
+                A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            A_Explode(90, 176, XF_EXPLICITDAMAGETYPE, false, 176);
+            A_RadiusThrust(900, 176, RTF_NOIMPACTDAMAGE);
+            A_Recoil(8);
+            A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
+            A_Quake(6, 18, 0, 520);
+            A_OverlayOffset(PSP_WEAPON, 0, 44);
+            for (int i = 0; i < 12; i++)
+                A_SpawnItemEx("TLHEnergySpark", random(-72, 72), random(-72, 72),
+                    random(-8, 40), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
         }
-        ZFGG B 15;
+        ZFGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 48);
+            A_Quake(3, 8, 0, 280);
+        }
+        ZFGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+        }
+        ZFGG B 10;
         Goto Ready;
 
     Zoom:
         ZFGG A 0
         {
-            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Cell") >= 10) return ResolveState("DoBFGBeam");
+            if ((sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))) ||
+                (player.mo && player.mo.CountInv("Cell") >= 10))
+                return ResolveState("DoBFGBeam");
             return ResolveState("Ready");
         }
     DoBFGBeam:
-        ZFGG A 10 A_BFGSound;
-        ZFGG B 5
+        ZFGG A 8 A_BFGSound;
+        ZFGG B 4
         {
-            A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            if (!(sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))))
+                A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("BFGBeam", useammo: false);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
+            A_Quake(5, 14, 0, 480);
+            A_OverlayOffset(PSP_WEAPON, 0, 43);
         }
-        ZFGG B 15;
+        ZFGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 47);
+        }
+        ZFGG B 4
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+        }
+        ZFGG B 8;
         Goto Ready;
 
     Reload:
         ZFGG A 0
         {
-            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Cell") >= 10) return ResolveState("DoSlowOrb");
+            if ((sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))) ||
+                (player.mo && player.mo.CountInv("Cell") >= 10))
+                return ResolveState("DoSlowOrb");
             return ResolveState("Ready");
         }
     DoSlowOrb:
-        ZFGG A 30 A_BFGSound;
-        ZFGG B 10 A_GunFlash;
-        ZFGG B 10
+        ZFGG A 20 A_BFGSound;
+        ZFGG B 4 A_GunFlash;
+        ZFGG B 4
         {
-            A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            if (!(sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))))
+                A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("BFGSlowOrb", useammo: false);
             A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
-            A_Recoil(5);
-            A_Quake(3, 10, 0, 300);
+            A_Recoil(7);
+            A_Quake(5, 14, 0, 620);
+            A_OverlayOffset(PSP_WEAPON, 0, 44);
         }
-        ZFGG B 30;
+        ZFGG B 5
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 48);
+        }
+        ZFGG B 5
+        {
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+        }
+        ZFGG B 25;
         Goto Ready;
 
     Flash:
         ZFGF A 11 Bright A_Light1;
         ZFGF B 6 Bright A_Light2;
         Goto LightDone;
-
     Spawn:
         BFUG A -1;
         Stop;
     }
-
 }
 
 // ============================================================================
@@ -5738,6 +6167,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 0.99; scaleY = 1.12; offsetY = 1.4; sway = 0.68;
         }
+        else if (cls == "HeavyChaingun")
+        {
+            scaleX = 1.06; scaleY = 1.13; offsetY = 1.7; baseRoll = -0.18; sway = 0.54;
+        }
+        else if (cls == "TLHCompactSMG")
+        {
+            scaleX = 0.99; scaleY = 1.05; offsetY = 0.35; baseRoll = -0.08; sway = 0.88;
+        }
         else if (cls == "RecoilRocketLauncher")
         {
             scaleX = 1.03; scaleY = 1.10; offsetY = 1.3; sway = 0.66;
@@ -5787,6 +6224,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Carbines and compact automatics settle quickly.
         if (cls == "TacticalM4A1") return 0.82;
+        if (cls == "TLHCompactSMG") return 0.78;
 
         // Very heavy weapons move less but hit harder when they recoil.
         if (cls == "M60MachineGun") return 0.66;
@@ -8236,6 +8674,30 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         {
             primary = 0x8B9693;
             secondary = 0x35413F;
+        }
+        else if (cls == "HeavyChaingun")
+        {
+            primary = 0xA0AAA7;
+            secondary = 0x303A37;
+            profileX = 1.06;
+            profileY = 1.12;
+            accentStrength = 1.14;
+        }
+        else if (cls == "TLHCompactSMG")
+        {
+            primary = 0x7D8986;
+            secondary = 0x35413F;
+            profileX = 0.96;
+            profileY = 1.02;
+            accentStrength = 0.92;
+        }
+        else if (cls == "RecoilRocketLauncher")
+        {
+            primary = 0x909B97;
+            secondary = 0x394440;
+            profileX = 1.04;
+            profileY = 1.08;
+            accentStrength = 1.05;
         }
         else if (cls == "RecoilShotgun" || cls == "FastRecoilSSG")
         {
