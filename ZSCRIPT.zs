@@ -6945,6 +6945,7 @@ class TacticalHUDHandler : EventHandler
     int hudShell;
     int hudRocket;
     int hudCell;
+    int hudWeaponHeat;
     int hudLiveEnemies;
     int hudTotalEnemies;
     int hudKills;
@@ -7518,7 +7519,7 @@ class TacticalHUDHandler : EventHandler
         hudShell = 0;
         hudRocket = 0;
         hudCell = 0;
-        
+        hudWeaponHeat = 0;
         hudFOV = 90.0;
         hudMoveSpeed = 0.0;
         hudVerticalSpeed = 0.0;
@@ -7649,6 +7650,12 @@ class TacticalHUDHandler : EventHandler
                     hudRevolverAmmo = revolver.cylinderAmmo;
                     hudRevolverReserve = hudClip;
                 }
+            }
+
+            if (ready is "HeavyChaingun")
+            {
+                let chaingun = HeavyChaingun(ready);
+                if (chaingun) hudWeaponHeat = chaingun.heat;
             }
 if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "ServiceRevolver") hudWeaponName = "SERVICE REVOLVER";
@@ -8566,6 +8573,25 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             hudLiveEnemies > 0 ? Font.CR_RED : main, 0.27);
         Text("DOWN", 570, 328, dim, 0.21);
         TextR(String.Format("%03d", hudKills), 609, 328, warn, 0.23);
+
+        if (tlhVisorWeaponClass == "HeavyChaingun")
+        {
+            Text("HEAT", 518, 338, dim, 0.21);
+            TextR(String.Format("%03d", int(clamp(double(hudWeaponHeat) / 3.0, 0.0, 100.0))),
+                570, 338,
+                hudWeaponHeat >= 250 ? Font.CR_RED :
+                hudWeaponHeat >= 180 ? Font.CR_YELLOW : Font.CR_WHITE,
+                0.23);
+            SegBar(574, 340, 35, hudWeaponHeat, 300, 5,
+                hudWeaponHeat >= 250 ? 0xC65B55 :
+                hudWeaponHeat >= 180 ? warn : main);
+        }
+        else
+        {
+            Text("LINK", 518, 338, dim, 0.21);
+            TextR(tlhHUDDualActive ? "AKIMBO" : "NORMAL", 609, 338,
+                tlhHUDDualActive ? Font.CR_GREEN : dim, 0.21);
+        }
     }
 
     // ========================================================================
