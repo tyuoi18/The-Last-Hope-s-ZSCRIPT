@@ -5901,26 +5901,27 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double airX = sin(double(level.time) * 0.07 * TLH_RAD_TO_DEG) * 0.08 * airBlend;
         double airY = cos(double(level.time) * 0.055 * TLH_RAD_TO_DEG) * 0.18 * airBlend;
 
-        double x =
+        // Avoid shadowing Actor.X/Y: use explicit names for local PSprite offsets.
+        double weaponBobX =
             (walkX * 0.92 + velocitySwayX + tlhAnimSwayX +
              tlhAnimInertiaX + lookX + simpleSwayX + stopX +
              recoilX + idleX + airX) * weight;
 
-        double y =
+        double weaponBobY =
             (walkY * 0.90 + velocitySwayY + tlhAnimSwayY +
              tlhAnimInertiaY + lookY + simpleSwayY + sprintSettle +
              stopY + recoilY + landingY + damageY + idleY + airY) * weight;
 
         // Reduce the visual amplitude while airborne and while crouched.
-        x *= intensity * rangeX * (1.0 - 0.32 * airBlend);
-        y *= intensity * rangeY * (1.0 - 0.18 * airBlend);
+        weaponBobX *= intensity * rangeX * (1.0 - 0.32 * airBlend);
+        weaponBobY *= intensity * rangeY * (1.0 - 0.18 * airBlend);
 
         // Keep authored weapon ranges sane even for weapons that were never
         // intended to use such large procedural offsets.
-        x = clamp(x, -11.0, 11.0);
-        y = clamp(y, -15.0, 15.0);
+        weaponBobX = clamp(weaponBobX, -11.0, 11.0);
+        weaponBobY = clamp(weaponBobY, -15.0, 15.0);
 
-        return (x, y);
+        return (weaponBobX, weaponBobY);
     }
 
     // Apply the procedural transform to the actual weapon PSprite and its
