@@ -1707,7 +1707,7 @@ class OfficerVulkanPistol : Weapon
             A_FireBullets(2.0, 0, 1, 8, "BulletPuff");
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Quake(1.5, 2.5, 0, 100);
+            A_Quake(1, 2, 0, 100);
             A_Recoil(1.4);
         }
         PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
@@ -2770,7 +2770,9 @@ Default
         {
             if (invoker.overheated)
                 return ResolveState("ManualVent");
-            return ResolveState(invoker.burstMode ? "SetAuto" : "SetBurst");
+            if (invoker.burstMode)
+                return ResolveState("SetAuto");
+            return ResolveState("SetBurst");
         }
 
     SetBurst:
@@ -2861,7 +2863,7 @@ Default
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             // Camera kick only; A_Recoil would physically push the player backward.
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
-            A_Quake(0.35, 0.8, 0, 35);
+            A_Quake(0, 1, 0, 35);
             invoker.heat += invoker.heat >= WarmHeat ? 3 : 2;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
@@ -2914,6 +2916,7 @@ Default
                 A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
                 return ResolveState("Overheated");
             }
+            return ResolveState(null);
         }
         CHGG B 1;
         CHGG A 0 A_ReFire;
@@ -2936,6 +2939,7 @@ Default
                 A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
                 return ResolveState("Overheated");
             }
+            return ResolveState(null);
         }
         CHGG B 1;
         CHGG A 0 A_ReFire;
@@ -2950,6 +2954,7 @@ Default
                 invoker.overheated = false;
                 return ResolveState("Ready");
             }
+            return ResolveState(null);
         }
         Loop;
 
