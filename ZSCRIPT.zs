@@ -5173,6 +5173,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool wasOnGround;
     bool akimboButtonHeld;
 
+    // Custom Fortnite-like over-the-shoulder camera, controlled by GZDoom's
+    // native chasecam toggle. The native flag is consumed once to prevent the
+    // engine's centered chase camera from fighting TLH's custom camera.
+    TLHFortniteCamera tlhFortniteCamera;
+    bool tlhChaseCameraActive;
+    bool tlhChaseToggleHandled;
+
     // Player-corpse smell reaction, owned by the active player pawn.
     Actor tlhCorpseReactionTarget;
     int tlhCorpseReactionStayTics;
@@ -5424,6 +5431,62 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             player.SetPsprite(PSP_WEAPON, transition);
     }
 
+    void SetTLHFortniteCamera(bool enable)
+    {
+        if (!player || !player.mo)
+            return;
+
+        if (enable)
+        {
+            if (!tlhFortniteCamera || tlhFortniteCamera.health <= 0)
+                tlhFortniteCamera = TLHFortniteCamera(Spawn("TLHFortniteCamera", Pos));
+
+            if (!tlhFortniteCamera)
+            {
+                tlhChaseCameraActive = false;
+                player.camera = self;
+                return;
+            }
+
+            tlhChaseCameraActive = true;
+            tlhFortniteCamera.Configure(self, true);
+            player.camera = tlhFortniteCamera;
+        }
+        else
+        {
+            tlhChaseCameraActive = false;
+
+            if (tlhFortniteCamera)
+                tlhFortniteCamera.Configure(self, false);
+
+            if (player.camera == tlhFortniteCamera || player.camera == self)
+                player.camera = self;
+
+            bSpriteAngle = false;
+            spriteAngle = 0;
+        }
+    }
+
+    void UpdateTLHChaseCameraToggle()
+    {
+        // The stock "chase" / chasecam toggle flips CF_CHASECAM on. Consume
+        // that edge, then hand the view to the custom camera. Clearing the bit
+        // lets the next press act as another toggle instead of fighting GZDoom.
+        if (player.cheats & CF_CHASECAM)
+        {
+            if (!tlhChaseToggleHandled)
+            {
+                tlhChaseToggleHandled = true;
+                player.cheats &= ~CF_CHASECAM;
+                SetTLHFortniteCamera(!tlhChaseCameraActive);
+            }
+        }
+        else
+        {
+            tlhChaseToggleHandled = false;
+        }
+    }
+
     override void Tick()
     {
         Super.Tick();
@@ -5431,6 +5494,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         if (player.playerstate == PST_DEAD)
         {
+            if (tlhChaseCameraActive)
+                SetTLHFortniteCamera(false);
+
+            // Do not leave a pending native chasecam flag to reactivate on respawn.
+            if (player.cheats & CF_CHASECAM)
+            {
+                player.cheats &= ~CF_CHASECAM;
+                tlhChaseToggleHandled = true;
+            }
+
             if (tlhDualWieldWeapon)
                 SetTLHWeaponDualFlag(tlhDualWieldWeapon, false);
 
@@ -5438,6 +5511,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhDualWieldActive = false;
             return;
         }
+
+        UpdateTLHChaseCameraToggle();
 
         // Drive corpse reactions directly from the living local pawn.
         // This does not depend on the HUD handler's consoleplayer cache.
@@ -7037,6 +7112,188 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return TryModeToggle();
     }
 
+}
+
+
+// ============================================================================
+// TLH FORTNITE-STYLE CHASE CAMERA
+// A shoulder-offset third-person view driven by GZDoom's native "chase" toggle.
+// Camera collision uses GZDoom's LineTracer so the camera moves closer instead
+// of clipping through solid walls. This implementation stays self-contained in
+// ZSCRIPT.zs; it does not need a separate camera mod or a new key binding.
+// ============================================================================
+class TLHFortniteCameraTracer : LineTracer
+{
+    override ETraceStatus TraceCallback()
+    {
+        switch (results.hitType)
+        {
+            case TRACE_CrossingPortal:
+                results.hitType = TRACE_HitNone;
+                return TRACE_Skip;
+
+            case TRACE_HitWall:
+            case TRACE_HitFloor:
+            case TRACE_HitCeiling:
+                return TRACE_Stop;
+        }
+
+        return TRACE_Skip;
+    }
+}
+
+class TLHFortniteCamera : Actor
+{
+    private bool active;
+    private bool positioned;
+    private double cameraYaw;
+    private double cameraPitch;
+
+    // Fortnite-like default framing, measured in Doom map units.
+    const CAMERA_DISTANCE = 78.0;
+    const CAMERA_SHOULDER = 15.0;
+    const CAMERA_SMOOTH = 0.28;
+
+    Default
+    {
+        Radius 0;
+        Height 0;
+        +NOINTERACTION
+        +NOBLOCKMAP
+        +NOGRAVITY
+        +NOCLIP
+        +NOSECTOR
+    }
+
+    States
+    {
+    Spawn:
+        TNT1 A -1;
+        Stop;
+    }
+
+    void Configure(Actor pawn, bool enable)
+    {
+        target = pawn;
+        active = enable;
+        positioned = false;
+
+        let p = TacticalPlayer(pawn);
+        if (!p || !p.player)
+            return;
+
+        if (enable)
+        {
+            cameraYaw = p.angle;
+            cameraPitch = p.pitch;
+            cameraFOV = p.player.FOV;
+            p.player.camera = self;
+            p.bSpriteAngle = true;
+            p.spriteAngle = 0;
+        }
+        else
+        {
+            if (p.player.camera == self)
+                p.player.camera = p;
+
+            p.bSpriteAngle = false;
+            p.spriteAngle = 0;
+        }
+    }
+
+    override void Tick()
+    {
+        Super.Tick();
+
+        if (!active || !target)
+            return;
+
+        let p = TacticalPlayer(target);
+        if (!p || !p.player || p.player.playerstate == PST_DEAD)
+        {
+            active = false;
+            return;
+        }
+
+        // Preserve scripted cameras/cutscenes instead of forcibly taking them over.
+        if (p.player.camera != self && p.player.camera != p)
+        {
+            active = false;
+            p.bSpriteAngle = false;
+            p.spriteAngle = 0;
+            return;
+        }
+
+        p.player.camera = self;
+        cameraFOV = p.player.FOV;
+
+        // Smooth the camera's orbit, but keep the camera view aligned with the
+        // current aim so the player's existing weapon firing direction is retained.
+        double yawError = DeltaAngle(cameraYaw, p.angle);
+        cameraYaw += yawError * CAMERA_SMOOTH;
+        cameraPitch += (p.pitch - cameraPitch) * 0.32;
+        angle = p.angle;
+        pitch = p.pitch;
+        roll = 0;
+
+        // Aim from the upper torso, with the view sitting behind and over the
+        // right shoulder. Looking up/down tilts the orbit like a modern TPS camera.
+        double pivotZ = max(8.0, p.height * 0.72 - p.floorclip);
+        Vector3 anchor = p.Pos + (0, 0, pivotZ);
+        Vector2 back = AngleToVector(cameraYaw + 180.0, cos(-cameraPitch));
+        Vector2 side = AngleToVector(cameraYaw + 90.0, 1.0);
+
+        Vector3 offset = (
+            back.x * CAMERA_DISTANCE + side.x * CAMERA_SHOULDER,
+            back.y * CAMERA_DISTANCE + side.y * CAMERA_SHOULDER,
+            sin(cameraPitch) * CAMERA_DISTANCE
+        );
+        double fullDistance = offset.Length();
+        if (fullDistance < 1.0)
+            return;
+
+        Vector3 direction = offset / fullDistance;
+        let tracer = new("TLHFortniteCameraTracer");
+        if (!tracer)
+            return;
+
+        bool hit = tracer.Trace(anchor, p.CurSector, direction,
+            fullDistance, TRACE_ReportPortals);
+        double allowedDistance = hit ? max(0.0, tracer.results.distance - 3.0) : fullDistance;
+        Vector3 desired = anchor + direction * allowedDistance;
+
+        // First frame snaps to its intended framing; later frames ease into it.
+        // Sprinting lets the camera catch up slightly faster without hard snapping.
+        Vector3 nextPos;
+        if (!positioned)
+        {
+            nextPos = desired;
+            positioned = true;
+        }
+        else
+        {
+            double blend = p.Vel.XY.Length() > 20.0 ? 0.36 : CAMERA_SMOOTH;
+            nextPos = Pos + (desired - Pos) * blend;
+        }
+
+        SetOrigin(nextPos, true);
+
+        // Keep the camera inside floor/ceiling bounds in tight spaces.
+        if (Pos.Z < floorZ + 2.0)
+            SetZ(floorZ + 2.0);
+        if (Pos.Z > ceilingZ - 2.0)
+            SetZ(ceilingZ - 2.0);
+
+        // While moving, orient the actor sprite relative to movement input, as
+        // in a modern third-person shooter. When firing, retain the aim-facing pose.
+        if (p.player.attackDown)
+            p.spriteAngle = 0;
+        else if (p.player.cmd.forwardMove || p.player.cmd.sideMove)
+            p.spriteAngle = atan2(double(p.player.cmd.sideMove),
+                double(p.player.cmd.forwardMove));
+        else
+            p.spriteAngle = 0;
+    }
 }
 
 
