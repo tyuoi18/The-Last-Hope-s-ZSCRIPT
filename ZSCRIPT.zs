@@ -793,14 +793,20 @@ class NukeMissile : Rocket
         MISL A 1 Bright A_StartSound("weapons/rocklf", CHAN_WEAPON);
         Loop;
     Death:
-        MISL B 10 Bright
+        MISL B 1 Bright
         {
             if (target && target.player)
-                target.A_SetBlend(0xFFFFFF, 0.96, 1);
+                target.A_SetBlend(0xFFFFFF, 1.0, 1);
             A_Explode(500, 512);
             A_StartSound("cyber/death", CHAN_BODY);
             A_Quake(8, 25, 0, 1000);
         }
+        MISL B 1 Bright
+        {
+            if (target && target.player)
+                target.A_SetBlend(0x080008, 0.90, 1);
+        }
+        MISL B 8 Bright;
         MISL C 8 Bright;
         MISL D 8 Bright;
         Stop;
@@ -1002,7 +1008,7 @@ class BFGBeam : FastProjectile
         BFE1 A 1 Bright
         {
             if (target && target.player)
-                target.A_SetBlend(0xFFFFFF, 0.90, 1);
+                target.A_SetBlend(0xFFFFFF, 1.0, 1);
             A_StartSound("weapons/bfgx", CHAN_BODY, CHANF_DEFAULT, 0.80);
             A_Explode(70, 96);
             A_RadiusThrust(360, 96, RTF_NOIMPACTDAMAGE);
@@ -1011,7 +1017,13 @@ class BFGBeam : FastProjectile
                 A_SpawnItemEx("TLHEnergySpark", random(-28, 28), random(-28, 28),
                     random(-8, 24), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
         }
-        BFE1 BCDEF 2 Bright;
+        BFE1 B 1 Bright
+        {
+            if (target && target.player)
+                target.A_SetBlend(0x080008, 0.90, 1);
+        }
+        BFE1 B 1 Bright;
+        BFE1 CDEF 2 Bright;
         Stop;
     }
 }
@@ -1023,12 +1035,18 @@ class TLHBFGImpactBall : BFGBall replaces BFGBall
     States
     {
     Death:
-        BFE1 A 0 Bright
+        BFE1 A 1 Bright
         {
             if (target && target.player)
-                target.A_SetBlend(0xFFFFFF, 0.92, 1);
+                target.A_SetBlend(0xFFFFFF, 1.0, 1);
         }
-        BFE1 AB 8 Bright;
+        BFE1 B 1 Bright
+        {
+            if (target && target.player)
+                target.A_SetBlend(0x080008, 0.90, 1);
+        }
+        BFE1 A 7 Bright;
+        BFE1 B 7 Bright;
         BFE1 C 8 Bright A_BFGSpray;
         BFE1 DEF 8 Bright;
         Stop;
@@ -1060,10 +1078,10 @@ class BFGSlowOrb : BFGBall
         }
         Loop;
     Death:
-        BFE1 A 2 Bright
+        BFE1 A 1 Bright
         {
             if (target && target.player)
-                target.A_SetBlend(0xFFFFFF, 0.94, 1);
+                target.A_SetBlend(0xFFFFFF, 1.0, 1);
             A_Explode(220, 224);
             A_RadiusThrust(-1400, 256, RTF_NOIMPACTDAMAGE);
             A_Quake(8, 24, 0, 800);
@@ -1071,6 +1089,11 @@ class BFGSlowOrb : BFGBall
             for (int i = 0; i < 18; i++)
                 A_SpawnItemEx("TLHEnergySpark", random(-84, 84), random(-84, 84),
                     random(-12, 48), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
+        }
+        BFE1 A 1 Bright
+        {
+            if (target && target.player)
+                target.A_SetBlend(0x080008, 0.90, 1);
         }
         BFE1 BCDEF 4 Bright;
         Stop;
@@ -4326,13 +4349,13 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
         }
     DoBFGBurst:
         ZFGG A 6 A_BFGSound;
-        ZFGG B 4
+        ZFGG B 1
         {
             if (!(sv_infiniteammo || (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true))))
                 A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_Explode(90, 176, XF_EXPLICITDAMAGETYPE, false, 176);
             if (player && player.mo)
-                player.mo.A_SetBlend(0xFFFFFF, 0.94, 1);
+                player.mo.A_SetBlend(0xFFFFFF, 1.0, 1);
             A_RadiusThrust(900, 176, RTF_NOIMPACTDAMAGE);
             A_Recoil(8);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
@@ -4342,6 +4365,12 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
                 A_SpawnItemEx("TLHEnergySpark", random(-72, 72), random(-72, 72),
                     random(-8, 40), 0, 0, 0, 0, SXF_NOCHECKPOSITION);
         }
+        ZFGG B 1
+        {
+            if (player && player.mo)
+                player.mo.A_SetBlend(0x080008, 0.90, 1);
+        }
+        ZFGG B 2;
         ZFGG B 4
         {
             A_OverlayOffset(PSP_WEAPON, 0, 48);
@@ -4566,19 +4595,9 @@ class HellfireProjector : Weapon
         Weapon.AmmoUse1 1;
         Inventory.PickupMessage "I found a Hellfire Napalm Projector!";
 
-        // Palette remap in ZScript. The source green ramp is used as the
-        // nozzle/accent channel and becomes intense red; body ramps become
-        // light gray. Flash states use their own sprite family and are not
-        // translated by this HUD preview unless the weapon itself is flashing.
-        Translation
-            "0:31=64:79",             // deep body -> dark gray
-            "32:47=88:103",           // warm/red shadows -> light gray
-            "48:95=88:103",            // body metal -> light gray
-            "96:111=96:111",           // gray metal -> neutral gray
-            "112:127=176:191",         // green nozzle ramp -> intense red
-            "128:175=88:103",          // secondary body tones -> light gray
-            "176:255=96:111";          // bright body tones -> gray
-        Scale 0.56;
+        // Use the unmodified vanilla DOOM II Rocket Launcher sprites (MISG/MISF).
+        // Keep the custom firing mechanics, but do not recolor or shrink the stock art.
+
     }
 
     States
@@ -4587,13 +4606,13 @@ class HellfireProjector : Weapon
         PISG A 0;
 
     TLHPickupReadyShim:
-        ZISG A 0
+        MISG A 0
         {
-            A_OverlayScale(PSP_WEAPON, 0.72, 0.76);
+            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        ZISG A 1
+        MISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4602,15 +4621,15 @@ class HellfireProjector : Weapon
         }
         Loop;
     Deselect:
-        ZISG A 1 A_Lower;
+        MISG A 1 A_Lower;
         Loop;
     Select:
-        ZISG A 1 A_Raise;
+        MISG A 1 A_Raise;
         Loop;
 
     Fire:
-        ZISG A 3;
-        ZISG B 5
+        MISG A 3;
+        MISG B 5
         {
             A_GunFlash();
             A_WeaponOffset(0, 36, WOF_INTERPOLATE);
@@ -4619,25 +4638,25 @@ class HellfireProjector : Weapon
             A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 220);
         }
-        ZISG B 5;
-        ZISG A 3 A_ReFire;
+        MISG B 5;
+        MISG A 3 A_ReFire;
         Goto Ready;
 
     AltFire:
-        ZISG A 3;
-        ZISG B 5
+        MISG A 3;
+        MISG B 5
         {
             A_FireProjectile("NapalmGlob", random(-4, 4), true, 0, 0, 0, random(-2, 2));
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 5, 0, 160);
         }
-        ZISG B 5;
+        MISG B 5;
         Goto Ready;
 
     Flash:
-        ZISF A 2 Bright A_Light1;
-        ZISF B 2 Bright A_Light2;
+        MISF A 2 Bright A_Light1;
+        MISF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
