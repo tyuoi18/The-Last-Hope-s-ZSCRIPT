@@ -5438,7 +5438,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         if (enable)
         {
-            if (!tlhFortniteCamera || tlhFortniteCamera.health <= 0)
+            if (!tlhFortniteCamera)
                 tlhFortniteCamera = TLHFortniteCamera(Spawn("TLHFortniteCamera", Pos));
 
             if (!tlhFortniteCamera)
@@ -7227,13 +7227,12 @@ class TLHFortniteCamera : Actor
         p.player.camera = self;
         cameraFOV = p.player.FOV;
 
-        // Smooth the camera's orbit, but keep the camera view aligned with the
-        // current aim so the player's existing weapon firing direction is retained.
+        // Smooth the orbit around the player while preserving an aim-aligned
+        // viewpoint. After positioning, the camera is aimed toward a point on
+        // the player's firing ray so the shoulder offset does not break crosshair alignment.
         double yawError = DeltaAngle(cameraYaw, p.angle);
         cameraYaw += yawError * CAMERA_SMOOTH;
         cameraPitch += (p.pitch - cameraPitch) * 0.32;
-        angle = p.angle;
-        pitch = p.pitch;
         roll = 0;
 
         // Aim from the upper torso, with the view sitting behind and over the
@@ -7283,6 +7282,14 @@ class TLHFortniteCamera : Actor
             SetZ(floorZ + 2.0);
         if (Pos.Z > ceilingZ - 2.0)
             SetZ(ceilingZ - 2.0);
+
+        // Converge on the point the player's aim ray reaches, not merely on a
+        // parallel view line. That compensates for the right-shoulder parallax.
+        Vector3 aimDirection = (AngleToVector(p.angle, cos(-p.pitch)), sin(p.pitch));
+        Vector3 aimPoint = anchor + aimDirection * 1024.0;
+        Vector3 viewDirection = aimPoint - Pos;
+        angle = atan2(viewDirection.y, viewDirection.x);
+        pitch = atan2(viewDirection.z, max(0.001, viewDirection.XY.Length()));
 
         // While moving, orient the actor sprite relative to movement input, as
         // in a modern third-person shooter. When firing, retain the aim-facing pose.
