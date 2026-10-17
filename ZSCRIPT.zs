@@ -7151,9 +7151,10 @@ class TLHFortniteCamera : Actor
     private double cameraPitch;
 
     // Fortnite-like default framing, measured in Doom map units.
-    const CAMERA_DISTANCE = 78.0;
-    const CAMERA_SHOULDER = 15.0;
-    const CAMERA_SMOOTH = 0.28;
+    const CAMERA_DISTANCE = 128.0;
+    const CAMERA_SHOULDER = 24.0;
+    const CAMERA_LIFT = 16.0;
+    const CAMERA_SMOOTH = 0.18;
 
     Default
     {
@@ -7233,7 +7234,7 @@ class TLHFortniteCamera : Actor
         // the player's firing ray so the shoulder offset does not break crosshair alignment.
         double yawError = DeltaAngle(cameraYaw, p.angle);
         cameraYaw += yawError * CAMERA_SMOOTH;
-        cameraPitch += (p.pitch - cameraPitch) * 0.32;
+        cameraPitch += (p.pitch - cameraPitch) * 0.24;
         roll = 0;
 
         // Aim from the upper torso, with the view sitting behind and over the
@@ -7246,7 +7247,7 @@ class TLHFortniteCamera : Actor
         Vector3 offset = (
             back.x * CAMERA_DISTANCE + side.x * CAMERA_SHOULDER,
             back.y * CAMERA_DISTANCE + side.y * CAMERA_SHOULDER,
-            sin(cameraPitch) * CAMERA_DISTANCE
+            sin(cameraPitch) * CAMERA_DISTANCE + CAMERA_LIFT
         );
         double fullDistance = offset.Length();
         if (fullDistance < 1.0)
@@ -7272,7 +7273,7 @@ class TLHFortniteCamera : Actor
         }
         else
         {
-            double blend = p.Vel.XY.Length() > 20.0 ? 0.36 : CAMERA_SMOOTH;
+            double blend = p.Vel.XY.Length() > 20.0 ? 0.32 : CAMERA_SMOOTH;
             nextPos = Pos + (desired - Pos) * blend;
         }
 
