@@ -2698,12 +2698,9 @@ class SemiAutoShotgun : Weapon
 // The stock Chaingun class remains available separately.
 // ============================================================================
 /* HEAVY CHAINGUN
-   HUD: CHGG A/B (CHGGA0/CHGGB0), flash: CHGF A/B, pickup: MGUN A.
-   Textures.wad may group the original DOOM II sprites inside one SS_START ... SS_END section.
-   Those markers only identify sprite namespace membership; they do not pin
-   a lump to a particular WAD or bypass GZDoom's resource loading order.
+   Uses only original DOOM II sprites: HUD CHGG A/B, flash CHGF A/B, pickup MGUN A.
    M4A1 keeps its separate ZHGG/ZGUN sprites.
-*/
+ */
 class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
@@ -5751,11 +5748,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else if (cls == "TacticalM4A1")
         {
             scaleX = 1.02; scaleY = 1.08; offsetY = 0.4; sway = 0.86;
-        }
-        else if (cls == "HeavyChaingun")
-        {
-            // Reserved profile for consistency if procedural PSprite motion is re-enabled.
-            scaleX = 0.98; scaleY = 1.14; offsetY = 1.2; sway = 0.64;
         }
         else if (cls == "M60MachineGun")
         {
