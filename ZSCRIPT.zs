@@ -2716,8 +2716,10 @@ class HeavyChaingun : DoomWeapon
 
     override void Tick()
     {
-        Super.Tick();
+        // The weapon can be initialized before it has an owner/player.
+        // Do not touch player state until both pointers are valid.
         if (!Owner || !Owner.player) return;
+        Super.Tick();
 
         bool firing = (Owner.player.ReadyWeapon == self &&
             (Owner.player.cmd.buttons & BT_ATTACK));
