@@ -1,0 +1,5 @@
+// The Last Hope gameplay configuration.
+// Keep gameplay-affecting selectors server-side so they are available to
+// CVar.FindCVar and remain authoritative in multiplayer.
+server int tlh_gamemode = 0;
+server bool tlh_ssg_only = false;
