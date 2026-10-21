@@ -3564,7 +3564,7 @@ class HunterRifle : DoomWeapon
         }
 
     Spawn:
-        RIFL H -1;
+        RFLE A -1;
         Stop;
     }
 }
