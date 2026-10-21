@@ -4435,9 +4435,6 @@ class AirstrikeDesignator : Weapon
 // the WAD does not need any new sprite lumps.
 // ============================================================================
 
-// Custom Service Revolver.
-// GZDoom requires a four-character sprite prefix. All frames use RVOL:
-// RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 // Bolt-action Hunter Rifle. Uses RIFLA0-RIFLD0 for the shot and RIFLE0-RIFLH0
 // for the bolt-cycle animation. No separate Flash state is used because the
 // authored A-D frames already contain the muzzle flash.
@@ -4745,6 +4742,9 @@ class HunterRifle : Weapon
     }
 }
 
+// Custom Service Revolver.
+// GZDoom requires a four-character sprite prefix. All frames use RVOL:
+// RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 class ServiceRevolver : Weapon
 {
     // Six-shot cylinder. Clip ammo is held in reserve and transferred on reload.
@@ -5418,7 +5418,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (tlhProneActive)
             {
                 bShadow = tlhPronePreviousShadow;
-                Height = FullHeight * clamp(player.crouchfactor, 0.0, 1.0);
                 tlhProneActive = false;
                 Height = FullHeight;
             }
