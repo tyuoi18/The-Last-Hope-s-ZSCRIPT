@@ -1,6 +1,12 @@
 // The Last Hope weapon/editor definitions.
+// Register the gameplay and HUD handlers globally for each map.
 // Slot 5 uses the existing Rocket Launcher (RecoilRocketLauncher).
 // Obsolete TLHGrenadeLauncher and TacticalRocketLauncher editor numbers were removed.
+
+GameInfo
+{
+    AddEventHandlers = "TacticalHUDHandler", "RemoveStartingPistol"
+}
 
 DoomEdNums
 {
