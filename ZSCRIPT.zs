@@ -5464,7 +5464,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
             bShadow = true;
             Height = max(20.0, FullHeight * 0.48);
-            Vel.XY *= 0.90;
+            Vel.XY *= 0.84;
         }
         else if (tlhProneActive)
         {
