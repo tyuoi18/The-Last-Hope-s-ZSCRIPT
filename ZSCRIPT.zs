@@ -5250,7 +5250,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
         Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
-        // Slot 4 includes the M4A1, HeavyChaingun, compact SMG and M60. No HeavyMinigun alias.
+        // Slot 4 includes the M4A1, bolt-action Hunter Rifle, heavy chaingun, compact SMG and M60.
         Player.WeaponSlot 4, "TacticalM4A1", "HunterRifle", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
 
@@ -5414,6 +5414,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             if (tlhDualWieldWeapon)
                 SetTLHWeaponDualFlag(tlhDualWieldWeapon, false);
+
+            if (tlhProneActive)
+            {
+                bStealth = tlhPronePreviousStealth;
+                tlhProneActive = false;
+                Height = FullHeight;
+            }
 
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
@@ -6327,9 +6334,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     int GetTLHAmmoSignature()
     {
         // A simple aggregate signature is used only for detecting a firing
-        // event. It is not a gameplay resource calculation.
+        // event. Account for the Hunter Rifle's loaded magazine as well as
+        // reserve inventories so a shot triggers the normal procedural recoil.
+        int hunterRounds = 0;
+        let hunter = HunterRifle(FindInventory("HunterRifle"));
+        if (hunter) hunterRounds = hunter.magazineAmmo;
+
         return CountInv("Clip") + CountInv("Shell") +
-               CountInv("RocketAmmo") + CountInv("Cell");
+               CountInv("RocketAmmo") + CountInv("Cell") + hunterRounds;
     }
 
     void UpdateTLHProceduralMotion(bool onGroundNow, int bt, int oldbt)
@@ -6804,14 +6816,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else if (mode == 14) // Random Arsenal
         {
             RemoveAllWeaponsExceptLocal("DashFist");
-            int r = random(0, 7);
+            int r = random(0, 8);
             if (r == 0) GiveModeWeaponLocal("RecoilPistol");
             else if (r == 1) GiveModeWeaponLocal("OfficerVulkanPistol");
             else if (r == 2) GiveModeWeaponLocal("RecoilShotgun");
             else if (r == 3) GiveModeWeaponLocal("TacticalM4A1");
-            else if (r == 4) GiveModeWeaponLocal("HeavyChaingun");
-            else if (r == 5) GiveModeWeaponLocal("M60MachineGun");
-            else if (r == 6) GiveModeWeaponLocal("RecoilRocketLauncher");
+            else if (r == 4) GiveModeWeaponLocal("HunterRifle");
+            else if (r == 5) GiveModeWeaponLocal("HeavyChaingun");
+            else if (r == 6) GiveModeWeaponLocal("M60MachineGun");
+            else if (r == 7) GiveModeWeaponLocal("RecoilRocketLauncher");
             else GiveModeWeaponLocal("AMR99RailRifle");
 
             GiveAllAmmoBurst(20);
