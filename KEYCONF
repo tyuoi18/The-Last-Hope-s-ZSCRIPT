@@ -3,3 +3,5 @@ addkeysection "The Last Hope" TheLastHope
 addmenukey "Toggle Dual Wield" "netevent tlh_dualwield"
 addmenukey "Go Prone (hold)" "+user1"
 defaultbind "MOUSE3" "+user1"
+addmenukey "Go Prone (hold)" "+user1"
+defaultbind "MOUSE3" "+user1"
