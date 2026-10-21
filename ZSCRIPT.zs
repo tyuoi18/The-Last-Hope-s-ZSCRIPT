@@ -4614,6 +4614,9 @@ class HunterRifle : Weapon
             if (!invoker.reloadLatched)
                 readyFlags |= WRF_ALLOWRELOAD;
             A_WeaponReady(readyFlags);
+            // This inline state function has early-return paths above, so its
+            // normal path must explicitly resolve the current state as well.
+            return ResolveState(null);
         }
         Loop;
 
