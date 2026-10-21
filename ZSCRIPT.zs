@@ -3275,7 +3275,7 @@ class HunterRifle : DoomWeapon
         Weapon.SelectionOrder 430;
         Weapon.Kickback 145;
         Weapon.AmmoType1 "HunterRifleMagazineAmmo";
-        Weapon.AmmoUse1 1;
+        Weapon.AmmoUse1 0; // Magazine rounds are consumed explicitly in FireShot.
         Weapon.AmmoGive1 5;
         Weapon.AmmoType2 "Clip";
         Weapon.AmmoUse2 0;
@@ -3404,6 +3404,7 @@ class HunterRifle : DoomWeapon
             // The shot's flash is baked into RIFL A-D: intentionally no A_GunFlash().
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_FireBullets(0.30, 0.30, 1, 18, "BulletPuff");
+            A_TakeInventory("HunterRifleMagazineAmmo", 1);
             A_SetPitch(pitch - 2.1, SPF_INTERPOLATE);
             A_Recoil(7.0);
 
