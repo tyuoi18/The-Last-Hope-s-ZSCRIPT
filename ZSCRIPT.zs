@@ -3284,15 +3284,13 @@ class HunterRifle : DoomWeapon
         Inventory.PickupMessage "Picked up the Hunter Rifle.";
     }
 
-    // If the magazine is empty but reserve rounds remain, stay on this weapon
-    // so the player can press R instead of being forcibly switched away.
+    // The five-round magazine is managed by this weapon's own Fire/Reload states.
+    // Do not let DoomWeapon's default ammo check auto-switch away when the custom
+    // magazine is absent/empty; the Fire state blocks the shot and asks the player
+    // to reload, while CheckAmmo keeps the rifle selectable even with no reserve.
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
-        if (fireMode == PrimaryFire && Ammo1 && Ammo1.Amount <= 0 &&
-            Ammo2 && Ammo2.Amount > 0)
-            return true;
-
-        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+        return true;
     }
 
     States
