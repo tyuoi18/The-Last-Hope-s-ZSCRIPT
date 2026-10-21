@@ -5452,8 +5452,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         int obt = player.oldbuttons;
 
         // Hold M3 (+user1) to go prone. The stance lowers the hitbox/view,
-        // damps movement while preserving directional control, and enables
-        // GZDoom monster-stealth handling until the button is released.
+        // damps movement while preserving directional control, and applies
+        // the shadow flag that makes monsters less likely to see the player.
         bool proneRequested = (bt & BT_USER1) != 0 && onGround && !isSlamming;
         if (proneRequested)
         {
