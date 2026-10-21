@@ -3132,7 +3132,7 @@ class HeavyChaingun : DoomWeapon
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite)
                 A_TakeInventory("Clip", 2, TIF_NOTAKEINFINITE);
-            A_FireProjectile("HeavyPiercingRound", random(-0.7, 0.7), false);
+            A_FireProjectile("HeavyPiercingRound", FRandom(-0.7, 0.7), false);
             A_SetPitch(pitch - 0.85, SPF_INTERPOLATE);
             A_Quake(1, 3, 0, 120);
             A_OverlayOffset(PSP_WEAPON, 0, 40);
@@ -3440,6 +3440,7 @@ class HunterRifle : DoomWeapon
                 invoker.proneButtonLatched = false;
 
             A_WeaponReady(emptyFlags);
+            return ResolveState(null);
         }
         Loop;
 
@@ -3481,6 +3482,7 @@ class HunterRifle : DoomWeapon
             }
 
             A_WeaponReady(aimFlags);
+            return ResolveState(null);
         }
         Loop;
 
