@@ -128,6 +128,26 @@ class TLHCellAmmo : Cell replaces Cell
     }
 }
 
+
+// Hunter Rifle's loaded five-round magazine. The actual reserve stays in Clip.
+class HunterRifleMagazineAmmo : Ammo
+{
+    Default
+    {
+        Inventory.Amount 5;
+        Inventory.MaxAmount 5;
+        Ammo.BackpackAmount 5;
+        Ammo.BackpackMaxAmount 5;
+    }
+
+    States
+    {
+    Spawn:
+        TNT1 A -1;
+        Stop;
+    }
+}
+
 // ============================================================================
 // 1. PROYECTILES Y EFECTOS VISUALES
 // ============================================================================
@@ -3234,6 +3254,313 @@ class HeavyChaingun : DoomWeapon
     }
 }
 
+
+// ============================================================================
+// HUNTER RIFLE - BOLT ACTION
+// RIFL A-D contain the weapon's own muzzle-flash frames, so there is no Flash
+// state or RIFL F flash sprite. RIFL E-H animate the bolt and reload cycle.
+// M2 = hold to aim, M3 = toggle prone, R = reload one cartridge per bolt cycle.
+// ============================================================================
+class HunterRifle : DoomWeapon
+{
+    bool aiming;
+    bool proneMode;
+    bool proneButtonLatched;
+    bool triggerLatched;
+
+    Default
+    {
+        Weapon.SlotNumber 4;
+        Weapon.SlotPriority 4.45;
+        Weapon.SelectionOrder 430;
+        Weapon.Kickback 145;
+        Weapon.AmmoType1 "HunterRifleMagazineAmmo";
+        Weapon.AmmoUse1 1;
+        Weapon.AmmoGive1 5;
+        Weapon.AmmoType2 "Clip";
+        Weapon.AmmoUse2 0;
+        Weapon.AmmoGive2 20;
+        AttackSound "weapons/sshotf";
+        Inventory.PickupMessage "Picked up the Hunter Rifle.";
+    }
+
+    // If the magazine is empty but reserve rounds remain, stay on this weapon
+    // so the player can press R instead of being forcibly switched away.
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (fireMode == PrimaryFire && Ammo1 && Ammo1.Amount <= 0 &&
+            Ammo2 && Ammo2.Amount > 0)
+            return true;
+
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+
+    States
+    {
+    Ready:
+        RIFL H 0
+        {
+            // Never carry scope FOV or the prone stance into weapon switching.
+            if (invoker.aiming)
+            {
+                if (!(player.cmd.buttons & BT_ALTATTACK))
+                {
+                    invoker.aiming = false;
+                    A_ZoomFactor(1.0, ZOOM_INSTANT);
+                }
+                else
+                    return ResolveState("AimHold");
+            }
+
+            A_OverlayScale(PSP_WEAPON, 1.04, 1.10);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            A_OverlayOffset(PSP_WEAPON, 0, invoker.proneMode ? 47 : 34);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState("HunterIdle");
+        }
+
+    HunterIdle:
+        RIFL H 1
+        {
+            if (!(player.cmd.buttons & BT_ZOOM))
+                invoker.proneButtonLatched = false;
+
+            // Bolt-action: require a trigger release before another shot.
+            int readyFlags = WRF_ALLOWRELOAD;
+            if (!invoker.proneButtonLatched)
+                readyFlags |= WRF_ALLOWZOOM;
+
+            if (invoker.triggerLatched)
+            {
+                if (player.cmd.buttons & BT_ATTACK)
+                    readyFlags |= WRF_NoPrimary;
+                else
+                    invoker.triggerLatched = false;
+            }
+
+            if (invoker.proneMode)
+            {
+                double proneSway = sin(level.time * 0.018 * TLH_RAD_TO_DEG) * 0.16;
+                A_OverlayOffset(PSP_WEAPON, proneSway, 47 + cos(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.08);
+                A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.014 * TLH_RAD_TO_DEG) * 0.08);
+            }
+            else
+            {
+                double sway = sin(level.time * 0.030 * TLH_RAD_TO_DEG) * 0.34;
+                A_OverlayOffset(PSP_WEAPON, sway, 34 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.14);
+                A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.22);
+            }
+
+            A_WeaponReady(readyFlags);
+        }
+        Loop;
+
+    Deselect:
+        RIFL H 0
+        {
+            invoker.aiming = false;
+            invoker.proneMode = false;
+            invoker.proneButtonLatched = false;
+            if (player)
+                A_ZoomFactor(1.0, ZOOM_INSTANT);
+            A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
+            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState("DeselectLower");
+        }
+    DeselectLower:
+        RIFL H 1 A_Lower;
+        Loop;
+
+    Select:
+        RIFL H 0
+        {
+            A_OverlayScale(PSP_WEAPON, 1.04, 1.10);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayOffset(PSP_WEAPON, 0, 39);
+            A_OverlayRotate(PSP_WEAPON, 0);
+            return ResolveState("SelectRaise");
+        }
+    SelectRaise:
+        RIFL H 1 A_Raise;
+        Loop;
+
+    Fire:
+        RIFL A 0
+        {
+            if (!invoker.Ammo1 || invoker.Ammo1.Amount <= 0)
+            {
+                A_Print("HUNTER RIFLE: EMPTY MAGAZINE - PRESS R");
+                return ResolveState("EmptyWait");
+            }
+            invoker.triggerLatched = true;
+            return ResolveState("FireShot");
+        }
+    FireShot:
+        RIFL A 3
+        {
+            // The shot's flash is baked into RIFL A-D: intentionally no A_GunFlash().
+            A_StartSound("weapons/sshotf", CHAN_WEAPON);
+            A_FireBullets(0.30, 0.30, 1, 18, "BulletPuff");
+            A_SetPitch(pitch - 2.1, SPF_INTERPOLATE);
+            A_Recoil(7.0);
+
+            int magRemaining = invoker.Ammo1 ? invoker.Ammo1.Amount : 0;
+            int reserveRemaining = invoker.Ammo2 ? invoker.Ammo2.Amount : 0;
+            A_Print(String.Format("HUNTER RIFLE | MAG %02d/05 | RESERVE %03d",
+                magRemaining, reserveRemaining));
+        }
+        RIFL B 2;
+        RIFL C 2;
+        RIFL D 2;
+        Goto BoltCycle;
+
+    BoltCycle:
+        // The same E-H animation visibly cycles the bolt after every shot.
+        RIFL E 3;
+        RIFL F 3;
+        RIFL G 3;
+        RIFL H 4;
+        Goto Ready;
+
+    EmptyWait:
+        RIFL H 1
+        {
+            if (invoker.Ammo1 && invoker.Ammo1.Amount > 0)
+                return ResolveState("Ready");
+
+            int emptyFlags = WRF_NoPrimary | WRF_NoSecondary | WRF_ALLOWRELOAD;
+            if (!invoker.proneButtonLatched)
+                emptyFlags |= WRF_ALLOWZOOM;
+            if (!(player.cmd.buttons & BT_ZOOM))
+                invoker.proneButtonLatched = false;
+
+            A_WeaponReady(emptyFlags);
+        }
+        Loop;
+
+    AltFire:
+        RIFL H 0
+        {
+            // M2 is hold-to-aim, not a toggle. The release restores the user's FOV.
+            invoker.aiming = true;
+            A_ZoomFactor(2.35, ZOOM_INSTANT);
+            A_StartSound("weapons/sshotc", CHAN_WEAPON, CHANF_DEFAULT, 0.35);
+            return ResolveState("AimHold");
+        }
+
+    AimHold:
+        RIFL H 1
+        {
+            if (!(player.cmd.buttons & BT_ALTATTACK))
+            {
+                invoker.aiming = false;
+                A_ZoomFactor(1.0, ZOOM_INSTANT);
+                A_OverlayOffset(PSP_WEAPON, 0, invoker.proneMode ? 43 : 29);
+                return ResolveState("Ready");
+            }
+
+            A_OverlayOffset(PSP_WEAPON, 0, invoker.proneMode ? 43 : 29);
+            int aimFlags = WRF_NoSecondary | WRF_ALLOWRELOAD;
+            if (!invoker.proneButtonLatched)
+                aimFlags |= WRF_ALLOWZOOM;
+
+            if (invoker.triggerLatched)
+            {
+                if (player.cmd.buttons & BT_ATTACK)
+                    aimFlags |= WRF_NoPrimary;
+                else
+                    invoker.triggerLatched = false;
+            }
+
+            A_WeaponReady(aimFlags);
+        }
+        Loop;
+
+    Zoom:
+        RIFL H 0
+        {
+            if (player && player.mo && player.mo.Pos.Z > player.mo.floorz + 0.5)
+            {
+                A_Print("HUNTER RIFLE: MUST BE GROUNDED TO GO PRONE");
+                return ResolveState("Ready");
+            }
+
+            // M3 toggles the prone stance once per press, even if the key is held.
+            invoker.proneMode = !invoker.proneMode;
+            invoker.proneButtonLatched = true;
+
+            if (invoker.proneMode)
+            {
+                A_StartSound("weapons/sshotc", CHAN_WEAPON, CHANF_DEFAULT, 0.40);
+                A_Print("HUNTER RIFLE: PRONE - SLOW MOVEMENT / HARDER TO SPOT");
+            }
+            else
+            {
+                A_StartSound("weapons/sshotl", CHAN_WEAPON, CHANF_DEFAULT, 0.40);
+                A_Print("HUNTER RIFLE: STANDING");
+            }
+            return ResolveState("Ready");
+        }
+
+    Reload:
+        TNT1 A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            int loaded = invoker.Ammo1 ? invoker.Ammo1.Amount : 0;
+            int reserve = invoker.Ammo2 ? invoker.Ammo2.Amount : 0;
+
+            if (loaded >= 5 || (!infinite && reserve <= 0))
+            {
+                A_Print(String.Format("HUNTER RIFLE | MAG %02d/05 | RESERVE %03d",
+                    loaded, reserve));
+                return ResolveState("Ready");
+            }
+            return ResolveState("ReloadCycle");
+        }
+
+    ReloadCycle:
+        // Each E-H pass loads exactly one cartridge and updates the live counter.
+        RIFL E 3;
+        RIFL F 3;
+        RIFL G 3;
+        RIFL H 4;
+        TNT1 A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            int loaded = invoker.Ammo1 ? invoker.Ammo1.Amount : 0;
+            int reserve = invoker.Ammo2 ? invoker.Ammo2.Amount : 0;
+
+            if (loaded >= 5 || (!infinite && reserve <= 0))
+            {
+                A_Print(String.Format("HUNTER RIFLE | MAG %02d/05 | RESERVE %03d",
+                    loaded, reserve));
+                return ResolveState("Ready");
+            }
+
+            if (!infinite)
+                A_TakeInventory("Clip", 1);
+            A_GiveInventory("HunterRifleMagazineAmmo", 1);
+
+            loaded = invoker.Ammo1 ? invoker.Ammo1.Amount : 0;
+            reserve = invoker.Ammo2 ? invoker.Ammo2.Amount : 0;
+            A_Print(String.Format("HUNTER RIFLE | MAG %02d/05 | RESERVE %03d",
+                loaded, reserve));
+
+            if (loaded >= 5 || (!infinite && reserve <= 0))
+                return ResolveState("Ready");
+            return ResolveState("ReloadCycle");
+        }
+
+    Spawn:
+        RIFL H -1;
+        Stop;
+    }
+}
+
 class TacticalM4A1 : DoomWeapon
 {
     bool burstMode;
@@ -5220,6 +5547,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     int previousGameMode;
     bool modeInitialized;
 
+    // Hunter Rifle prone stance: restore pre-existing invisibility/shadow settings on exit.
+    bool tlhHunterProneEffectsActive;
+    bool tlhHunterPronePreviousShadow;
+
     // ========================================================================
     // PROCEDURAL FIRST-PERSON MOTION
     // These values are intentionally kept on the player so every weapon can
@@ -5297,8 +5628,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
         Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
-        // Slot 4 includes the M4A1, rebuilt HeavyChaingun, compact SMG and M60.
-        Player.WeaponSlot 4, "TacticalM4A1", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
+        // Slot 4 includes the M4A1, Hunter Rifle, HeavyChaingun, compact SMG and M60.
+        Player.WeaponSlot 4, "TacticalM4A1", "HunterRifle", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
 
         Player.WeaponSlot 6, "RecoilPlasmaRifle";
@@ -5340,6 +5671,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             // Slot 4
             GiveInventory("TacticalM4A1", 1, true);
+            GiveInventory("HunterRifle", 1, true);
             GiveInventory("HeavyChaingun", 1, true);
             GiveInventory("TLHCompactSMG", 1, true);
             GiveInventory("M60MachineGun", 1, true);
@@ -5558,6 +5890,27 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         int obt = player.oldbuttons;
         ResetTLHDualForWeaponSwitch();
         RestoreTLHOwnedWeaponTranslations();
+
+        HunterRifle proneWeapon = HunterRifle(player.ReadyWeapon);
+        bool hunterProneNow = proneWeapon && proneWeapon.proneMode;
+        if (hunterProneNow)
+        {
+            if (!tlhHunterProneEffectsActive)
+            {
+                tlhHunterPronePreviousShadow = bShadow;
+                tlhHunterProneEffectsActive = true;
+            }
+
+            // Shadow makes enemies less reliable at seeing/aiming at this actor.
+            bShadow = true;
+            if (onGround)
+                Vel.XY *= 0.56;
+        }
+        else if (tlhHunterProneEffectsActive)
+        {
+            bShadow = tlhHunterPronePreviousShadow;
+            tlhHunterProneEffectsActive = false;
+        }
 
         int gameMode = GetGameMode();
 
@@ -6173,6 +6526,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         player.viewz += cameraBob;
 
+        // Prone lowers the viewpoint to sell the body-to-ground posture.
+        let hunterProneWeapon = HunterRifle(player.ReadyWeapon);
+        if (hunterProneWeapon && hunterProneWeapon.proneMode)
+            player.viewz -= 14.0;
+
         // Preserve GZDoom's normal collision safety after our extra visual bob.
         if (player.viewz > ceilingz - 4)
             player.viewz = ceilingz - 4;
@@ -6606,6 +6964,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 1.02; scaleY = 1.08; offsetY = 0.4; sway = 0.86;
         }
+        else if (cls == "HunterRifle")
+        {
+            scaleX = 1.08; scaleY = 1.10; offsetY = 1.1; baseRoll = -0.12; sway = 0.58;
+        }
         else if (cls == "M60MachineGun")
         {
             scaleX = 0.99; scaleY = 1.12; offsetY = 1.4; sway = 0.68;
@@ -6667,6 +7029,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Carbines and compact automatics settle quickly.
         if (cls == "TacticalM4A1") return 0.82;
+        if (cls == "HunterRifle") return 0.62;
         if (cls == "TLHCompactSMG") return 0.78;
 
         // Very heavy weapons move less but hit harder when they recoil.
@@ -6696,7 +7059,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // A simple aggregate signature is used only for detecting a firing
         // event. It is not a gameplay resource calculation.
         return CountInv("Clip") + CountInv("Shell") +
-               CountInv("RocketAmmo") + CountInv("Cell");
+               CountInv("RocketAmmo") + CountInv("Cell") +
+               CountInv("HunterRifleMagazineAmmo");
     }
 
     void UpdateTLHProceduralMotion(bool onGroundNow, int bt, int oldbt)
@@ -6792,6 +7156,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                     impulse *= 1.25;
                 else if (cls == "RecoilRocketLauncher" || cls == "HellfireProjector")
                     impulse *= 2.00;
+                else if (cls == "HunterRifle")
+                    impulse *= 2.15;
                 else if (cls == "RecoilPlasmaRifle")
                     impulse *= 0.72;
                 else if (cls == "AMR99RailRifle")
@@ -7902,6 +8268,9 @@ class TacticalHUDHandler : EventHandler
     int hudClip;
     int hudRevolverAmmo;
     int hudRevolverReserve;
+    int hudHunterMag;
+    int hudHunterReserve;
+    bool hudHunterProne;
     int hudShell;
     int hudRocket;
     int hudCell;
@@ -8480,6 +8849,9 @@ class TacticalHUDHandler : EventHandler
         hudClip = 0;
         hudRevolverAmmo = 0;
         hudRevolverReserve = 0;
+        hudHunterMag = 0;
+        hudHunterReserve = 0;
+        hudHunterProne = false;
         hudShell = 0;
         hudRocket = 0;
         hudCell = 0;
@@ -8615,6 +8987,17 @@ class TacticalHUDHandler : EventHandler
                 }
             }
 
+            if (ready is "HunterRifle")
+            {
+                let hunter = HunterRifle(ready);
+                if (hunter)
+                {
+                    hudHunterMag = hunter.Ammo1 ? hunter.Ammo1.Amount : 0;
+                    hudHunterReserve = hunter.Ammo2 ? hunter.Ammo2.Amount : 0;
+                    hudHunterProne = hunter.proneMode;
+                }
+            }
+
 if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "ServiceRevolver") hudWeaponName = "SERVICE REVOLVER";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
@@ -8623,6 +9006,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
+            else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "HeavyChaingun") hudWeaponName = "HEAVY CHAINGUN";
             else if (hudWeaponName == "TLHCompactSMG") hudWeaponName = "M12 COMPACT SMG";
             else if (hudWeaponName == "M60MachineGun") hudWeaponName = "M60 MACHINE GUN";
@@ -9347,6 +9731,14 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             primary = 0x7D8986;
             secondary = 0x39423F;
         }
+        else if (cls == "HunterRifle")
+        {
+            primary = 0xA3AAA0;
+            secondary = 0x5C6651;
+            profileX = 1.10;
+            profileY = 1.13;
+            accentStrength = 0.94;
+        }
         else if (cls == "M60MachineGun")
         {
             primary = 0x68716F;
@@ -9528,7 +9920,18 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         // module, so its palette design visibly changes with the weapon.
         DrawProceduralWeaponHUD();
 
-        if (tlhVisorWeaponClass == "ServiceRevolver")
+        if (tlhVisorWeaponClass == "HunterRifle")
+        {
+            Text("MAG", 518, 306, dim, 0.21);
+            TextR(String.Format("%02d/05", hudHunterMag), 565, 306,
+                hudHunterMag <= 1 ? warn : Font.CR_WHITE, 0.25);
+            Text("RSV", 570, 306, dim, 0.21);
+            TextR(String.Format("%03d", hudHunterReserve), 609, 306, Font.CR_WHITE, 0.24);
+            Text("STANCE", 518, 317, dim, 0.21);
+            TextR(hudHunterProne ? "PRONE" : "STANDING", 609, 317,
+                hudHunterProne ? Font.CR_GREEN : Font.CR_WHITE, 0.22);
+        }
+        else if (tlhVisorWeaponClass == "ServiceRevolver")
         {
             Text("CYLINDER", 518, 306, dim, 0.21);
             TextR(String.Format("%02d/06", hudRevolverAmmo), 609, 306,
