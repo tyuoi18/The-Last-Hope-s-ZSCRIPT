@@ -7107,7 +7107,7 @@ class TacticalHUDHandler : EventHandler
             e.Thing.Scale = (0.56, 0.56);
 
         let modeCvar = CVar.FindCVar("tlh_gamemode");
-        int gameMode = modeCvar ? modeCvar.GetInt() : 0;
+        int gameMode = modeCvar ? clamp(modeCvar.GetInt(), 0, 33) : 0;
 
         if (gameMode == 18 &&
             (e.Thing is "PowerupGiver" ||
@@ -7412,7 +7412,7 @@ class TacticalHUDHandler : EventHandler
 
         int mode = 0;
         let c = CVar.FindCVar("tlh_gamemode");
-        if (c) mode = c.GetInt();
+        if (c) mode = clamp(c.GetInt(), 0, 33);
 
         int faceMax = 600;
         if (mode == 1 || mode == 2) faceMax = 100;
