@@ -26,8 +26,9 @@ const TLH_MAX_SHELLS = 100;
 const TLH_MAX_ROCKETS = 50;
 const TLH_MAX_CELLS = 300;
 
-// The Last Hope gameplay modes. The actual selector is the user CVar
-// "tlh_gamemode" defined in CVARINFO.
+// The Last Hope gameplay modes. The selector is a server CVar so gameplay
+// rules remain authoritative and synchronized in multiplayer. It is defined
+// in the companion CVARINFO lump as "tlh_gamemode".
 // 0 Tactical Standard
 // 1 Classic Doom
 // 2 Hardcore
@@ -7106,7 +7107,7 @@ class TacticalHUDHandler : EventHandler
             e.Thing.Scale = (0.56, 0.56);
 
         let modeCvar = CVar.FindCVar("tlh_gamemode");
-        int gameMode = modeCvar ? modeCvar.GetInt() : 0;
+        int gameMode = modeCvar ? clamp(modeCvar.GetInt(), 0, 33) : 0;
 
         if (gameMode == 18 &&
             (e.Thing is "PowerupGiver" ||
@@ -7411,7 +7412,7 @@ class TacticalHUDHandler : EventHandler
 
         int mode = 0;
         let c = CVar.FindCVar("tlh_gamemode");
-        if (c) mode = c.GetInt();
+        if (c) mode = clamp(c.GetInt(), 0, 33);
 
         int faceMax = 600;
         if (mode == 1 || mode == 2) faceMax = 100;
@@ -7655,7 +7656,9 @@ class TacticalHUDHandler : EventHandler
         hudVerticalSpeed = p.Vel.Z;
         hudAltitude = max(0.0, p.Pos.Z - p.floorz);
         hudOnGround = (p.Pos.Z <= p.floorz + 0.5);
-        hudModeName = GetGameModeName(clamp(CVar.FindCVar("tlh_gamemode") ? CVar.FindCVar("tlh_gamemode").GetInt() : 0, 0, 33));
+        let hudModeCvar = CVar.FindCVar("tlh_gamemode");
+        int hudModeValue = hudModeCvar ? hudModeCvar.GetInt() : 0;
+        hudModeName = GetGameModeName(clamp(hudModeValue, 0, 33));
         UpdateAimTarget(p);
 
         let armor = BasicArmor(p.FindInventory("BasicArmor"));

@@ -1,0 +1,3 @@
+// The Last Hope custom controls.
+addkeysection "The Last Hope" TheLastHope
+addmenukey "Toggle Dual Wield" "netevent tlh_dualwield"
