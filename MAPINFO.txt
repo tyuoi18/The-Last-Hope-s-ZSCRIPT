@@ -13,4 +13,5 @@ DoomEdNums
     30001 = ServiceRevolver
     30002 = StreetSweeperShotgun
     30003 = HunterRifle
+    30003 = HunterRifle
 }
