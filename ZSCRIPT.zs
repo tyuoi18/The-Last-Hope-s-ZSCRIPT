@@ -5162,7 +5162,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     bool tlhProneActive;
-    bool tlhPronePreviousStealth;
+    bool tlhPronePreviousShadow;
 
     int hordeTimer;
     int arenaTimer;
@@ -5417,7 +5417,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             if (tlhProneActive)
             {
-                bStealth = tlhPronePreviousStealth;
+                bShadow = tlhPronePreviousShadow;
+                Height = FullHeight * clamp(player.crouchfactor, 0.0, 1.0);
                 tlhProneActive = false;
                 Height = FullHeight;
             }
@@ -5458,17 +5459,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             if (!tlhProneActive)
             {
-                tlhPronePreviousStealth = bStealth;
+                tlhPronePreviousShadow = bShadow;
                 tlhProneActive = true;
             }
-            bStealth = true;
+            bShadow = true;
             Height = max(20.0, FullHeight * 0.48);
-            Vel.XY *= 0.72;
+            Vel.XY *= 0.90;
         }
         else if (tlhProneActive)
         {
             tlhProneActive = false;
-            bStealth = tlhPronePreviousStealth;
+            bShadow = tlhPronePreviousShadow;
+            Height = FullHeight * clamp(player.crouchfactor, 0.0, 1.0);
         }
 
         ResetTLHDualForWeaponSwitch();
