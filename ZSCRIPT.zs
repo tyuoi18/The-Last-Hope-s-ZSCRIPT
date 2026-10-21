@@ -4739,8 +4739,8 @@ class HunterRifle : Weapon
         }
 
     Spawn:
-        // The final, locked-bolt frame doubles as the world pickup sprite.
-        RIFL H -1;
+        // Dedicated world pickup sprite: RFLEA0.
+        RFLE A -1;
         Stop;
     }
 }
