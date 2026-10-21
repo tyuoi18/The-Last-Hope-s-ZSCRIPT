@@ -3300,6 +3300,9 @@ class HunterRifle : DoomWeapon
     Ready:
         RIFL H 0
         {
+            if (!(player.cmd.buttons & BT_ZOOM))
+                invoker.proneButtonLatched = false;
+
             // Never carry scope FOV or the prone stance into weapon switching.
             if (invoker.aiming)
             {
@@ -3453,6 +3456,9 @@ class HunterRifle : DoomWeapon
     AimHold:
         RIFL H 1
         {
+            if (!(player.cmd.buttons & BT_ZOOM))
+                invoker.proneButtonLatched = false;
+
             if (!(player.cmd.buttons & BT_ALTATTACK))
             {
                 invoker.aiming = false;
@@ -3481,6 +3487,9 @@ class HunterRifle : DoomWeapon
     Zoom:
         RIFL H 0
         {
+            // Latch M3 before validation too, so holding it in mid-air cannot
+            // repeatedly re-enter this zero-tic state or spam the warning.
+            invoker.proneButtonLatched = true;
             if (player && player.mo && player.mo.Pos.Z > player.mo.floorz + 0.5)
             {
                 A_Print("HUNTER RIFLE: MUST BE GROUNDED TO GO PRONE");
@@ -3489,7 +3498,6 @@ class HunterRifle : DoomWeapon
 
             // M3 toggles the prone stance once per press, even if the key is held.
             invoker.proneMode = !invoker.proneMode;
-            invoker.proneButtonLatched = true;
 
             if (invoker.proneMode)
             {
