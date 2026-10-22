@@ -2006,8 +2006,15 @@ class OfficerVulkanPistol : Weapon
         Goto LightDone;
 
     Spawn:
-        ZIST A -1;
-        Stop;
+        // Vanilla GZDoom pistol pickup (PIST A / PISTA0).
+        // Procedural touch only: a restrained 1.5% scale pulse, preserving
+        // the original pickup silhouette and using the class translation.
+        PIST A 1
+        {
+            double pickupPulse = 1.0 + sin(double(level.time) * 0.02 * TLH_RAD_TO_DEG) * 0.015;
+            A_SetScale(pickupPulse, pickupPulse);
+        }
+        Loop;
     }
 
 }
