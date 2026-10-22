@@ -2712,6 +2712,8 @@ class SemiAutoShotgun : Weapon
 class HeavyChaingun : DoomWeapon
 {
     bool burstMode;
+    bool gatlingMode;
+    bool gatlingSpunUp;
     int heat;
     bool overheated;
     bool warningShown;
@@ -2762,13 +2764,28 @@ Default
     States
     {
     Ready:
+        CHGG A 0
+        {
+            if (invoker.gatlingSpunUp &&
+                (!player || !(player.cmd.buttons & BT_ATTACK)))
+                return ResolveState("GatlingSpinDown");
+            return ResolveState(null);
+        }
         CHGG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
-        // Keep the chosen fire mode when switching to another weapon.
-        // The mode changes only through Reload, where the UI notice is shown.
-        CHGG A 1 A_Lower();
+        // Keep the chosen fire mode when switching weapons, but stop the
+        // barrel spin so it cannot remain latched across weapon changes.
+        CHGG A 1
+        {
+            if (invoker.gatlingSpunUp)
+            {
+                invoker.gatlingSpunUp = false;
+                A_StartSound("weapons/sawidle", CHAN_WEAPON);
+            }
+            A_Lower();
+        }
         Loop;
 
     Select:
@@ -2780,8 +2797,12 @@ Default
         {
             if (invoker.overheated)
                 return ResolveState("ManualVent");
-            if (invoker.burstMode)
+
+            // R cycles: Full Auto -> Burst -> Gatling -> Full Auto.
+            if (invoker.gatlingMode)
                 return ResolveState("SetAuto");
+            if (invoker.burstMode)
+                return ResolveState("SetGatling");
             return ResolveState("SetBurst");
         }
 
@@ -2790,6 +2811,8 @@ Default
         CHGG A 4
         {
             invoker.burstMode = true;
+            invoker.gatlingMode = false;
+            invoker.gatlingSpunUp = false;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: 3-ROUND BURST");
         }
@@ -2800,9 +2823,26 @@ Default
         CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
         CHGG A 4
         {
+            if (invoker.gatlingMode && invoker.gatlingSpunUp)
+                A_StartSound("weapons/sawidle", CHAN_WEAPON);
             invoker.burstMode = false;
+            invoker.gatlingMode = false;
+            invoker.gatlingSpunUp = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: FULL AUTO");
+        }
+        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    SetGatling:
+        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 4
+        {
+            invoker.burstMode = false;
+            invoker.gatlingMode = true;
+            invoker.gatlingSpunUp = false;
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: GATLING (SPIN-UP)");
         }
         CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
@@ -2845,6 +2885,11 @@ Default
                 A_StartSound("weapons/sshotc", CHAN_WEAPON);
                 A_Print("HEAVY CHAINGUN: BARREL HOT");
             }
+
+            // Gatling maintains its own fast cadence and handles heat through
+            // the shared warning/overheat gates above.
+            if (invoker.gatlingMode)
+                return ResolveState(invoker.gatlingSpunUp ? "GatlingFire" : "GatlingSpinUp");
 
             if (invoker.heat >= CriticalHeat)
                 return ResolveState("FireHot");
@@ -2907,6 +2952,81 @@ Default
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
         }
         CHGG B 4;
+        Goto Ready;
+
+    // Gatling takes a short moment to spool up, then fires faster than Full Auto.
+    // The first shot uses the ammo already consumed by entering Fire; A_ReFire
+    // returns through Fire for subsequent shots so normal ammo checks stay intact.
+    GatlingSpinUp:
+        CHGG A 3 A_StartSound("weapons/sawup", CHAN_WEAPON);
+        CHGG B 3;
+        CHGG A 1
+        {
+            bool infiniteAmmo = sv_infiniteammo ||
+                (player && player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+
+            if (!player || !player.mo || !(player.cmd.buttons & BT_ATTACK))
+            {
+                // Cancelled spool-up: refund the round that Fire reserved.
+                if (!infiniteAmmo)
+                    A_GiveInventory("Clip", 1);
+                invoker.gatlingSpunUp = false;
+                return ResolveState("GatlingSpinDown");
+            }
+
+            invoker.gatlingSpunUp = true;
+            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            A_Quake(0, 1.2, 0, 35);
+
+            invoker.heat += 4;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+            return ResolveState(null);
+        }
+        CHGG B 1;
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    GatlingFire:
+        CHGG A 1
+        {
+            if (!player || !player.mo || !(player.cmd.buttons & BT_ATTACK))
+                return ResolveState("GatlingSpinDown");
+
+            A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - 0.70, SPF_INTERPOLATE);
+            A_Quake(0, 1.4, 0, 35);
+            invoker.heat += 5;
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+            return ResolveState(null);
+        }
+        CHGG B 1;
+        CHGG A 0 A_ReFire;
+        Goto Ready;
+
+    GatlingSpinDown:
+        CHGG B 3;
+        CHGG A 2
+        {
+            invoker.gatlingSpunUp = false;
+            A_StartSound("weapons/sawidle", CHAN_WEAPON);
+        }
         Goto Ready;
 
     FireWarm:
