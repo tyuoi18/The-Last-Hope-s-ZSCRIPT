@@ -7484,6 +7484,38 @@ class BerserkerPerk : CustomInventory replaces Berserk
 // Virtual design canvas: 640 x 360.
 // ============================================================================
 
+// Global DbyS (Damage by Sector) compatibility handler.
+// GZDoom normally leaves monster damage opt-in for damaging sectors.
+// Mark every positive-damage sector so monsters and decorations are harmed too.
+// Strife-style delayed-damage sectors (SECF_HAZARD) are intentionally excluded.
+class DbySSectorHandler : EventHandler
+{
+    String configuredMapName;
+
+    override void WorldTick()
+    {
+        // Run once at the beginning of each map, including a restart of the
+        // same map. Level.maptime is zero on its initial world tick.
+        if (configuredMapName == level.MapName && level.maptime != 0)
+            return;
+
+        configuredMapName = level.MapName;
+
+        for (int i = 0; i < level.Sectors.Size(); i++)
+        {
+            Sector sec = level.Sectors[i];
+            if (sec.damageamount <= 0)
+                continue;
+
+            // UDMF specifies that hurtmonsters and damagehazard do not combine.
+            if (sec.Flags & Sector.SECF_HAZARD)
+                continue;
+
+            sec.MoreFlags |= Sector.SECMF_HURTMONSTERS;
+        }
+    }
+}
+
 class TacticalHUDHandler : EventHandler
 {
     // ------------------------------------------------------------------------
@@ -9716,7 +9748,17 @@ class TacticalZombieMan : ZombieMan replaces ZombieMan
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         DropItem "TacticalZombieDrop";
+    }
+
+    States
+    {
+
+    See:
+        POSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9749,7 +9791,17 @@ class TacticalShotgunGuy : ShotgunGuy replaces ShotgunGuy
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         DropItem "TacticalShotgunDrop";
+    }
+
+    States
+    {
+
+    See:
+        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9794,7 +9846,17 @@ class TacticalChaingunGuy : ChaingunGuy replaces ChaingunGuy
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         DropItem "TacticalChaingunDrop";
+    }
+
+    States
+    {
+
+    See:
+        CPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9810,10 +9872,20 @@ class TLH_AssaultImp : DoomImp
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 140;
         Speed 11;
         FastSpeed 15;
         PainChance 48;
+    }
+
+    States
+    {
+
+    See:
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9821,10 +9893,20 @@ class TLH_HeavyShotgunGuy : ShotgunGuy
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 120;
         Speed 11;
         FastSpeed 15;
         PainChance 18;
+    }
+
+    States
+    {
+
+    See:
+        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9832,10 +9914,20 @@ class TLH_BerserkerDemon : Demon
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 360;
         Speed 13;
         FastSpeed 16;
         PainChance 24;
+    }
+
+    States
+    {
+
+    See:
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9843,10 +9935,20 @@ class TLH_RavagerRevenant : Revenant
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 550;
         Speed 12;
         FastSpeed 16;
         PainChance 8;
+    }
+
+    States
+    {
+
+    See:
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9867,10 +9969,20 @@ class TLH_CombatBaron : BaronOfHell
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1400;
         Speed 9;
         FastSpeed 11;
         PainChance 8;
+    }
+
+    States
+    {
+
+    See:
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9889,10 +10001,20 @@ class TLH_VanguardCacodemon : Cacodemon
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 600;
         Speed 12;
         FastSpeed 14;
         PainChance 10;
+    }
+
+    States
+    {
+
+    See:
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9900,11 +10022,21 @@ class TLH_ArmoredHellKnight : HellKnight
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 900;
         Speed 10;
         FastSpeed 13;
         PainChance 8;
         DamageFactor "Normal", 0.75;
+    }
+
+    States
+    {
+
+    See:
+        BOS2 AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9912,11 +10044,21 @@ class TLH_SiegeRevenant : Revenant
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 700;
         Speed 10;
         FastSpeed 14;
         PainChance 5;
         DamageFactor "Normal", 0.80;
+    }
+
+    States
+    {
+
+    See:
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9924,6 +10066,8 @@ class TLH_HeavyDemon : Demon
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 500;
         Speed 11;
         FastSpeed 14;
@@ -9931,16 +10075,34 @@ class TLH_HeavyDemon : Demon
         Radius 18;
         Height 56;
     }
+
+    States
+    {
+
+    See:
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
+    }
 }
 
 class TLH_BloodCacodemon : Cacodemon
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 800;
         Speed 10;
         FastSpeed 13;
         PainChance 8;
+    }
+
+    States
+    {
+
+    See:
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9948,11 +10110,21 @@ class TLH_HellfireBaron : BaronOfHell
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1800;
         Speed 7;
         FastSpeed 10;
         PainChance 5;
         DamageFactor "Normal", 0.65;
+    }
+
+    States
+    {
+
+    See:
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9990,11 +10162,21 @@ class TLH_DevastatorRevenant : Revenant
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 950;
         Speed 11;
         FastSpeed 15;
         PainChance 4;
         DamageFactor "Normal", 0.85;
+    }
+
+    States
+    {
+
+    See:
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10002,11 +10184,21 @@ class TLH_VoidCacodemon : Cacodemon
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1100;
         Speed 9;
         FastSpeed 12;
         PainChance 6;
         DamageFactor "Normal", 0.80;
+    }
+
+    States
+    {
+
+    See:
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10014,11 +10206,21 @@ class TLH_BrutalImp : DoomImp
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 220;
         Speed 10;
         FastSpeed 14;
         PainChance 38;
         DamageFactor "Normal", 0.90;
+    }
+
+    States
+    {
+
+    See:
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10026,11 +10228,21 @@ class TLH_ExecutionerBaron : BaronOfHell
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 2200;
         Speed 6;
         FastSpeed 9;
         PainChance 4;
         DamageFactor "Normal", 0.60;
+    }
+
+    States
+    {
+
+    See:
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10045,6 +10257,8 @@ class TLH_StalkerImp : DoomImp
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 300;
         Speed 17;
         FastSpeed 21;
@@ -10056,6 +10270,10 @@ class TLH_StalkerImp : DoomImp
 
     States
     {
+    See:
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
+
     Missile:
         TROO EF 5 A_FaceTarget;
         TROO G 4
@@ -10085,6 +10303,8 @@ class TLH_RazorDemon : Demon
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 700;
         Speed 17;
         FastSpeed 21;
@@ -10095,12 +10315,22 @@ class TLH_RazorDemon : Demon
         +DONTTHRUST
         Obituary "was shredded by a TLH Razor Demon";
     }
+
+    States
+    {
+
+    See:
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
+    }
 }
 
 class TLH_HunterRevenant : Revenant
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1000;
         Speed 15;
         FastSpeed 19;
@@ -10111,6 +10341,10 @@ class TLH_HunterRevenant : Revenant
 
     States
     {
+    See:
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
+
     Missile:
         SKEL J 0 Bright A_FaceTarget;
         SKEL J 7 Bright A_FaceTarget;
@@ -10128,12 +10362,22 @@ class TLH_AssaultBaron : BaronOfHell
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 2400;
         Speed 12;
         FastSpeed 15;
         PainChance 16;
         DamageFactor "Normal", 0.55;
         Obituary "was overrun by a TLH Assault Baron";
+    }
+
+    States
+    {
+
+    See:
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
