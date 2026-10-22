@@ -1,0 +1,192 @@
+// The Last Hope — DECORATE compatibility layer
+// -----------------------------------------------------------------------------
+// DbyS (Damage by Sector) is enabled globally by DbySSectorHandler in ZSCRIPT:
+// sectors with positive damageamount receive SECMF_HURTMONSTERS, so monsters
+// and decorations suffer the same sector damage as players. Strife's delayed
+// damagehazard sectors are intentionally excluded by the handler.
+//
+// Enemy AI update:
+// - QUICKTORETALIATE: react to incoming damage more promptly.
+// - LOOKALLAROUND: acquire threats without remaining front-facing only.
+// - CHF_FASTCHASE: use GZDoom's evasive fast-chase behavior while pursuing.
+// Vanilla attack, pain, death and resurrection states are inherited unchanged.
+// TacticalZombieMan / TacticalShotgunGuy / TacticalChaingunGuy are already
+// replaced by ZScript and are enhanced there to avoid duplicate replacements.
+// -----------------------------------------------------------------------------
+
+ACTOR TLH_AI_DoomImp : DoomImp replaces DoomImp
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Demon : Demon replaces Demon
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Spectre : Spectre replaces Spectre
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Cacodemon : Cacodemon replaces Cacodemon
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_LostSoul : LostSoul replaces LostSoul
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        SKUL AB 6 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_PainElemental : PainElemental replaces PainElemental
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        PAIN A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Revenant : Revenant replaces Revenant
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_HellKnight : HellKnight replaces HellKnight
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        BOS2 AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_BaronOfHell : BaronOfHell replaces BaronOfHell
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Fatso : Fatso replaces Fatso
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Arachnotron : Arachnotron replaces Arachnotron
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        BSPI A 20
+        BSPI A 3 A_BabyMetal
+        BSPI ABBCC 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        BSPI D 3 A_BabyMetal
+        BSPI DEEFF 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Goto See+1
+    }
+}
+
+ACTOR TLH_AI_SpiderMastermind : SpiderMastermind replaces SpiderMastermind
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        SPID A 3 A_Metal
+        SPID ABB 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SPID C 3 A_Metal
+        SPID CDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SPID E 3 A_Metal
+        SPID EFF 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Cyberdemon : Cyberdemon replaces Cyberdemon
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        CYBR AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
+
+ACTOR TLH_AI_Archvile : Archvile replaces Archvile
+{
+    +QUICKTORETALIATE
+    +LOOKALLAROUND
+    States
+    {
+    See:
+        VILE AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        Loop
+    }
+}
