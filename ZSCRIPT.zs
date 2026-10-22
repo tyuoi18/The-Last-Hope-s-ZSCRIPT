@@ -2889,7 +2889,11 @@ Default
             // Gatling maintains its own fast cadence and handles heat through
             // the shared warning/overheat gates above.
             if (invoker.gatlingMode)
-                return ResolveState(invoker.gatlingSpunUp ? "GatlingFire" : "GatlingSpinUp");
+            {
+                if (invoker.gatlingSpunUp)
+                    return ResolveState("GatlingFire");
+                return ResolveState("GatlingSpinUp");
+            }
 
             if (invoker.heat >= CriticalHeat)
                 return ResolveState("FireHot");
@@ -2978,7 +2982,7 @@ Default
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
-            A_Quake(0, 1.2, 0, 35);
+            A_Quake(0, 1, 0, 35);
 
             invoker.heat += 4;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
@@ -3004,7 +3008,7 @@ Default
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.70, SPF_INTERPOLATE);
-            A_Quake(0, 1.4, 0, 35);
+            A_Quake(0, 1, 0, 35);
             invoker.heat += 5;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
             if (invoker.heat >= MaxHeat)
