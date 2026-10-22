@@ -9956,12 +9956,22 @@ class TLH_HeavyMancubus : Fatso
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 900;
         Speed 7;
         FastSpeed 9;
         PainChance 6;
         Radius 24;
         Height 64;
+    }
+
+    States
+    {
+
+    See:
+        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -9990,10 +10000,20 @@ class TLH_AssaultArachnotron : Arachnotron
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 900;
         Speed 10;
         FastSpeed 12;
         PainChance 12;
+    }
+
+    States
+    {
+
+    See:
+        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10136,6 +10156,8 @@ class TLH_TacticalMancubus : Fatso
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1100;
         Speed 9;
         FastSpeed 11;
@@ -10144,17 +10166,35 @@ class TLH_TacticalMancubus : Fatso
         Height 64;
         DamageFactor "Normal", 0.80;
     }
+
+    States
+    {
+
+    See:
+        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
+    }
 }
 
 class TLH_SiegeArachnotron : Arachnotron
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1200;
         Speed 8;
         FastSpeed 10;
         PainChance 7;
         DamageFactor "Normal", 0.80;
+    }
+
+    States
+    {
+
+    See:
+        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10289,6 +10329,8 @@ class TLH_BreacherShotgunner : ShotgunGuy
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 300;
         Speed 14;
         FastSpeed 18;
@@ -10296,6 +10338,14 @@ class TLH_BreacherShotgunner : ShotgunGuy
         DamageFactor "Normal", 0.60;
         +DONTTHRUST
         Obituary "was breached by a TLH Breacher";
+    }
+
+    States
+    {
+
+    See:
+        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        Loop;
     }
 }
 
@@ -10402,6 +10452,8 @@ class TLH_DoomguyElite : Actor
 {
     Default
     {
+        +QUICKTORETALIATE;
+        +LOOKALLAROUND;
         Health 1800;
         Radius 16;
         Height 56;
@@ -10431,7 +10483,7 @@ class TLH_DoomguyElite : Actor
         Loop;
 
     See:
-        PLAY ABCD 3 A_Chase;
+        PLAY ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
         Loop;
 
     Missile:
