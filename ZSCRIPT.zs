@@ -2766,11 +2766,9 @@ Default
         Loop;
 
     Deselect:
-        CHGG A 1
-        {
-            invoker.burstMode = false;
-            A_Lower();
-        }
+        // Keep the chosen fire mode when switching to another weapon.
+        // The mode changes only through Reload, where the UI notice is shown.
+        CHGG A 1 A_Lower();
         Loop;
 
     Select:
@@ -2793,7 +2791,7 @@ Default
         {
             invoker.burstMode = true;
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Print("HEAVY CHAINGUN: CONTROLLED BURST");
+            A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: 3-ROUND BURST");
         }
         CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
@@ -2804,7 +2802,7 @@ Default
         {
             invoker.burstMode = false;
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
-            A_Print("HEAVY CHAINGUN: FULL AUTO");
+            A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: FULL AUTO");
         }
         CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
@@ -8859,17 +8857,15 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         bool flip = false;
         Vector2 stateScale = (1.0, 1.0);
 
-        // HeavyChaingun uses the original DOOM II CHGG sprite family for the visor preview.
-        // Keep a static A-frame fallback while the transient PSprite cache is empty.
+        // Do not query/draw CHGGA0 directly from this UI render path while the
+        // weapon is changing. The engine draws the real HeavyChaingun PSprite;
+        // this extra visor preview stays disabled until a stable texture cache
+        // is available, avoiding crashes during weapon selection.
         if (hudWeaponTextureValid && hudWeaponTextureClass == cls)
         {
             tex = hudWeaponTexture;
             flip = hudWeaponFlip;
             stateScale = hudWeaponStateScale;
-        }
-        else if (cls == "HeavyChaingun")
-        {
-            tex = TexMan.CheckForTexture("CHGGA0", TexMan.Type_Sprite);
         }
         else
         {
