@@ -5539,6 +5539,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
     override void Tick()
     {
+        // Capture +user1 before the base player tick processes weapon-ready
+        // buttons. Custom weapons such as HunterRifle call A_WeaponReady with
+        // restricted flags, which can make the post-Super button read miss M3.
+        bool tlhUser1HeldBeforeSuper = false;
+        if (player)
+            tlhUser1HeldBeforeSuper = (player.cmd.buttons & BT_USER1) != 0;
+
         Super.Tick();
         if (!player || !player.mo) return;
 
@@ -5585,7 +5592,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Hold M3 (+user1) to go prone. The stance lowers the hitbox/view,
         // damps movement while preserving directional control, and applies
         // the shadow flag that makes monsters less likely to see the player.
-        bool proneRequested = (bt & BT_USER1) != 0 && onGround && !isSlamming;
+        bool proneRequested = (((bt & BT_USER1) != 0 || tlhUser1HeldBeforeSuper) &&
+            onGround && !isSlamming);
         if (proneRequested)
         {
             if (!tlhProneActive)
