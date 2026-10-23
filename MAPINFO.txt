@@ -5,7 +5,7 @@
 
 GameInfo
 {
-    AddEventHandlers = "TacticalHUDHandler", "RemoveStartingPistol", "DbySSectorHandler"
+    AddEventHandlers = "TacticalHUDHandler", "RemoveStartingPistol", "DbySSectorHandler", "TLHRealisticAIHandler"
 }
 
 DoomEdNums
