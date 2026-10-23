@@ -1,192 +1,257 @@
-// The Last Hope — DECORATE compatibility layer
-// -----------------------------------------------------------------------------
-// DbyS (Damage by Sector) is enabled globally by DbySSectorHandler in ZSCRIPT:
-// sectors with positive damageamount receive SECMF_HURTMONSTERS, so monsters
-// and decorations suffer the same sector damage as players. Strife's delayed
-// damagehazard sectors are intentionally excluded by the handler.
+// The Last Hope — realistic enemy perception and procedural roaming.
+// GZDoom's A_Wander picks movement directions and respects map collision;
+// periodic A_LookEx checks make every patrol route emergent from the level geometry.
+// No additional health, damage, speed, reaction bonuses or attack cadence are added.
 //
-// Enemy AI update:
-// - QUICKTORETALIATE: react to incoming damage more promptly.
-// - LOOKALLAROUND: acquire threats without remaining front-facing only.
-// - CHF_FASTCHASE: use GZDoom's evasive fast-chase behavior while pursuing.
-// Vanilla attack, pain, death and resurrection states are inherited unchanged.
-// TacticalZombieMan / TacticalShotgunGuy / TacticalChaingunGuy are already
-// replaced by ZScript and are enhanced there to avoid duplicate replacements.
-// -----------------------------------------------------------------------------
+// Senses: front-facing ~100 degree field of view, 1024 map-unit sight range,
+// and 512-unit sound response. Actors chase normally after detecting a threat,
+// but do not re-acquire targets with 360-degree awareness.
+// TLHRealisticAIHandler (ZScript) gives up after a short period without sight.
 
 ACTOR TLH_AI_DoomImp : DoomImp replaces DoomImp
 {
     +QUICKTORETALIATE
-    +LOOKALLAROUND
+    // Do not use LOOKALLAROUND or FASTCHASE.
     States
     {
+    Spawn:
+        TROO A 8 A_LookEx(0, 0, 1024, 512, 100, "See")
+        TROO A 4 A_Wander
+        TROO B 4 A_Wander
+        TROO C 4 A_LookEx(0, 0, 1024, 512, 100, "See")
+        TROO D 4 A_Wander
+        Loop
+
     See:
-        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Demon : Demon replaces Demon
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        SARG A 8 A_LookEx(0, 0, 768, 512, 110, "See")
+        SARG A 4 A_Wander
+        SARG B 4 A_Wander
+        SARG C 4 A_LookEx(0, 0, 768, 512, 110, "See")
+        SARG D 4 A_Wander
+        Loop
+
     See:
-        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Spectre : Spectre replaces Spectre
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        SARG A 8 A_LookEx(0, 0, 640, 384, 100, "See")
+        SARG A 4 A_Wander
+        SARG B 4 A_Wander
+        SARG C 4 A_LookEx(0, 0, 640, 384, 100, "See")
+        SARG D 4 A_Wander
+        Loop
+
     See:
-        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Cacodemon : Cacodemon replaces Cacodemon
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        HEAD A 8 A_LookEx(0, 0, 1024, 640, 115, "See")
+        HEAD A 5 A_Wander
+        HEAD A 5 A_LookEx(0, 0, 1024, 640, 115, "See")
+        Loop
+
     See:
-        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_LostSoul : LostSoul replaces LostSoul
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        SKUL A 7 A_LookEx(0, 0, 768, 384, 110, "See")
+        SKUL A 4 A_Wander
+        SKUL B 4 A_Wander
+        SKUL A 7 A_LookEx(0, 0, 768, 384, 110, "See")
+        Loop
+
     See:
-        SKUL AB 6 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SKUL AB 6 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_PainElemental : PainElemental replaces PainElemental
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        PAIN A 8 A_LookEx(0, 0, 1024, 640, 110, "See")
+        PAIN A 5 A_Wander
+        PAIN A 5 A_LookEx(0, 0, 1024, 640, 110, "See")
+        Loop
+
     See:
-        PAIN A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        PAIN A 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Revenant : Revenant replaces Revenant
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        SKEL A 8 A_LookEx(0, 0, 1024, 640, 105, "See")
+        SKEL A 4 A_Wander
+        SKEL B 4 A_Wander
+        SKEL C 4 A_LookEx(0, 0, 1024, 640, 105, "See")
+        SKEL D 4 A_Wander
+        Loop
+
     See:
-        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_HellKnight : HellKnight replaces HellKnight
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        BOS2 A 8 A_LookEx(0, 0, 1024, 512, 100, "See")
+        BOS2 A 4 A_Wander
+        BOS2 B 4 A_Wander
+        BOS2 C 4 A_LookEx(0, 0, 1024, 512, 100, "See")
+        BOS2 D 4 A_Wander
+        Loop
+
     See:
-        BOS2 AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        BOS2 AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_BaronOfHell : BaronOfHell replaces BaronOfHell
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 100, "See")
+        BOSS A 4 A_Wander
+        BOSS B 4 A_Wander
+        BOSS C 4 A_LookEx(0, 0, 1024, 512, 100, "See")
+        BOSS D 4 A_Wander
+        Loop
+
     See:
-        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Fatso : Fatso replaces Fatso
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        FATT A 8 A_LookEx(0, 0, 896, 640, 100, "See")
+        FATT A 5 A_Wander
+        FATT B 5 A_Wander
+        FATT A 8 A_LookEx(0, 0, 896, 640, 100, "See")
+        Loop
+
     See:
-        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Arachnotron : Arachnotron replaces Arachnotron
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        BSPI A 8 A_LookEx(0, 0, 1024, 512, 100, "See")
+        BSPI A 4 A_Wander
+        BSPI B 4 A_Wander
+        BSPI C 4 A_LookEx(0, 0, 1024, 512, 100, "See")
+        BSPI D 4 A_Wander
+        Loop
+
     See:
-        BSPI A 20
-        BSPI A 3 A_BabyMetal
-        BSPI ABBCC 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
-        BSPI D 3 A_BabyMetal
-        BSPI DEEFF 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
-        Goto See+1
+        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
+        Loop
     }
 }
 
 ACTOR TLH_AI_SpiderMastermind : SpiderMastermind replaces SpiderMastermind
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        SPID A 8 A_LookEx(0, 0, 1152, 768, 100, "See")
+        SPID A 4 A_Wander
+        SPID B 4 A_Wander
+        SPID C 4 A_LookEx(0, 0, 1152, 768, 100, "See")
+        SPID D 4 A_Wander
+        Loop
+
     See:
-        SPID A 3 A_Metal
-        SPID ABB 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
-        SPID C 3 A_Metal
-        SPID CDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
-        SPID E 3 A_Metal
-        SPID EFF 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        SPID AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Cyberdemon : Cyberdemon replaces Cyberdemon
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        CYBR A 8 A_LookEx(0, 0, 1280, 768, 100, "See")
+        CYBR A 4 A_Wander
+        CYBR B 4 A_Wander
+        CYBR C 4 A_LookEx(0, 0, 1280, 768, 100, "See")
+        CYBR D 4 A_Wander
+        Loop
+
     See:
-        CYBR AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        CYBR AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
 
 ACTOR TLH_AI_Archvile : Archvile replaces Archvile
 {
-    +QUICKTORETALIATE
-    +LOOKALLAROUND
     States
     {
+    Spawn:
+        VILE A 8 A_LookEx(0, 0, 1024, 512, 100, "See")
+        VILE A 4 A_Wander
+        VILE B 4 A_Wander
+        VILE C 4 A_LookEx(0, 0, 1024, 512, 100, "See")
+        VILE D 4 A_Wander
+        Loop
+
     See:
-        VILE AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE)
+        VILE AABBCCDD 2 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND)
         Loop
     }
 }
