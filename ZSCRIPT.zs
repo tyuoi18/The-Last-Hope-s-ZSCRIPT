@@ -7516,6 +7516,113 @@ class DbySSectorHandler : EventHandler
     }
 }
 
+// Realistic enemy perception memory. Actors patrol with A_Wander until they
+// detect a player within their authored forward FOV and sight/hearing bounds.
+// If sight is broken, they search for a few seconds; then they turn toward the
+// last known position and resume map-aware roaming rather than tracking through
+// walls forever. Does not alter HP, damage, movement speed, or attack cadence.
+class TLHRealisticAIHandler : EventHandler
+{
+    transient Array<Actor> trackedMonsters;
+    transient Array<int> lostSightTics;
+    transient Array<Vector3> lastKnownPositions;
+    String trackedMapName;
+    int scanTics;
+
+    int FindTrackedMonster(Actor candidate)
+    {
+        for (int i = 0; i < trackedMonsters.Size(); i++)
+        {
+            if (trackedMonsters[i] == candidate)
+                return i;
+        }
+        return -1;
+    }
+
+    override void WorldTick()
+    {
+        if (trackedMapName != level.MapName)
+        {
+            trackedMonsters.Clear();
+            lostSightTics.Clear();
+            lastKnownPositions.Clear();
+            trackedMapName = level.MapName;
+            scanTics = 0;
+        }
+
+        // Register new monsters every 8 tics to avoid a full ThinkerIterator
+        // scan on every frame.
+        scanTics++;
+        if (scanTics >= 8)
+        {
+            scanTics = 0;
+            ThinkerIterator it = ThinkerIterator.Create("Actor");
+            Actor candidate;
+            while ((candidate = Actor(it.Next())) != null)
+            {
+                if (!candidate.bIsMonster || candidate.Health <= 0)
+                    continue;
+                if (FindTrackedMonster(candidate) < 0)
+                {
+                    trackedMonsters.Push(candidate);
+                    lostSightTics.Push(0);
+                    lastKnownPositions.Push(candidate.Pos);
+                }
+            }
+        }
+
+        for (int i = trackedMonsters.Size() - 1; i >= 0; i--)
+        {
+            Actor monster = trackedMonsters[i];
+            if (!monster || monster.Health <= 0 || !monster.bIsMonster)
+            {
+                trackedMonsters.Delete(i);
+                lostSightTics.Delete(i);
+                lastKnownPositions.Delete(i);
+                continue;
+            }
+
+            Actor playerTarget = monster.target;
+            // Keep infighting and non-player target logic vanilla.
+            if (!playerTarget || !playerTarget.player || playerTarget.Health <= 0)
+            {
+                lostSightTics[i] = 0;
+                continue;
+            }
+
+            double dx = playerTarget.Pos.X - monster.Pos.X;
+            double dy = playerTarget.Pos.Y - monster.Pos.Y;
+            double distanceSq = dx * dx + dy * dy;
+            bool visible = distanceSq <= 1024.0 * 1024.0 && monster.CheckSight(playerTarget);
+
+            if (visible)
+            {
+                lostSightTics[i] = 0;
+                lastKnownPositions[i] = playerTarget.Pos;
+                continue;
+            }
+
+            lostSightTics[i]++;
+            // 105 tics = 3.5 seconds: long enough to investigate a corner,
+            // short enough to stop supernatural wall-tracking.
+            if (lostSightTics[i] >= 105)
+            {
+                Vector3 known = lastKnownPositions[i];
+                double towardX = known.X - monster.Pos.X;
+                double towardY = known.Y - monster.Pos.Y;
+                if (towardX * towardX + towardY * towardY > 32.0 * 32.0)
+                    monster.Angle = atan2(towardY, towardX);
+
+                monster.A_ClearTarget();
+                State patrolState = monster.FindState("Spawn");
+                if (patrolState)
+                    monster.SetState(patrolState);
+                lostSightTics[i] = 0;
+            }
+        }
+    }
+}
+
 class TacticalHUDHandler : EventHandler
 {
     // ------------------------------------------------------------------------
@@ -9748,16 +9855,23 @@ class TacticalZombieMan : ZombieMan replaces ZombieMan
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         DropItem "TacticalZombieDrop";
     }
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        POSS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        POSS A 5 A_Wander;
+        POSS A 5 A_Wander;
+        POSS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        POSS A 5 A_Wander;
+        Loop;
+
 
     See:
-        POSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        POSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9791,16 +9905,23 @@ class TacticalShotgunGuy : ShotgunGuy replaces ShotgunGuy
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         DropItem "TacticalShotgunDrop";
     }
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        SPOS A 5 A_Wander;
+        SPOS A 5 A_Wander;
+        SPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        SPOS A 5 A_Wander;
+        Loop;
+
 
     See:
-        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9846,16 +9967,23 @@ class TacticalChaingunGuy : ChaingunGuy replaces ChaingunGuy
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         DropItem "TacticalChaingunDrop";
     }
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        CPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        CPOS A 5 A_Wander;
+        CPOS A 5 A_Wander;
+        CPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        CPOS A 5 A_Wander;
+        Loop;
+
 
     See:
-        CPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        CPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9872,8 +10000,6 @@ class TLH_AssaultImp : DoomImp
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 140;
         Speed 11;
         FastSpeed 15;
@@ -9882,9 +10008,18 @@ class TLH_AssaultImp : DoomImp
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        TROO A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        TROO A 5 A_Wander;
+        TROO A 5 A_Wander;
+        TROO A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        TROO A 5 A_Wander;
+        Loop;
+
 
     See:
-        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9893,8 +10028,6 @@ class TLH_HeavyShotgunGuy : ShotgunGuy
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 120;
         Speed 11;
         FastSpeed 15;
@@ -9903,9 +10036,18 @@ class TLH_HeavyShotgunGuy : ShotgunGuy
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        SPOS A 5 A_Wander;
+        SPOS A 5 A_Wander;
+        SPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        SPOS A 5 A_Wander;
+        Loop;
+
 
     See:
-        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9914,8 +10056,6 @@ class TLH_BerserkerDemon : Demon
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 360;
         Speed 13;
         FastSpeed 16;
@@ -9924,9 +10064,18 @@ class TLH_BerserkerDemon : Demon
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SARG A 8 A_LookEx(0, 0, 704, 320, 105, "See");
+        SARG A 5 A_Wander;
+        SARG A 5 A_Wander;
+        SARG A 8 A_LookEx(0, 0, 704, 320, 105, "See");
+        SARG A 5 A_Wander;
+        Loop;
+
 
     See:
-        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9935,8 +10084,6 @@ class TLH_RavagerRevenant : Revenant
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 550;
         Speed 12;
         FastSpeed 16;
@@ -9945,9 +10092,18 @@ class TLH_RavagerRevenant : Revenant
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        SKEL A 5 A_Wander;
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        Loop;
+
 
     See:
-        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9956,8 +10112,6 @@ class TLH_HeavyMancubus : Fatso
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 900;
         Speed 7;
         FastSpeed 9;
@@ -9968,9 +10122,18 @@ class TLH_HeavyMancubus : Fatso
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        FATT A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        FATT A 5 A_Wander;
+        FATT A 5 A_Wander;
+        FATT A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        FATT A 5 A_Wander;
+        Loop;
+
 
     See:
-        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -9979,8 +10142,6 @@ class TLH_CombatBaron : BaronOfHell
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1400;
         Speed 9;
         FastSpeed 11;
@@ -9989,9 +10150,18 @@ class TLH_CombatBaron : BaronOfHell
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        BOSS A 5 A_Wander;
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        Loop;
+
 
     See:
-        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10000,8 +10170,6 @@ class TLH_AssaultArachnotron : Arachnotron
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 900;
         Speed 10;
         FastSpeed 12;
@@ -10010,9 +10178,18 @@ class TLH_AssaultArachnotron : Arachnotron
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BSPI A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        BSPI A 5 A_Wander;
+        BSPI A 5 A_Wander;
+        BSPI A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        BSPI A 5 A_Wander;
+        Loop;
+
 
     See:
-        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10021,8 +10198,6 @@ class TLH_VanguardCacodemon : Cacodemon
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 600;
         Speed 12;
         FastSpeed 14;
@@ -10031,9 +10206,18 @@ class TLH_VanguardCacodemon : Cacodemon
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        HEAD A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        HEAD A 5 A_Wander;
+        HEAD A 5 A_Wander;
+        HEAD A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        HEAD A 5 A_Wander;
+        Loop;
+
 
     See:
-        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10042,8 +10226,6 @@ class TLH_ArmoredHellKnight : HellKnight
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 900;
         Speed 10;
         FastSpeed 13;
@@ -10053,9 +10235,18 @@ class TLH_ArmoredHellKnight : HellKnight
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BOS2 A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        BOS2 A 5 A_Wander;
+        BOS2 A 5 A_Wander;
+        BOS2 A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        BOS2 A 5 A_Wander;
+        Loop;
+
 
     See:
-        BOS2 AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BOS2 AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10064,8 +10255,6 @@ class TLH_SiegeRevenant : Revenant
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 700;
         Speed 10;
         FastSpeed 14;
@@ -10075,9 +10264,18 @@ class TLH_SiegeRevenant : Revenant
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        SKEL A 5 A_Wander;
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        Loop;
+
 
     See:
-        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10086,8 +10284,6 @@ class TLH_HeavyDemon : Demon
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 500;
         Speed 11;
         FastSpeed 14;
@@ -10098,9 +10294,18 @@ class TLH_HeavyDemon : Demon
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SARG A 8 A_LookEx(0, 0, 704, 320, 105, "See");
+        SARG A 5 A_Wander;
+        SARG A 5 A_Wander;
+        SARG A 8 A_LookEx(0, 0, 704, 320, 105, "See");
+        SARG A 5 A_Wander;
+        Loop;
+
 
     See:
-        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10109,8 +10314,6 @@ class TLH_BloodCacodemon : Cacodemon
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 800;
         Speed 10;
         FastSpeed 13;
@@ -10119,9 +10322,18 @@ class TLH_BloodCacodemon : Cacodemon
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        HEAD A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        HEAD A 5 A_Wander;
+        HEAD A 5 A_Wander;
+        HEAD A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        HEAD A 5 A_Wander;
+        Loop;
+
 
     See:
-        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10130,8 +10342,6 @@ class TLH_HellfireBaron : BaronOfHell
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1800;
         Speed 7;
         FastSpeed 10;
@@ -10141,9 +10351,18 @@ class TLH_HellfireBaron : BaronOfHell
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        BOSS A 5 A_Wander;
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        Loop;
+
 
     See:
-        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10156,8 +10375,6 @@ class TLH_TacticalMancubus : Fatso
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1100;
         Speed 9;
         FastSpeed 11;
@@ -10169,9 +10386,18 @@ class TLH_TacticalMancubus : Fatso
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        FATT A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        FATT A 5 A_Wander;
+        FATT A 5 A_Wander;
+        FATT A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        FATT A 5 A_Wander;
+        Loop;
+
 
     See:
-        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        FATT AABBCCDD 4 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10180,8 +10406,6 @@ class TLH_SiegeArachnotron : Arachnotron
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1200;
         Speed 8;
         FastSpeed 10;
@@ -10191,9 +10415,18 @@ class TLH_SiegeArachnotron : Arachnotron
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BSPI A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        BSPI A 5 A_Wander;
+        BSPI A 5 A_Wander;
+        BSPI A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        BSPI A 5 A_Wander;
+        Loop;
+
 
     See:
-        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BSPI AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10202,8 +10435,6 @@ class TLH_DevastatorRevenant : Revenant
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 950;
         Speed 11;
         FastSpeed 15;
@@ -10213,9 +10444,18 @@ class TLH_DevastatorRevenant : Revenant
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        SKEL A 5 A_Wander;
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        Loop;
+
 
     See:
-        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10224,8 +10464,6 @@ class TLH_VoidCacodemon : Cacodemon
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1100;
         Speed 9;
         FastSpeed 12;
@@ -10235,9 +10473,18 @@ class TLH_VoidCacodemon : Cacodemon
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        HEAD A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        HEAD A 5 A_Wander;
+        HEAD A 5 A_Wander;
+        HEAD A 8 A_LookEx(0, 0, 896, 448, 110, "See");
+        HEAD A 5 A_Wander;
+        Loop;
+
 
     See:
-        HEAD A 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        HEAD A 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10246,8 +10493,6 @@ class TLH_BrutalImp : DoomImp
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 220;
         Speed 10;
         FastSpeed 14;
@@ -10257,9 +10502,18 @@ class TLH_BrutalImp : DoomImp
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        TROO A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        TROO A 5 A_Wander;
+        TROO A 5 A_Wander;
+        TROO A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        TROO A 5 A_Wander;
+        Loop;
+
 
     See:
-        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10268,8 +10522,6 @@ class TLH_ExecutionerBaron : BaronOfHell
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 2200;
         Speed 6;
         FastSpeed 9;
@@ -10279,9 +10531,18 @@ class TLH_ExecutionerBaron : BaronOfHell
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        BOSS A 5 A_Wander;
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        Loop;
+
 
     See:
-        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10297,8 +10558,6 @@ class TLH_StalkerImp : DoomImp
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 300;
         Speed 17;
         FastSpeed 21;
@@ -10310,8 +10569,17 @@ class TLH_StalkerImp : DoomImp
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        TROO A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        TROO A 5 A_Wander;
+        TROO A 5 A_Wander;
+        TROO A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        TROO A 5 A_Wander;
+        Loop;
+
     See:
-        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        TROO AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
 
     Missile:
@@ -10329,8 +10597,6 @@ class TLH_BreacherShotgunner : ShotgunGuy
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 300;
         Speed 14;
         FastSpeed 18;
@@ -10342,9 +10608,18 @@ class TLH_BreacherShotgunner : ShotgunGuy
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        SPOS A 5 A_Wander;
+        SPOS A 5 A_Wander;
+        SPOS A 8 A_LookEx(0, 0, 832, 384, 100, "See");
+        SPOS A 5 A_Wander;
+        Loop;
+
 
     See:
-        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SPOS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10353,8 +10628,6 @@ class TLH_RazorDemon : Demon
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 700;
         Speed 17;
         FastSpeed 21;
@@ -10368,9 +10641,18 @@ class TLH_RazorDemon : Demon
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SARG A 8 A_LookEx(0, 0, 704, 320, 105, "See");
+        SARG A 5 A_Wander;
+        SARG A 5 A_Wander;
+        SARG A 8 A_LookEx(0, 0, 704, 320, 105, "See");
+        SARG A 5 A_Wander;
+        Loop;
+
 
     See:
-        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SARG AABBCCDD 2 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10379,8 +10661,6 @@ class TLH_HunterRevenant : Revenant
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1000;
         Speed 15;
         FastSpeed 19;
@@ -10391,8 +10671,17 @@ class TLH_HunterRevenant : Revenant
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        SKEL A 5 A_Wander;
+        SKEL A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        SKEL A 5 A_Wander;
+        Loop;
+
     See:
-        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        SKEL ABCD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
 
     Missile:
@@ -10412,8 +10701,6 @@ class TLH_AssaultBaron : BaronOfHell
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 2400;
         Speed 12;
         FastSpeed 15;
@@ -10424,9 +10711,18 @@ class TLH_AssaultBaron : BaronOfHell
 
     States
     {
+    Spawn:
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        BOSS A 5 A_Wander;
+        BOSS A 8 A_LookEx(0, 0, 1024, 512, 105, "See");
+        BOSS A 5 A_Wander;
+        Loop;
+
 
     See:
-        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        BOSS AABBCCDD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
     }
 }
@@ -10452,8 +10748,6 @@ class TLH_DoomguyElite : Actor
 {
     Default
     {
-        +QUICKTORETALIATE;
-        +LOOKALLAROUND;
         Health 1800;
         Radius 16;
         Height 56;
@@ -10479,11 +10773,16 @@ class TLH_DoomguyElite : Actor
     States
     {
     Spawn:
-        PLAY A 4 A_Look;
+        // Bounded sight + sound hearing, then short, collision-aware roaming.
+        PLAY A 8 A_LookEx(0, 0, 1024, 384, 95, "See");
+        PLAY A 5 A_Wander;
+        PLAY A 5 A_Wander;
+        PLAY A 8 A_LookEx(0, 0, 1024, 384, 95, "See");
+        PLAY A 5 A_Wander;
         Loop;
 
     See:
-        PLAY ABCD 3 A_Chase("Melee", "Missile", CHF_FASTCHASE);
+        PLAY ABCD 3 A_Chase("Melee", "Missile", CHF_DONTLOOKALLAROUND);
         Loop;
 
     Missile:
