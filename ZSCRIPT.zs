@@ -7525,7 +7525,8 @@ class TLHRealisticAIHandler : EventHandler
 {
     transient Array<Actor> trackedMonsters;
     transient Array<int> lostSightTics;
-    transient Array<Vector3> lastKnownPositions;
+    transient Array<double> lastKnownX;
+    transient Array<double> lastKnownY;
     String trackedMapName;
     int scanTics;
 
@@ -7539,19 +7540,37 @@ class TLHRealisticAIHandler : EventHandler
         return -1;
     }
 
+    void ResumePatrol(Actor monster, int index)
+    {
+        double towardX = lastKnownX[index] - monster.Pos.X;
+        double towardY = lastKnownY[index] - monster.Pos.Y;
+        if (towardX * towardX + towardY * towardY > 32.0 * 32.0)
+            monster.Angle = atan2(towardY, towardX);
+
+        // Stop wall-tracking and return to the patrol/look state, facing the
+        // last place the player was observed. A_LookEx can hear a nearby player
+        // again, but still requires its ordinary sight/FOV or hearing checks.
+        monster.A_ClearTarget();
+        State patrolState = monster.FindState("Spawn");
+        if (patrolState)
+            monster.SetState(patrolState);
+        lostSightTics[index] = 0;
+    }
+
     override void WorldTick()
     {
-        if (trackedMapName != level.MapName)
+        if (trackedMapName != level.MapName || level.maptime == 0)
         {
             trackedMonsters.Clear();
             lostSightTics.Clear();
-            lastKnownPositions.Clear();
+            lastKnownX.Clear();
+            lastKnownY.Clear();
             trackedMapName = level.MapName;
             scanTics = 0;
         }
 
-        // Register new monsters every 8 tics to avoid a full ThinkerIterator
-        // scan on every frame.
+        // Register new monsters every 8 tics instead of scanning all thinkers
+        // on every tic. A_Wander itself uses normal movement/collision geometry.
         scanTics++;
         if (scanTics >= 8)
         {
@@ -7566,7 +7585,8 @@ class TLHRealisticAIHandler : EventHandler
                 {
                     trackedMonsters.Push(candidate);
                     lostSightTics.Push(0);
-                    lastKnownPositions.Push(candidate.Pos);
+                    lastKnownX.Push(candidate.Pos.X);
+                    lastKnownY.Push(candidate.Pos.Y);
                 }
             }
         }
@@ -7578,51 +7598,45 @@ class TLHRealisticAIHandler : EventHandler
             {
                 trackedMonsters.Delete(i);
                 lostSightTics.Delete(i);
-                lastKnownPositions.Delete(i);
+                lastKnownX.Delete(i);
+                lastKnownY.Delete(i);
                 continue;
             }
 
             Actor playerTarget = monster.target;
-            // Keep infighting and non-player target logic vanilla.
+            // Leave monster-vs-monster infighting and other targets untouched.
             if (!playerTarget || !playerTarget.player || playerTarget.Health <= 0)
             {
                 lostSightTics[i] = 0;
                 continue;
             }
 
-            double dx = playerTarget.Pos.X - monster.Pos.X;
-            double dy = playerTarget.Pos.Y - monster.Pos.Y;
-            double distanceSq = dx * dx + dy * dy;
-            bool visible = distanceSq <= 1024.0 * 1024.0 && monster.CheckSight(playerTarget);
-
-            if (visible)
+            // Stagger CheckSight calls across four tics to limit overhead on
+            // maps with many enemies. A successful sight check refreshes memory.
+            if (((int(level.maptime) + i) & 3) == 0)
             {
-                lostSightTics[i] = 0;
-                lastKnownPositions[i] = playerTarget.Pos;
-                continue;
+                double dx = playerTarget.Pos.X - monster.Pos.X;
+                double dy = playerTarget.Pos.Y - monster.Pos.Y;
+                double distanceSq = dx * dx + dy * dy;
+                bool visible = distanceSq <= 1024.0 * 1024.0 && monster.CheckSight(playerTarget);
+
+                if (visible)
+                {
+                    lostSightTics[i] = 0;
+                    lastKnownX[i] = playerTarget.Pos.X;
+                    lastKnownY[i] = playerTarget.Pos.Y;
+                    continue;
+                }
             }
 
             lostSightTics[i]++;
-            // 105 tics = 3.5 seconds: long enough to investigate a corner,
-            // short enough to stop supernatural wall-tracking.
+            // 105 tics = 3.5 seconds: enough to check around a corner, but not
+            // enough to track the player indefinitely through sealed geometry.
             if (lostSightTics[i] >= 105)
-            {
-                Vector3 known = lastKnownPositions[i];
-                double towardX = known.X - monster.Pos.X;
-                double towardY = known.Y - monster.Pos.Y;
-                if (towardX * towardX + towardY * towardY > 32.0 * 32.0)
-                    monster.Angle = atan2(towardY, towardX);
-
-                monster.A_ClearTarget();
-                State patrolState = monster.FindState("Spawn");
-                if (patrolState)
-                    monster.SetState(patrolState);
-                lostSightTics[i] = 0;
-            }
+                ResumePatrol(monster, i);
         }
     }
 }
-
 class TacticalHUDHandler : EventHandler
 {
     // ------------------------------------------------------------------------
