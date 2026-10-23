@@ -10,8 +10,7 @@
 
 ACTOR TLH_AI_DoomImp : DoomImp replaces DoomImp
 {
-    +QUICKTORETALIATE
-    // Do not use LOOKALLAROUND or FASTCHASE.
+    // No QUICKTORETALIATE, LOOKALLAROUND or FASTCHASE.
     States
     {
     Spawn:
