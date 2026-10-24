@@ -7653,7 +7653,7 @@ class TLHRealisticAIHandler : EventHandler
 
             lostSightTics[i]++;
             // 105 tics = 3.5 seconds: enough to check around a corner, but not
-            // enough to track the player indefinitely through sealed geometry.
+            // enough to track a target indefinitely through sealed geometry.
             if (lostSightTics[i] >= 105)
                 ResumePatrol(monster, i);
         }
