@@ -5289,6 +5289,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     Weapon tlhDualWieldWeapon;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
+    bool tlhProneStealthActive;
+    bool tlhPronePreviousMinVisible;
+    double tlhPronePreviousAlpha;
 
     int hordeTimer;
     int arenaTimer;
@@ -5551,8 +5554,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (tlhProneActive)
             {
                 bShadow = tlhPronePreviousShadow;
-                tlhProneActive = false;
                 Height = FullHeight;
+                tlhProneActive = false;
+            }
+            if (tlhProneStealthActive)
+            {
+                Alpha = tlhPronePreviousAlpha;
+                bMinVisible = tlhPronePreviousMinVisible;
+                tlhProneStealthActive = false;
             }
 
             tlhDualWieldWeapon = null;
@@ -5604,6 +5613,31 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhProneActive = false;
             bShadow = tlhPronePreviousShadow;
             Height = FullHeight * clamp(player.crouchfactor, 0.0, 1.0);
+        }
+
+        Weapon proneWeapon = player.ReadyWeapon;
+        bool hunterRifleStealth = tlhProneActive &&
+            proneWeapon && proneWeapon is "HunterRifle";
+        if (hunterRifleStealth)
+        {
+            if (!tlhProneStealthActive)
+            {
+                tlhPronePreviousAlpha = Alpha;
+                tlhPronePreviousMinVisible = bMinVisible;
+                tlhProneStealthActive = true;
+            }
+
+            // Low silhouette plus shadowed rendering makes the prone shooter
+            // harder to spot and harder for monsters to aim at.
+            Alpha = min(tlhPronePreviousAlpha, 0.32);
+            bShadow = true;
+            bMinVisible = true;
+        }
+        else if (tlhProneStealthActive)
+        {
+            Alpha = tlhPronePreviousAlpha;
+            bMinVisible = tlhPronePreviousMinVisible;
+            tlhProneStealthActive = false;
         }
 
         ResetTLHDualForWeaponSwitch();
@@ -7554,6 +7588,8 @@ class TacticalHUDHandler : EventHandler
     // ------------------------------------------------------------------------
     transient ui bool tlhInputM3Down;
     transient ui String tlhInputLast;
+    String tlhNoAvoidMeleeMapName;
+    bool tlhNoAvoidMeleeScanned;
     transient ui Array<String> tlhInputHistory;
     transient ui String tlhHUDDualBindName;
 
@@ -7623,6 +7659,11 @@ class TacticalHUDHandler : EventHandler
 
     override void WorldThingSpawned(WorldEvent e){
         if (!e.Thing) return;
+
+        // Never let hostile monsters use the AVOIDMELEE evasive behavior.
+        // This removes the melee-dodge trait without replacing their attack AI.
+        if (e.Thing.bIsMonster && !e.Thing.bFriendly)
+            e.Thing.bAvoidMelee = false;
 
         // World pickups must use their original sprite palette. The class
         // defaults still carry the custom first-person translation.
@@ -8084,6 +8125,22 @@ class TacticalHUDHandler : EventHandler
     }
 
     override void WorldTick(){
+        // Clear AVOIDMELEE from enemies already present when a map starts.
+        // Repeated at maptime 0 to cover restarting the same map.
+        if (tlhNoAvoidMeleeMapName != level.MapName ||
+            !tlhNoAvoidMeleeScanned || level.maptime == 0)
+        {
+            ThinkerIterator monsterScan = ThinkerIterator.Create("Actor");
+            Actor scannedActor;
+            while ((scannedActor = Actor(monsterScan.Next())) != null)
+            {
+                if (scannedActor.bIsMonster && !scannedActor.bFriendly)
+                    scannedActor.bAvoidMelee = false;
+            }
+            tlhNoAvoidMeleeMapName = level.MapName;
+            tlhNoAvoidMeleeScanned = true;
+        }
+
         // --------------------------------------------------------------------
         // Sample all HUD data in play context.
         // ThinkerIterator is used for the live hostile count, so dynamically
