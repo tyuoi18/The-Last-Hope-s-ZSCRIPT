@@ -7548,8 +7548,8 @@ class TLHRealisticAIHandler : EventHandler
             monster.Angle = atan2(towardY, towardX);
 
         // Stop wall-tracking and return to the patrol/look state, facing the
-        // last place the player was observed. A_LookEx can hear a nearby player
-        // again, but still requires its ordinary sight/FOV or hearing checks.
+        // last place this actor's target was observed. A_LookEx requires its
+        // ordinary sight/FOV or hearing checks before acquiring a target again.
         monster.A_ClearTarget();
         State patrolState = monster.FindState("Spawn");
         if (patrolState)
@@ -7603,28 +7603,50 @@ class TLHRealisticAIHandler : EventHandler
                 continue;
             }
 
-            Actor playerTarget = monster.target;
-            // Leave monster-vs-monster infighting and other targets untouched.
-            if (!playerTarget || !playerTarget.player || playerTarget.Health <= 0)
+            Actor trackedTarget = monster.target;
+            bool marineAI = monster is "ScriptedMarine";
+
+            if (!trackedTarget || trackedTarget.Health <= 0)
             {
                 lostSightTics[i] = 0;
                 continue;
+            }
+
+            if (marineAI)
+            {
+                // Marines only retain hostile monsters as targets. Do not make
+                // them chase the player or other friendly actors.
+                if (!trackedTarget.bIsMonster || trackedTarget.bFriendly)
+                {
+                    lostSightTics[i] = 0;
+                    continue;
+                }
+            }
+            else
+            {
+                // Normal enemies retain the original player-only behavior;
+                // ordinary monster-vs-monster infighting stays untouched.
+                if (!trackedTarget.player)
+                {
+                    lostSightTics[i] = 0;
+                    continue;
+                }
             }
 
             // Stagger CheckSight calls across four tics to limit overhead on
             // maps with many enemies. A successful sight check refreshes memory.
             if (((int(level.maptime) + i) & 3) == 0)
             {
-                double dx = playerTarget.Pos.X - monster.Pos.X;
-                double dy = playerTarget.Pos.Y - monster.Pos.Y;
+                double dx = trackedTarget.Pos.X - monster.Pos.X;
+                double dy = trackedTarget.Pos.Y - monster.Pos.Y;
                 double distanceSq = dx * dx + dy * dy;
-                bool visible = distanceSq <= 1024.0 * 1024.0 && monster.CheckSight(playerTarget);
+                bool visible = distanceSq <= 1024.0 * 1024.0 && monster.CheckSight(trackedTarget);
 
                 if (visible)
                 {
                     lostSightTics[i] = 0;
-                    lastKnownX[i] = playerTarget.Pos.X;
-                    lastKnownY[i] = playerTarget.Pos.Y;
+                    lastKnownX[i] = trackedTarget.Pos.X;
+                    lastKnownY[i] = trackedTarget.Pos.Y;
                     continue;
                 }
             }
