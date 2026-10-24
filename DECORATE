@@ -470,7 +470,7 @@ ACTOR TLH_AI_MarineScriptedMarine : ScriptedMarine replaces ScriptedMarine
     }
 }
 
-ACTOR TLH_AI_MarineMarineFist : MarineFist replaces MarineFist
+ACTOR TLH_AI_MarineFist : MarineFist replaces MarineFist
 {
     States
     {
@@ -488,7 +488,7 @@ ACTOR TLH_AI_MarineMarineFist : MarineFist replaces MarineFist
     }
 }
 
-ACTOR TLH_AI_MarineMarineBerserk : MarineBerserk replaces MarineBerserk
+ACTOR TLH_AI_MarineBerserk : MarineBerserk replaces MarineBerserk
 {
     States
     {
@@ -506,7 +506,7 @@ ACTOR TLH_AI_MarineMarineBerserk : MarineBerserk replaces MarineBerserk
     }
 }
 
-ACTOR TLH_AI_MarineMarineChainsaw : MarineChainsaw replaces MarineChainsaw
+ACTOR TLH_AI_MarineChainsaw : MarineChainsaw replaces MarineChainsaw
 {
     States
     {
@@ -524,7 +524,7 @@ ACTOR TLH_AI_MarineMarineChainsaw : MarineChainsaw replaces MarineChainsaw
     }
 }
 
-ACTOR TLH_AI_MarineMarinePistol : MarinePistol replaces MarinePistol
+ACTOR TLH_AI_MarinePistol : MarinePistol replaces MarinePistol
 {
     States
     {
@@ -542,7 +542,7 @@ ACTOR TLH_AI_MarineMarinePistol : MarinePistol replaces MarinePistol
     }
 }
 
-ACTOR TLH_AI_MarineMarineShotgun : MarineShotgun replaces MarineShotgun
+ACTOR TLH_AI_MarineShotgun : MarineShotgun replaces MarineShotgun
 {
     States
     {
@@ -560,7 +560,7 @@ ACTOR TLH_AI_MarineMarineShotgun : MarineShotgun replaces MarineShotgun
     }
 }
 
-ACTOR TLH_AI_MarineMarineSSG : MarineSSG replaces MarineSSG
+ACTOR TLH_AI_MarineSSG : MarineSSG replaces MarineSSG
 {
     States
     {
@@ -578,7 +578,7 @@ ACTOR TLH_AI_MarineMarineSSG : MarineSSG replaces MarineSSG
     }
 }
 
-ACTOR TLH_AI_MarineMarineChaingun : MarineChaingun replaces MarineChaingun
+ACTOR TLH_AI_MarineChaingun : MarineChaingun replaces MarineChaingun
 {
     States
     {
@@ -596,7 +596,7 @@ ACTOR TLH_AI_MarineMarineChaingun : MarineChaingun replaces MarineChaingun
     }
 }
 
-ACTOR TLH_AI_MarineMarineRocket : MarineRocket replaces MarineRocket
+ACTOR TLH_AI_MarineRocket : MarineRocket replaces MarineRocket
 {
     States
     {
@@ -614,7 +614,7 @@ ACTOR TLH_AI_MarineMarineRocket : MarineRocket replaces MarineRocket
     }
 }
 
-ACTOR TLH_AI_MarineMarinePlasma : MarinePlasma replaces MarinePlasma
+ACTOR TLH_AI_MarinePlasma : MarinePlasma replaces MarinePlasma
 {
     States
     {
@@ -632,7 +632,7 @@ ACTOR TLH_AI_MarineMarinePlasma : MarinePlasma replaces MarinePlasma
     }
 }
 
-ACTOR TLH_AI_MarineMarineRailgun : MarineRailgun replaces MarineRailgun
+ACTOR TLH_AI_MarineRailgun : MarineRailgun replaces MarineRailgun
 {
     States
     {
@@ -650,7 +650,7 @@ ACTOR TLH_AI_MarineMarineRailgun : MarineRailgun replaces MarineRailgun
     }
 }
 
-ACTOR TLH_AI_MarineMarineBFG : MarineBFG replaces MarineBFG
+ACTOR TLH_AI_MarineBFG : MarineBFG replaces MarineBFG
 {
     States
     {
