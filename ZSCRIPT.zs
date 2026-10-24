@@ -2385,7 +2385,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             {
                 A_FireProjectile("DragonBreathFire", random(-10, 10), false, 0, 0, 0, random(-5, 5));
             }
-            A_StartSound("fatbso", CHAN_WEAPON);
+            A_StartSound("weapons/sshotf", CHAN_WEAPON);
+            A_StartSound("vile/firestrt", CHAN_BODY);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
             A_Quake(3, 5, 0, 100);
         }
@@ -4692,8 +4693,6 @@ class HunterRifle : Weapon
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.2);
-            A_Print(String.Format("HUNTER RIFLE: %d/5 | RESERVE %d",
-                invoker.magazineAmmo, player.mo ? player.mo.CountInv("Clip") : 0));
         }
         RIFL C 1;
         RIFL D 1;
@@ -4753,8 +4752,7 @@ class HunterRifle : Weapon
         RIFL H 3
         {
             A_StartSound("weapons/sshoto", CHAN_WEAPON);
-            A_Print(String.Format("HUNTER RIFLE: EMPTY (%d/5) | PRESS R",
-                invoker.magazineAmmo));
+            A_Print("HUNTER RIFLE: EMPTY | PRESS R");
             if (player.cmd.buttons & BT_ALTATTACK)
             {
                 invoker.aimActive = true;
@@ -4777,8 +4775,6 @@ class HunterRifle : Weapon
             if (!(player.cmd.buttons & BT_ATTACK))
                 invoker.shotLatched = false;
 
-            A_Print(String.Format("HUNTER RIFLE: %d/5 | RESERVE %d",
-                invoker.magazineAmmo, player.mo ? player.mo.CountInv("Clip") : 0));
 
             if (player.cmd.buttons & BT_ALTATTACK)
             {
@@ -4855,8 +4851,6 @@ class HunterRifle : Weapon
             }
 
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
-            A_Print(String.Format("HUNTER RIFLE: %d/5 | RESERVE %d",
-                invoker.magazineAmmo, player.mo ? player.mo.CountInv("Clip") : 0));
 
             if (player.cmd.buttons & BT_ALTATTACK)
             {
@@ -5055,7 +5049,7 @@ class ServiceRevolver : Weapon
         RVOL Q 5
         {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
-            A_Print(String.Format("REVOLVER: %d/6", invoker.cylinderAmmo));
+            
         }
         Goto Ready;
 
@@ -5118,7 +5112,7 @@ class ServiceRevolver : Weapon
             if (!infinite && invoker.cylinderAmmo < 3)
             {
                 A_StartSound("weapons/sshoto", CHAN_WEAPON);
-                A_Print(String.Format("REVOLVER: FAN NEEDS 3 ROUNDS (%d/6) | PRESS R", invoker.cylinderAmmo));
+                A_Print("REVOLVER: FAN NEEDS 3 ROUNDS | PRESS R");
                 return ResolveState("Ready");
             }
             return ResolveState("FanFire1");
@@ -9844,7 +9838,7 @@ class TLH_AssaultImp : DoomImp
     {
         Health 140;
         Speed 11;
-        FastSpeed 15;
+        FastSpeed 11;
         PainChance 48;
     }
 }
@@ -10048,7 +10042,7 @@ class TLH_BrutalImp : DoomImp
     {
         Health 220;
         Speed 10;
-        FastSpeed 14;
+        FastSpeed 10;
         PainChance 38;
         DamageFactor "Normal", 0.90;
     }
@@ -10079,7 +10073,7 @@ class TLH_StalkerImp : DoomImp
     {
         Health 300;
         Speed 17;
-        FastSpeed 21;
+        FastSpeed 17;
         PainChance 80;
         DamageFactor "Normal", 0.65;
         HitObituary "$OB_IMPHIT";
