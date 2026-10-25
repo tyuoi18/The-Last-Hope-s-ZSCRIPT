@@ -9242,8 +9242,8 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Color dim = 0x24443F;
         int visibleRows = min(count, 8);
         double panelHeight = 18.0 + visibleRows * 10.0;
-        Panel(454, 143, 162, panelHeight, dim, 95);
-        TextR("ACTIVE POWER-UPS", 609, 146, main, 0.22);
+        Panel(24, 143, 162, panelHeight, dim, 95);
+        TextR("ACTIVE POWER-UPS", 179, 146, main, 0.22);
 
         for (int i = 0; i < visibleRows; i++)
         {
@@ -9251,7 +9251,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             if (count > 8 && i == 7)
             {
                 Text(String.Format("+%d MORE ACTIVE", count - 7),
-                    462, y, Font.CR_WHITE, 0.20);
+                    32, y, Font.CR_WHITE, 0.20);
                 continue;
             }
 
@@ -9261,9 +9261,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             int timerColor = remainingSeconds <= 10 ? Font.CR_RED :
                 remainingSeconds <= 30 ? Font.CR_YELLOW : Font.CR_WHITE;
 
-            Text(hudPowerupNames[i], 462, y, Font.CR_WHITE, 0.20);
+            Text(hudPowerupNames[i], 32, y, Font.CR_WHITE, 0.20);
             TextR(String.Format("%02d:%02d", minutes, seconds),
-                609, y, timerColor, 0.20);
+                179, y, timerColor, 0.20);
         }
     }
 
