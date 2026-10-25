@@ -5630,9 +5630,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             // Reduce pawn visibility and let hostile monsters fail their
             // normal visibility checks against the prone shooter.
-            Alpha = min(tlhPronePreviousAlpha, 0.32);
+            Alpha = min(tlhPronePreviousAlpha, 0.18);
             bShadow = true;
-            bMinVisible = true;
+            // MINVISIBLE enforces a minimum visibility; disable it for actual
+            // concealment while prone. Previous value is restored on exit.
+            bMinVisible = false;
         }
         else if (tlhProneStealthActive)
         {
@@ -8382,6 +8384,11 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Actor mo;
         while ((mo = Actor(it.Next())) != null)
         {
+            // Re-assert this for every live actor, not just at map start or
+            // spawn time, so no hostile can regain MBF21 melee-avoidance dodging.
+            if (mo.bIsMonster && !mo.bFriendly)
+                mo.bAvoidMelee = false;
+
             if (mo.bIsMonster && mo.Health > 0)
             {
                 hudLiveEnemies++;
@@ -9235,6 +9242,8 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
     ui void DrawPowerupTimers()
     {
+        // This panel is strictly conditional: no timed power-up means no HUD
+        // panel. The cache is rebuilt in WorldTick from every active Powerup.
         int count = hudPowerupNames.Size();
         if (count <= 0) return;
 
