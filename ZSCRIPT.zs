@@ -5632,9 +5632,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             // normal visibility checks against the prone shooter.
             Alpha = min(tlhPronePreviousAlpha, 0.18);
             bShadow = true;
-            // MINVISIBLE enforces a minimum visibility; disable it for actual
-            // concealment while prone. Previous value is restored on exit.
-            bMinVisible = false;
+            // MINVISIBLE prevents hostile monsters from seeing the prone pawn.
+            // Preserve it while prone, then restore the player's prior value.
+            bMinVisible = true;
         }
         else if (tlhProneStealthActive)
         {
