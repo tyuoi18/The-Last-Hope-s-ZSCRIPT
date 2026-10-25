@@ -7547,6 +7547,25 @@ class DbySSectorHandler : EventHandler
 
 class TacticalHUDHandler : EventHandler
 {
+    // Universal active power-up countdown labels. PowerStrength is intentionally
+    // omitted because vanilla Berserk does not have a normal expiry countdown.
+    String GetPowerupHUDName(Powerup effect)
+    {
+        if (!effect) return "POWER-UP";
+        String cls = effect.GetClassName();
+        if (cls == "PowerInvulnerable") return "INVULNERABILITY";
+        if (cls == "PowerInvisibility") return "INVISIBILITY";
+        if (cls == "PowerIronFeet") return "RADIATION SUIT";
+        if (cls == "PowerLightAmp") return "LIGHT AMP";
+        if (cls == "PowerFlight") return "FLIGHT";
+        if (cls == "PowerGhost") return "GHOST";
+        if (cls == "PowerShadow") return "SHADOW";
+        if (cls == "TLHAdrenalinePower") return "ADRENALINE";
+        if (cls == "TLHJuggernautPower") return "JUGGERNAUT";
+        if (cls == "PowerWeaponLevel2") return "POWER WEAPON";
+        return cls;
+    }
+
     // ------------------------------------------------------------------------
     // PLAY-CONTEXT TELEMETRY
     // ------------------------------------------------------------------------
@@ -7567,6 +7586,8 @@ class TacticalHUDHandler : EventHandler
     int hudRocket;
     int hudCell;
     int hudWeaponHeat;
+    transient Array<String> hudPowerupNames;
+    transient Array<int> hudPowerupTics;
     int hudLiveEnemies;
     int hudTotalEnemies;
     int hudKills;
@@ -8126,6 +8147,11 @@ class TacticalHUDHandler : EventHandler
     }
 
     override void WorldTick(){
+        // Rebuild the universal countdown cache every tic. It is only drawn
+        // while one or more timed power-ups are actually active.
+        hudPowerupNames.Clear();
+        hudPowerupTics.Clear();
+
         // Clear AVOIDMELEE from monsters that were already present when the map
         // loaded. Rescan at map start/restart so existing actors are covered too.
         if (tlhNoAvoidMeleeMapName != level.MapName ||
@@ -8219,6 +8245,22 @@ class TacticalHUDHandler : EventHandler
             hudWeaponTextureValid = false;
             hudWeaponTextureClass = "";
             return;
+        }
+
+        // Every active timed Powerup subtype is included, including custom TLH
+        // perks. EffectTics is already the remaining duration in engine tics.
+        Inventory powerItem = p.Inv;
+        while (powerItem != null)
+        {
+            Inventory nextPowerItem = powerItem.Inv;
+            let activePower = Powerup(powerItem);
+            if (activePower && activePower.EffectTics > 0 &&
+                !(activePower is "PowerStrength"))
+            {
+                hudPowerupNames.Push(GetPowerupHUDName(activePower));
+                hudPowerupTics.Push(activePower.EffectTics);
+            }
+            powerItem = nextPowerItem;
         }
 
         // Avoid querying a live PSprite/State while GZDoom changes weapons.
@@ -9186,6 +9228,46 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
     }
 
     // ========================================================================
+    // UNIVERSAL POWER-UP COUNTDOWN
+    // Hidden when no timed power-ups are active. Shows each remaining duration
+    // as MM:SS; when the list is unusually long, the final row reports overflow.
+    // ========================================================================
+
+    ui void DrawPowerupTimers()
+    {
+        int count = hudPowerupNames.Size();
+        if (count <= 0) return;
+
+        Color main = 0x61C6B1;
+        Color dim = 0x24443F;
+        int visibleRows = min(count, 8);
+        double panelHeight = 18.0 + visibleRows * 10.0;
+        Panel(454, 143, 162, panelHeight, dim, 95);
+        TextR("ACTIVE POWER-UPS", 609, 146, main, 0.22);
+
+        for (int i = 0; i < visibleRows; i++)
+        {
+            double y = 157 + i * 10.0;
+            if (count > 8 && i == 7)
+            {
+                Text(String.Format("+%d MORE ACTIVE", count - 7),
+                    462, y, Font.CR_WHITE, 0.20);
+                continue;
+            }
+
+            int remainingSeconds = (hudPowerupTics[i] + 34) / 35;
+            int minutes = remainingSeconds / 60;
+            int seconds = remainingSeconds % 60;
+            int timerColor = remainingSeconds <= 10 ? Font.CR_RED :
+                remainingSeconds <= 30 ? Font.CR_YELLOW : Font.CR_WHITE;
+
+            Text(hudPowerupNames[i], 462, y, Font.CR_WHITE, 0.20);
+            TextR(String.Format("%02d:%02d", minutes, seconds),
+                609, y, timerColor, 0.20);
+        }
+    }
+
+    // ========================================================================
     // LOWER RIGHT // ARMAMENT + THREAT
     // ========================================================================
 
@@ -9451,6 +9533,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawTelemetry();
         DrawOpticalNode();
         DrawVitals();
+        DrawPowerupTimers();
         DrawCombat();
         DrawHelmetGlassDetail();
         DrawFaceNode();
