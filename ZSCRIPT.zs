@@ -9468,6 +9468,14 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             profileY = 1.12;
             accentStrength = 1.06;
         }
+        else if (cls == "SimpleRifle" && hudBlueRifleUnlocked)
+        {
+            // Match the actual procedurally palette-translated first-person
+            // weapon instead of requiring a separate blue sprite sheet.
+            primary = 0x66B9F2;
+            secondary = 0x215D9C;
+            accentStrength = 1.15;
+        }
         else if (cls == "RecoilPistol")
         {
             primary = 0x8B9693;
@@ -9704,7 +9712,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         if (hudWeaponWarning != "")
             Text(hudWeaponWarning, 182, 298, warn, 0.20);
         else
-            Text("READY // NO ACTIVE COOLDOWNS", 182, 298, main, 0.20);
+            Text("STATUS: CHECK MODE / AMMO ABOVE", 182, 298, main, 0.20);
     }
 
     ui void DrawCombat()
