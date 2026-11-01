@@ -11,6 +11,6 @@ GameInfo
 DoomEdNums
 {
     30001 = ServiceRevolver
-    30002 = StreetSweeperShotgun
+    30002 = SimpleRifle
     30003 = HunterRifle
 }
