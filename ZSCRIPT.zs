@@ -5332,6 +5332,7 @@ class SimpleRifle : Weapon
             A_SetPitch(pitch - 5.5, SPF_INTERPOLATE);
             A_Recoil(5.5);
             A_Quake(3, 7, 0, 180);
+            return ResolveState(null);
         }
         ASLT B 3 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
         ASLT A 4 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
@@ -5380,6 +5381,7 @@ class SimpleRifle : Weapon
             A_SetPitch(pitch - 9.0, SPF_INTERPOLATE);
             A_Recoil(8.0);
             A_Quake(5, 11, 0, 260);
+            return ResolveState(null);
         }
         ASLT B 6 A_WeaponOffset(0, 46, WOF_INTERPOLATE);
         ASLT A 10 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
@@ -5401,6 +5403,7 @@ class SimpleRifle : Weapon
             if (!infinite)
                 A_TakeInventory("RocketAmmo", 3, TIF_NOTAKEINFINITE);
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            return ResolveState(null);
         }
         ASLT A 4 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
         ASLT B 4
@@ -5428,6 +5431,7 @@ class SimpleRifle : Weapon
             if (!infinite)
                 A_TakeInventory("Cell", 24, TIF_NOTAKEINFINITE);
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            return ResolveState(null);
         }
         ASLT A 8 A_WeaponOffset(0, 43, WOF_INTERPOLATE);
         ASLT B 7
