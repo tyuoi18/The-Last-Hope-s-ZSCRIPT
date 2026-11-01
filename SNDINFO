@@ -5,3 +5,7 @@ REAC02 REAC02
 REAC03 REAC03
 REAC04 REAC04
 REAC05 REAC05
+
+// Plays once when the 150-kill SimpleRifle blue finish unlocks.
+// Include an audio lump named BLUAS in the WAD/PK3.
+BLUAS BLUAS
