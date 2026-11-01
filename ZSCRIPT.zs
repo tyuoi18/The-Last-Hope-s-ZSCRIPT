@@ -1001,13 +1001,13 @@ class DashFist : Fist replaces Fist
         PISG A 0;
 
     TLHPickupReadyShim:
-        ZUNG A 0
+        PUNG A 0
         {
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
         }
-        ZUNG A 1
+        PUNG A 1
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
@@ -1015,57 +1015,57 @@ class DashFist : Fist replaces Fist
         }
         Loop;
     Deselect:
-        ZUNG A 1 A_Lower;
+        PUNG A 1 A_Lower;
         Loop;
     Select:
-        ZUNG A 1 A_Raise;
+        PUNG A 1 A_Raise;
         Loop;
     Fire:
-        ZUNG B 3;
-        ZUNG C 3
+        PUNG B 3;
+        PUNG C 3
         {
             A_CustomPunch(20, TRUE, CPF_PULLIN, "BulletPuff", 64, 0, 0, "ArmorBonus", "weapons/melee");
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
         }
-        ZUNG D 4;
-        ZUNG C 3;
-        ZUNG B 4 A_ReFire;
+        PUNG D 4;
+        PUNG C 3;
+        PUNG B 4 A_ReFire;
         Goto Ready;
     AltFire:
-        ZUNG B 4
+        PUNG B 4
         {
             A_Recoil(-25);
             A_StartSound("skeleton/swing", CHAN_WEAPON);
         }
-        ZUNG C 3
+        PUNG C 3
         {
             A_CustomPunch(90, TRUE, CPF_PULLIN, "BulletPuff", 80, 0, 0, "ArmorBonus", "weapons/melee");
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 5, 0, 100);
         }
-        ZUNG D 8;
-        ZUNG C 4;
-        ZUNG B 5;
+        PUNG D 8;
+        PUNG C 4;
+        PUNG B 5;
         Goto Ready;
     Zoom:
-        ZUNG B 5;
-        ZUNG C 5
+        PUNG B 5;
+        PUNG C 5
         {
             A_Explode(80, 128, XF_NOTMISSILE);
             A_StartSound("cyber/hoof", CHAN_BODY);
             A_SetPitch(pitch + 4.0, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 200);
         }
-        ZUNG D 10;
+        PUNG D 10;
         Goto Ready;
     Reload:
-        ZUNG B 2 A_StartSound("vile/sight", CHAN_BODY);
-        ZUNG C 8
+        PUNG B 2 A_StartSound("vile/sight", CHAN_BODY);
+        PUNG C 8
         {
             A_RadiusThrust(800, 192, RTF_NOIMPACTDAMAGE);
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
-        ZUNG D 8;
+        PUNG D 8;
         Goto Ready;
     }
 
@@ -4417,13 +4417,13 @@ class HellfireProjector : Weapon
         PISG A 0;
 
     TLHPickupReadyShim:
-        ZISG A 0
+        PISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.72, 0.76);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        ZISG A 1
+        PISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4432,15 +4432,15 @@ class HellfireProjector : Weapon
         }
         Loop;
     Deselect:
-        ZISG A 1 A_Lower;
+        PISG A 1 A_Lower;
         Loop;
     Select:
-        ZISG A 1 A_Raise;
+        PISG A 1 A_Raise;
         Loop;
 
     Fire:
-        ZISG A 3;
-        ZISG B 5
+        PISG A 3;
+        PISG B 5
         {
             A_GunFlash();
             A_WeaponOffset(0, 36, WOF_INTERPOLATE);
@@ -4449,25 +4449,25 @@ class HellfireProjector : Weapon
             A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 220);
         }
-        ZISG B 5;
-        ZISG A 3 A_ReFire;
+        PISG B 5;
+        PISG A 3 A_ReFire;
         Goto Ready;
 
     AltFire:
-        ZISG A 3;
-        ZISG B 5
+        PISG A 3;
+        PISG B 5
         {
             A_FireProjectile("NapalmGlob", random(-4, 4), true, 0, 0, 0, random(-2, 2));
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 5, 0, 160);
         }
-        ZISG B 5;
+        PISG B 5;
         Goto Ready;
 
     Flash:
-        ZISF A 2 Bright A_Light1;
-        ZISF B 2 Bright A_Light2;
+        PISF A 2 Bright A_Light1;
+        PISF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
@@ -5183,20 +5183,26 @@ class ServiceRevolver : Weapon
     }
 }
 
-class StreetSweeperShotgun : Weapon
+
+
+class SimpleRifle : Weapon
 {
+
+bool Aiming;
+
     Default
     {
-        Weapon.SlotNumber 3;
+        Weapon.SlotNumber 2;
         Weapon.SlotPriority 3.25;
         Weapon.SelectionOrder 325;
         Weapon.Kickback 125;
-        Weapon.AmmoType1 "Shell";
+        Weapon.AmmoType1 "Clip";
         Weapon.AmmoGive1 16;
         Weapon.AmmoUse1 1;
-        Weapon.AmmoType2 "Shell";
+        Weapon.AmmoType2 "Clip";
+		Weapon.AmmoGive2 16;
         Weapon.AmmoUse2 2;
-        Inventory.PickupMessage "Picked up the Street Sweeper Shotgun.";
+        Inventory.PickupMessage "Picked up a Simple Rifle.";
     }
 
     States
@@ -5205,20 +5211,20 @@ class StreetSweeperShotgun : Weapon
         PISG A 0;
 
     TLHPickupReadyShim:
-        SHTG A 0
+        ASLT A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
         }
-        SHTG A 1 A_WeaponReady(WRF_ALLOWRELOAD);
+        ASLT A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
-        SHTG A 1 A_Lower;
+        ASLT A 1 A_Lower;
         Loop;
 
     Select:
-        SHTG A 1
+        ASLT A 1
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
             A_Raise();
@@ -5226,36 +5232,80 @@ class StreetSweeperShotgun : Weapon
         Loop;
 
     Fire:
-        SHTG B 0 A_GunFlash;
-        SHTG B 5
+        ASLT A 5 A_GunFlash;
+        ASLT B 5
         {
             A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
-            A_Recoil(5.5);
+            A_Recoil(1.5);
         }
-        SHTG C 3 A_ReFire;
+        ASLT A 7 A_ReFire;
         Goto Ready;
 
     AltFire:
-        SHTG B 0 A_GunFlash;
-        SHTG B 8
-        {
+        SHTG B 2
+		{
             A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(8.0);
+            A_Recoil(2.0);
         }
-        SHTG C 5;
+        SHTG C 4;
+        ASLT B 5;
+		
+        ASLT A 5;
         Goto Ready;
+		
+	Reload:
+		ASLT A 3 A_GunFlash;
+		ASLT A 9
+		{
+			A_Print("3/3");
+			A_FireProjectile("FlakGrenade");
+			A_GunFlash;
+		}
+		ASLT A 9
+		{
+			A_Print("2/3");
+			A_FireProjectile("FlakGrenade");
+			A_GunFlash;
+		}
+		ASLT A 9
+		{
+			A_Print("1/3");
+			A_FireProjectile("FlakGrenade");
+			A_GunFlash;
+		}
+		ASLT B 3 A_Print("0/3");
+		SHTG B 4;
+		ASLT B 5;
+		Goto Ready;
+		
+	Zoom:
+		ASLT A 1
+			{
+				if(!invoker.Aiming)
+				{
+					A_ZoomFactor(3.0);
+					invoker.Aiming = True;
+				}
+				else
+				{
+					A_ZoomFactor(1.0);
+					invoker.Aiming = False;
+				}
+			}
+		ASLT A 5;
+		Goto Ready;
 
     Flash:
-        SHTF A 3 Bright A_Light1;
-        SHTF B 3 Bright A_Light2;
+        ASLF A 3 Bright A_Light1;
+        ASLF B 3 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
-        SHOT A -1;
+        ASRQ A -1;
         Stop;
     }
 }
@@ -5377,8 +5427,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.ViewBobSpeed 20;
         Player.StartItem "Clip", 100;
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
-        Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol";
-        Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun", "StreetSweeperShotgun";
+        Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol", "SimpleRifle";
+        Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun";
         // Slot 4 includes the M4A1, bolt-action Hunter Rifle, heavy chaingun, compact SMG and M60.
         Player.WeaponSlot 4, "TacticalM4A1", "HunterRifle", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
         Player.WeaponSlot 5, "RecoilRocketLauncher";
@@ -5413,12 +5463,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             GiveInventory("RecoilPistol", 1, true);
             GiveInventory("ServiceRevolver", 1, true);
             GiveInventory("OfficerVulkanPistol", 1, true);
+			GiveInventory("SimpleRifle", 1, true);
 
             // Slot 3
             GiveInventory("RecoilShotgun", 1, true);
             GiveInventory("FastRecoilSSG", 1, true);
             GiveInventory("SemiAutoShotgun", 1, true);
-            GiveInventory("StreetSweeperShotgun", 1, true);
 
             // Slot 4
             GiveInventory("TacticalM4A1", 1, true);
@@ -6406,7 +6456,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 0.98; scaleY = 1.10; offsetY = 0.8; sway = 0.96;
         }
-        else if (cls == "StreetSweeperShotgun")
+        else if (cls == "SimpleRifle")
         {
             scaleX = 1.00; scaleY = 1.12; offsetY = 0.9; sway = 0.98;
         }
@@ -7130,7 +7180,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (FindInventory("ServiceRevolver")) count++;
         if (FindInventory("OfficerVulkanPistol")) count++;
         if (FindInventory("RecoilShotgun")) count++;
-        if (FindInventory("StreetSweeperShotgun")) count++;
+        if (FindInventory("SimpleRifle")) count++;
         if (FindInventory("FastRecoilSSG")) count++;
         if (FindInventory("TacticalM4A1")) count++;
         if (FindInventory("HunterRifle")) count++;
@@ -7165,9 +7215,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (pick == 1) selected = "RecoilShotgun";
             else pick--;
         }
-        if (selected == "" && FindInventory("StreetSweeperShotgun"))
+        if (selected == "" && FindInventory("SimpleRifle"))
         {
-            if (pick == 1) selected = "StreetSweeperShotgun";
+            if (pick == 1) selected = "SimpleRifle";
             else pick--;
         }
         if (selected == "" && FindInventory("FastRecoilSSG"))
@@ -8363,7 +8413,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "StreetSweeperShotgun") hudWeaponName = "STREET SWEEPER";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -9875,7 +9925,7 @@ class TacticalZombieDrop : Actor
             }
             else
             {
-                drop = Spawn("Clip", Pos);
+                drop = Spawn("SimpleRifle", Pos);
             }
 
             if (drop)
@@ -10416,5 +10466,3 @@ class TLH_DoomguyElite : Actor
         Stop;
     }
 }
-
-
