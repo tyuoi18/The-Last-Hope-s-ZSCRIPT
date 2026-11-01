@@ -5218,7 +5218,7 @@ class TLHBlueRiflePower : Inventory
     }
 }
 
-// TLH HOTFIX: GZDOOM_4_14_2_STATE_RETURNS_FIXED_20261101
+// TLH HOTFIX: GZDOOM_4_14_2_TYPED_STATE_RETURNS_20261101
 // First-tier precision rifle. On the 150-kill blue unlock, M1/M2/R switch
 // to overpowered GaussSlug attacks that consume Cell (plasma) only.
 class SimpleRifle : Weapon
@@ -5333,8 +5333,9 @@ class SimpleRifle : Weapon
             A_SetPitch(pitch - 5.5, SPF_INTERPOLATE);
             A_Recoil(5.5);
             A_Quake(3, 7, 0, 180);
-            return null; // action state: continue with the next frame
+            return ResolveState("BlueFireRecovery");
         }
+    BlueFireRecovery:
         ASLT B 3 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
         ASLT A 4 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
         Goto Ready;
@@ -5382,8 +5383,9 @@ class SimpleRifle : Weapon
             A_SetPitch(pitch - 9.0, SPF_INTERPOLATE);
             A_Recoil(8.0);
             A_Quake(5, 11, 0, 260);
-            return null; // action state: continue with the next frame
+            return ResolveState("BlueAltRecovery");
         }
+    BlueAltRecovery:
         ASLT B 6 A_WeaponOffset(0, 46, WOF_INTERPOLATE);
         ASLT A 10 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
@@ -5404,8 +5406,9 @@ class SimpleRifle : Weapon
             if (!infinite)
                 A_TakeInventory("RocketAmmo", 3, TIF_NOTAKEINFINITE);
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            return null; // success: do not jump away from the flak animation
+            return ResolveState("SimpleFlakVolley");
         }
+    SimpleFlakVolley:
         ASLT A 4 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
         ASLT B 4
         {
@@ -5432,8 +5435,9 @@ class SimpleRifle : Weapon
             if (!infinite)
                 A_TakeInventory("Cell", 24, TIF_NOTAKEINFINITE);
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            return null; // success: continue to the charged rail burst
+            return ResolveState("BlueOverdriveCharge");
         }
+    BlueOverdriveCharge:
         ASLT A 8 A_WeaponOffset(0, 43, WOF_INTERPOLATE);
         ASLT B 7
         {
