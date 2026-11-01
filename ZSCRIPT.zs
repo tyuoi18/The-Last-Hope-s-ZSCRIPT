@@ -13,6 +13,8 @@ version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
+// Cosmetic reward threshold, credited per player (not per weapon).
+const TLH_BLUE_RIFLE_KILL_GOAL = 60;
 const TLH_STOWED_LAYER = 3; // dedicated folded-launcher overlay; keep PSP_FLASH (1) free
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -1392,7 +1394,9 @@ class RecoilPistol : Pistol replaces Pistol
         {
             A_GunFlash();
             A_FirePistol();
-            A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
+            A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
+            A_Recoil(0.65);
         }
         PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
@@ -1403,7 +1407,9 @@ class RecoilPistol : Pistol replaces Pistol
         {
             A_GunFlash();
             A_FirePistol();
-            A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
+            A_WeaponOffset(0, 35.5, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 0.85, SPF_INTERPOLATE);
+            A_Recoil(0.35);
         }
         PISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG A 0 A_ReFire;
@@ -2107,9 +2113,11 @@ class RecoilShotgun : Shotgun replaces Shotgun
         SHTG A 7
         {
             A_GunFlash();
-            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
             A_FireShotgun();
-            A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
+            A_Recoil(1.5);
+            A_Quake(1, 3, 0, 96);
         }
         SHTG BC 5;
         SHTG D 4;
@@ -3312,7 +3320,10 @@ class TacticalM4A1 : DoomWeapon
         }
         ZHGG A 2
         {
+            A_GunFlash();
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_WeaponOffset(0, 35, WOF_INTERPOLATE);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
         ZHGG B 1;
@@ -3323,7 +3334,10 @@ class TacticalM4A1 : DoomWeapon
         // Three-round burst. Each shot keeps the same readable A0/B0 animation.
         ZHGG A 2
         {
+            A_GunFlash();
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
         ZHGG B 1;
@@ -5185,123 +5199,284 @@ class ServiceRevolver : Weapon
 
 
 
+// Non-droppable 150-kill milestone reward: blue palette plus railgun-overdrive
+// ONLY for the SimpleRifle. No global weapon/player buff or screen tint.
+class TLHBlueRiflePower : Inventory
+{
+    Default
+    {
+        Inventory.MaxAmount 1;
+        Inventory.InterHubAmount 1;
+        +INVENTORY.UNDROPPABLE;
+        +INVENTORY.HUBPOWER;
+        Translation
+            "0:31=0:31",          // retain deep silhouettes
+            "32:79=192:207",      // body / warm details -> blue
+            "80:111=192:207",     // metal -> blue
+            "112:175=192:207",    // other accents -> blue
+            "176:255=192:207";    // highlights -> blue
+    }
+}
+
+// TLH HOTFIX: GZDOOM_4_14_2_TYPED_STATE_RETURNS_20261101
+// First-tier precision rifle. On the 150-kill blue unlock, M1/M2/R switch
+// to overpowered GaussSlug attacks that consume Cell (plasma) only.
 class SimpleRifle : Weapon
 {
-
-bool Aiming;
+    bool Aiming;
 
     Default
     {
         Weapon.SlotNumber 2;
         Weapon.SlotPriority 3.25;
         Weapon.SelectionOrder 325;
-        Weapon.Kickback 125;
+        Weapon.Kickback 70;
         Weapon.AmmoType1 "Clip";
-        Weapon.AmmoGive1 16;
+        Weapon.AmmoGive1 12;
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "Clip";
-		Weapon.AmmoGive2 16;
+        Weapon.AmmoGive2 0; // Never award the same ammo twice on pickup.
         Weapon.AmmoUse2 2;
         Inventory.PickupMessage "Picked up a Simple Rifle.";
+    }
+
+    // Blue mode must check Cells rather than the default Clip ammo. Otherwise
+    // GZDoom could reject blue shots with no bullets, even with ample plasma.
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (Owner && Owner.FindInventory("TLHBlueRiflePower"))
+        {
+            if (sv_infiniteammo || Owner.FindInventory("PowerInfiniteAmmo", true))
+                return true;
+
+            // M1 = 6 cells; M2 = 16 cells. EitherFire is used for selection.
+            int needed = (fireMode == AltFire) ? 16 : 6;
+            return Owner.CountInv("Cell") >= needed;
+        }
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
     {
     Ready:
         PISG A 0;
-
     TLHPickupReadyShim:
         ASLT A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
         }
-        ASLT A 1 A_WeaponReady(WRF_ALLOWRELOAD);
-        Loop;
-
-    Deselect:
-        ASLT A 1 A_Lower;
+        ASLT A 1
+        {
+            double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.25;
+            A_OverlayOffset(PSP_WEAPON, sway, 32 + cos(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.18, 0);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
+        }
         Loop;
 
     Select:
-        ASLT A 1
+        ASLT A 1 A_Raise;
+        Loop;
+
+    Deselect:
+        ASLT A 0
         {
-            A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
-            A_Raise();
+            invoker.Aiming = false;
+            A_ZoomFactor(1.0, ZOOM_INSTANT);
         }
+        ASLT A 1 A_Lower;
         Loop;
 
     Fire:
-        ASLT A 5 A_GunFlash;
-        ASLT B 5
+        ASLT A 0
         {
-            A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
-            A_Recoil(1.5);
+            if (player.mo && player.mo.FindInventory("TLHBlueRiflePower"))
+                return ResolveState("BlueFire");
+            return ResolveState(null);
         }
-        ASLT A 7 A_ReFire;
+        ASLT A 2 A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+        ASLT B 3
+        {
+            A_GunFlash();
+            if (invoker.Aiming)
+                A_FireBullets(0.65, 0.45, 1, 8, "BulletPuff");
+            else
+                A_FireBullets(2.2, 1.25, 1, 8, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 0.85, SPF_INTERPOLATE);
+            A_Recoil(0.8);
+        }
+        ASLT A 2 A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+        ASLT A 3 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
+        Goto Ready;
+
+    // M1 blue: heavy, fast GaussSlug beam. Manual Cell cost avoids spending
+    // Clip and avoids double-charging AmmoType1 on A_FireProjectile.
+    BlueFire:
+        ASLT A 2 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT B 4
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("Cell") < 6)
+            {
+                A_Print("BLUE RIFLE: NEED 6 PLASMA CELLS");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("Cell", 6, TIF_NOTAKEINFINITE);
+            A_GunFlash();
+            A_FireProjectile("GaussSlug", useammo: false);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 49, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 5.5, SPF_INTERPOLATE);
+            A_Recoil(5.5);
+            A_Quake(3, 7, 0, 180);
+            return ResolveState("BlueFireRecovery");
+        }
+    BlueFireRecovery:
+        ASLT B 3 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
+        ASLT A 4 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
         Goto Ready;
 
     AltFire:
-        SHTG B 2
-		{
-            A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
-            A_StartSound("weapons/sshotf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(2.0);
+        ASLT A 0
+        {
+            if (player.mo && player.mo.FindInventory("TLHBlueRiflePower"))
+                return ResolveState("BlueAltFire");
+            return ResolveState(null);
         }
-        SHTG C 4;
-        ASLT B 5;
-		
-        ASLT A 5;
+        ASLT A 2 A_WeaponOffset(0, 33, WOF_INTERPOLATE);
+        ASLT B 5
+        {
+            A_GunFlash();
+            A_FireBullets(0.2, 0.12, 1, 13, "BulletPuff");
+            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 1.65, SPF_INTERPOLATE);
+            A_Recoil(1.5);
+        }
+        ASLT B 4 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT A 9 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
-		
-	Reload:
-		ASLT A 3 A_GunFlash;
-		ASLT A 9
-		{
-			A_Print("3/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT A 9
-		{
-			A_Print("2/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT A 9
-		{
-			A_Print("1/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT B 3 A_Print("0/3");
-		SHTG B 4;
-		ASLT B 5;
-		Goto Ready;
-		
-	Zoom:
-		ASLT A 1
-			{
-				if(!invoker.Aiming)
-				{
-					A_ZoomFactor(3.0);
-					invoker.Aiming = True;
-				}
-				else
-				{
-					A_ZoomFactor(1.0);
-					invoker.Aiming = False;
-				}
-			}
-		ASLT A 5;
-		Goto Ready;
+
+    // M2 blue: twin GaussSlugs, slight angular divergence for crowd clearing.
+    BlueAltFire:
+        ASLT A 5 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT B 6
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("Cell") < 16)
+            {
+                A_Print("BLUE RIFLE: NEED 16 PLASMA CELLS");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("Cell", 16, TIF_NOTAKEINFINITE);
+            A_GunFlash();
+            A_FireProjectile("GaussSlug", -1.5, false);
+            A_FireProjectile("GaussSlug", 1.5, false);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 57, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 9.0, SPF_INTERPOLATE);
+            A_Recoil(8.0);
+            A_Quake(5, 11, 0, 260);
+            return ResolveState("BlueAltRecovery");
+        }
+    BlueAltRecovery:
+        ASLT B 6 A_WeaponOffset(0, 46, WOF_INTERPOLATE);
+        ASLT A 10 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    // R is a limited, high-cost special, NOT a free grenade reload.
+    Reload:
+        ASLT A 0
+        {
+            if (player.mo && player.mo.FindInventory("TLHBlueRiflePower"))
+                return ResolveState("BlueOverdrive");
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("RocketAmmo") < 3)
+            {
+                A_Print("SIMPLE RIFLE: 3 ROCKET AMMO NEEDED FOR FLAK SALVO");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("RocketAmmo", 3, TIF_NOTAKEINFINITE);
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            return ResolveState("SimpleFlakVolley");
+        }
+    SimpleFlakVolley:
+        ASLT A 4 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT B 4
+        {
+            A_FireProjectile("FlakGrenade", -5);
+            A_GunFlash();
+        }
+        ASLT B 4 A_FireProjectile("FlakGrenade", 0);
+        ASLT B 4 A_FireProjectile("FlakGrenade", 5);
+        ASLT A 6 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    // R blue: expensive triple GaussSlug fan. Unlike the basic rifle's
+    // flak salvo, the unlocked rifle uses plasma exclusively for all attacks.
+    BlueOverdrive:
+        ASLT A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("Cell") < 24)
+            {
+                A_Print("BLUE RIFLE: NEED 24 PLASMA CELLS FOR OVERDRIVE");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("Cell", 24, TIF_NOTAKEINFINITE);
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            return ResolveState("BlueOverdriveCharge");
+        }
+    BlueOverdriveCharge:
+        ASLT A 8 A_WeaponOffset(0, 43, WOF_INTERPOLATE);
+        ASLT B 7
+        {
+            A_GunFlash();
+            A_FireProjectile("GaussSlug", -3, false);
+            A_FireProjectile("GaussSlug", 0, false);
+            A_FireProjectile("GaussSlug", 3, false);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 62, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 12.0, SPF_INTERPOLATE);
+            A_Recoil(10.0);
+            A_Quake(6, 14, 0, 320);
+        }
+        ASLT B 8 A_WeaponOffset(0, 44, WOF_INTERPOLATE);
+        ASLT A 13 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    Zoom:
+        ASLT A 1
+        {
+            if (!invoker.Aiming)
+            {
+                invoker.Aiming = true;
+                A_ZoomFactor(1.75, ZOOM_INSTANT);
+                A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            }
+            else
+            {
+                invoker.Aiming = false;
+                A_ZoomFactor(1.0, ZOOM_INSTANT);
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+            }
+        }
+        ASLT A 3;
+        Goto Ready;
 
     Flash:
-        ASLF A 3 Bright A_Light1;
-        ASLF B 3 Bright A_Light2;
+        ASLF A 2 Bright A_Light1;
+        ASLF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
@@ -5312,12 +5487,10 @@ bool Aiming;
 
 
 
-
-
-
-
 class TacticalPlayer : DoomPlayer replaces DoomPlayer
 {
+    // Progress for the purely cosmetic blue SimpleRifle reward.
+    int tlhBlueRifleKills;
     int jumpCount;
     int slideCooldown;
     int fallTicks;
@@ -6209,7 +6382,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!isFlashPSP && (isWeaponPSP || isDualPSP))
         {
             let weaponDefault = GetDefaultByType(weapon.GetClass());
-            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
+            let blueRiflePalette = GetDefaultByType("TLHBlueRiflePower");
+            if (weapon is "SimpleRifle" && FindInventory("TLHBlueRiflePower") && blueRiflePalette)
+                psp.Translation = blueRiflePalette.Translation;
+            else
+                psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
@@ -7626,6 +7803,15 @@ class TacticalHUDHandler : EventHandler
     String hudModeName;
     String hudWeaponName;
     int hudMapTime;
+    int hudBlueRifleKills;
+    bool hudBlueRifleEquipped;
+    bool hudBlueRifleUnlocked;
+    bool hudBlueRifleBlocked;
+    String hudWeaponActionHint;
+    String hudWeaponAmmoHint;
+    String hudWeaponWarning;
+    int hudDualCooldown;
+    int hudSlideCooldown;
     int hudPlayerHealth;
     int hudArmor;
     int hudArmorMax;
@@ -7730,6 +7916,44 @@ class TacticalHUDHandler : EventHandler
         // observes the configured binding.
     }
 
+
+      // A single lifetime milestone per player. Only actual hostile monster deaths
+    // with a player damage source count; environmental/monster kills do not.
+    override void WorldThingDied(WorldEvent e)
+    {
+        if (!e.Thing || !e.Thing.bIsMonster || e.Thing.bFriendly)
+            return;
+
+        // WorldThingDied exposes the killing source through the victim's
+        // target; DamageSource is a WorldThingDamaged field, not reliable here.
+        Actor killer = e.Thing.target;
+        if ((!killer || !killer.player) && e.Inflictor &&
+            e.Inflictor.target && e.Inflictor.target.player)
+            killer = e.Inflictor.target;
+
+        let marine = TacticalPlayer(killer);
+        if (!marine || marine.Health <= 0 || marine.FindInventory("TLHBlueRiflePower"))
+            return;
+
+        let mode = CVar.FindCVar("tlh_gamemode");
+        if (mode && mode.GetInt() == 18) return; // Honor No Powerups mode.
+
+        marine.tlhBlueRifleKills++;
+        if (marine.tlhBlueRifleKills >= TLH_BLUE_RIFLE_KILL_GOAL)
+        {
+            marine.GiveInventory("TLHBlueRiflePower", 1);
+            marine.A_StartSound("BLUAS", CHAN_ITEM, CHANF_UI, 1.0, ATTN_NONE);
+            marine.A_Print("V.T COMBAT INTERFACE: BLUE RAIL UNLOCKED! SIMPLE RIFLE NOW USES PLASMA");
+        }
+        else if (marine.tlhBlueRifleKills == 1 ||
+                 marine.tlhBlueRifleKills % 10 == 0 ||
+                 marine.tlhBlueRifleKills == TLH_BLUE_RIFLE_KILL_GOAL - 1)
+        {
+            marine.A_Print(String.Format("V.T BLUE RAIL: %d/%d KILLS // %d REMAINING",
+                marine.tlhBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL,
+                TLH_BLUE_RIFLE_KILL_GOAL - marine.tlhBlueRifleKills));
+        }
+    }
 
     override void WorldThingSpawned(WorldEvent e){
         if (!e.Thing) return;
@@ -8251,6 +8475,12 @@ class TacticalHUDHandler : EventHandler
         hudOnGround = true;
         hudWeaponName = "NONE";
         hudModeName = "TACTICAL STANDARD";
+        hudWeaponActionHint = "";
+        hudWeaponAmmoHint = "";
+        hudWeaponWarning = "";
+        hudDualCooldown = 0;
+        hudSlideCooldown = 0;
+        hudBlueRifleBlocked = false;
 
         // Rebuild the helmet analyzer cache in play context.
         tlhVisorActive = false;
@@ -8323,13 +8553,22 @@ class TacticalHUDHandler : EventHandler
         hudWeaponFlip = false;
         hudWeaponStateScale = (1.0, 1.0);
         hudWeaponTranslation = 0;
+        hudBlueRifleKills = 0;
+        hudBlueRifleEquipped = false;
+        hudBlueRifleUnlocked = p.FindInventory("TLHBlueRiflePower") != null;
 
         UpdateTLHDoomguyFace(p);
         tlhVisorPlayerDead = (p.player.playerstate == PST_DEAD);
         tlhVisorActive = p.FindInventory("PowerInvulnerable") != null;
 
         let tpState = TacticalPlayer(p);
-        if (tpState) tlhHUDDualActive = tpState.tlhDualWieldActive;
+        if (tpState)
+        {
+            tlhHUDDualActive = tpState.tlhDualWieldActive;
+            hudBlueRifleKills = tpState.tlhBlueRifleKills;
+            hudDualCooldown = max(0, tpState.akimboCooldown);
+            hudSlideCooldown = max(0, tpState.slideCooldown);
+        }
 
         hudPlayerHealth = max(0, p.Health);
         hudFOV = clamp(double(p.player.FOV), 20.0, 160.0);
@@ -8340,6 +8579,7 @@ class TacticalHUDHandler : EventHandler
         let hudModeCvar = CVar.FindCVar("tlh_gamemode");
         int hudModeValue = hudModeCvar ? hudModeCvar.GetInt() : 0;
         hudModeName = GetGameModeName(clamp(hudModeValue, 0, 33));
+        hudBlueRifleBlocked = (hudModeValue == 18);
         UpdateAimTarget(p);
 
         let armor = BasicArmor(p.FindInventory("BasicArmor"));
@@ -8361,6 +8601,12 @@ class TacticalHUDHandler : EventHandler
         Weapon ready = p.player.ReadyWeapon;
         if (ready)
         {
+            hudBlueRifleEquipped = (ready is "SimpleRifle");
+            if (hudBlueRifleEquipped && hudBlueRifleUnlocked)
+            {
+                let bluePalette = GetDefaultByType("TLHBlueRiflePower");
+                if (bluePalette) hudWeaponTranslation = int(bluePalette.Translation);
+            }
             tlhVisorWeaponClass = ready.GetClassName();
 
             if (ready is "FastRecoilSSG")
@@ -8408,12 +8654,105 @@ class TacticalHUDHandler : EventHandler
                 let chaingun = HeavyChaingun(ready);
                 if (chaingun) hudWeaponHeat = chaingun.heat;
             }
+
+            // Sample weapon mechanics in play context: UI reads cached text
+            // instead of querying live weapons or player inventory.
+            if (ready is "SimpleRifle")
+            {
+                if (hudBlueRifleUnlocked)
+                {
+                    hudWeaponActionHint = "BLUE: M1 6 CEL | M2 16 CEL | R 24 CEL";
+                    hudWeaponAmmoHint = String.Format("CEL %d  |  SHOTS M1:%d M2:%d R:%d",
+                        hudCell, hudCell / 6, hudCell / 16, hudCell / 24);
+                    if (hudCell < 6)
+                        hudWeaponWarning = "NO PLASMA: GET AT LEAST 6 CELLS";
+                    else if (hudCell < 16)
+                        hudWeaponWarning = "M1 ONLY: NEED 16 CELLS FOR M2";
+                    else if (hudCell < 24)
+                        hudWeaponWarning = "OVERDRIVE R LOCKED: NEED 24 CELLS";
+                    else
+                        hudWeaponWarning = "BLUE RAIL: ALL MODES AVAILABLE";
+                }
+                else
+                {
+                    hudWeaponActionHint = "M1 1 BUL | M2 2 BUL | R 3 RCK";
+                    hudWeaponAmmoHint = String.Format("BUL %d | RCK %d | M1 SHOTS %d",
+                        hudClip, hudRocket, hudClip);
+                    if (hudClip < 1)
+                        hudWeaponWarning = "NO BULLETS: COLLECT CLIPS";
+                    else if (hudClip < 2)
+                        hudWeaponWarning = "PRECISION M2 NEEDS 2 BULLETS";
+                    else if (hudRocket < 3)
+                        hudWeaponWarning = "FLAK R NEEDS 3 ROCKET AMMO";
+                    else
+                        hudWeaponWarning = "SIMPLE RIFLE: ALL MODES AVAILABLE";
+                }
+            }
+            else if (ready is "ServiceRevolver")
+            {
+                hudWeaponActionHint = "REVOLVER: M1 FIRE | R RELOAD";
+                hudWeaponAmmoHint = String.Format("CYLINDER %d/6 | RESERVE %d",
+                    hudRevolverAmmo, hudClip);
+                if (hudRevolverAmmo <= 0)
+                    hudWeaponWarning = hudClip > 0 ? "CYLINDER EMPTY: PRESS R" : "EMPTY: FIND BULLETS";
+            }
+            else if (ready is "HunterRifle")
+            {
+                hudWeaponActionHint = "HUNTER: M1 FIRE | R RELOAD";
+                hudWeaponAmmoHint = String.Format("MAGAZINE %d/5 | RESERVE %d",
+                    hudHunterAmmo, hudClip);
+                if (hudHunterAmmo <= 0)
+                    hudWeaponWarning = hudClip > 0 ? "MAGAZINE EMPTY: PRESS R" : "EMPTY: FIND BULLETS";
+            }
+            else if (ready is "RecoilPistol")
+            {
+                let pistol = RecoilPistol(ready);
+                hudWeaponActionHint = pistol && pistol.fullAuto ? "PISTOL: FULL AUTO | R SEMI" : "PISTOL: SEMI | R AUTO";
+                hudWeaponAmmoHint = String.Format("BULLETS %d | M1 SHOTS %d", hudClip, hudClip);
+                if (hudClip < 1) hudWeaponWarning = "EMPTY: FIND BULLETS";
+            }
+            else if (ready is "RecoilShotgun")
+            {
+                let shotgun = RecoilShotgun(ready);
+                hudWeaponActionHint = shotgun && shotgun.overdrive ? "SHOTGUN: OVERDRIVE | R STANDARD" : "SHOTGUN: STANDARD | R OVERDRIVE";
+                hudWeaponAmmoHint = String.Format("SHELLS %d | SHOTS %d", hudShell, hudShell);
+                if (hudShell < 1) hudWeaponWarning = "EMPTY: FIND SHOTGUN SHELLS";
+            }
+            else if (ready is "TacticalM4A1")
+            {
+                let m4 = TacticalM4A1(ready);
+                hudWeaponActionHint = m4 && m4.burstMode ? "M4A1: BURST x3 | R AUTO" : "M4A1: FULL AUTO | R BURST";
+                hudWeaponAmmoHint = String.Format("BUL %d | RCK %d | BURSTS %d",
+                    hudClip, hudRocket, hudClip / 3);
+                if (hudClip < 1) hudWeaponWarning = "EMPTY: NEED CLIP AMMO";
+                else if (m4 && m4.burstMode && hudClip < 3)
+                    hudWeaponWarning = "BURST NEEDS 3 BULLETS";
+            }
+            else if (ready is "HeavyChaingun")
+            {
+                hudWeaponActionHint = "CHAINGUN: HEAT / COOLING";
+                hudWeaponAmmoHint = String.Format("BULLETS %d | HEAT %d/300",
+                    hudClip, hudWeaponHeat);
+                if (hudClip < 1) hudWeaponWarning = "EMPTY: NEED CLIP AMMO";
+                else if (hudWeaponHeat >= 250) hudWeaponWarning = "HIGH HEAT: LET THE GUN COOL";
+            }
+            else if (ready.Ammo1 && ready.AmmoUse1 > 0)
+            {
+                // General-purpose shot counter for other ammunition-fed weapons.
+                int available = ready.Ammo1.Amount;
+                int cost = max(1, ready.AmmoUse1);
+                hudWeaponActionHint = String.Format("M1 COST: %d AMMO PER SHOT", cost);
+                hudWeaponAmmoHint = String.Format("AMMO %d | M1 SHOTS LEFT %d",
+                    available, available / cost);
+                if (available < cost) hudWeaponWarning = "OUT OF AMMO: FIND MORE SUPPLIES";
+            }
+
 if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "ServiceRevolver") hudWeaponName = "SERVICE REVOLVER";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = hudBlueRifleUnlocked ? "SIMPLE RIFLE / BLUE RAIL" : "SIMPLE RIFLE";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -8849,7 +9188,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Corner(12, 349, 1, -1, gasket, 150);
         Corner(628, 349, -1, -1, gasket, 150);
 
-        Text("YRB / SHELL", 23, 246, dim, 0.22);
+        Text("V.T / SHELL", 23, 246, dim, 0.22);
         TextR("HUD-SEAL", 617, 246, dim, 0.22);
         Text("03", 23, 259, steel, 0.22);
         TextR("04", 617, 259, steel, 0.22);
@@ -8866,9 +9205,22 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Color steel = 0x778185;
         Color warn = 0xB9A875;
 
-        Text("YARBIS", 25, 17, main, 0.43);
+        Text("V.T Combat Interface", 25, 17, main, 0.29);
         Text("HELMET // INTERNAL", 25, 29, dim, 0.24);
+        // Visible with ANY weapon, not just while holding the SimpleRifle.
         Text(hudMapName, 25, 40, steel, 0.25);
+        if (hudBlueRifleUnlocked)
+            Text("BLUE RAIL: UNLOCKED", 25, 52, 0x66B9F2, 0.22);
+        else if (hudBlueRifleBlocked)
+            Text("BLUE RAIL: DISABLED IN THIS MODE", 25, 52, warn, 0.20);
+        else
+            Text(String.Format("BLUE RAIL %d/%d  |  %d KILLS LEFT",
+                min(hudBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL),
+                TLH_BLUE_RIFLE_KILL_GOAL,
+                max(0, TLH_BLUE_RIFLE_KILL_GOAL - hudBlueRifleKills)),
+                25, 52, warn, 0.22);
+        SegBar(25, 63, 164, hudBlueRifleUnlocked ? TLH_BLUE_RIFLE_KILL_GOAL : hudBlueRifleKills,
+            TLH_BLUE_RIFLE_KILL_GOAL, 12, hudBlueRifleUnlocked ? 0x66B9F2 : 0xB9A875);
 
         TextC("NEURAL VISOR", 320, 17, dim, 0.25);
         TextC("SYSTEM LINK // 100%", 320, 28, main, 0.25);
@@ -9116,6 +9468,14 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             profileY = 1.12;
             accentStrength = 1.06;
         }
+        else if (cls == "SimpleRifle" && hudBlueRifleUnlocked)
+        {
+            // Match the actual procedurally palette-translated first-person
+            // weapon instead of requiring a separate blue sprite sheet.
+            primary = 0x66B9F2;
+            secondary = 0x215D9C;
+            accentStrength = 1.15;
+        }
         else if (cls == "RecoilPistol")
         {
             primary = 0x8B9693;
@@ -9329,6 +9689,31 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
     // ========================================================================
     // LOWER RIGHT // ARMAMENT + THREAT
     // ========================================================================
+
+
+    // Persistent, non-center-obscuring armament diagnostics. Cached in
+    // WorldTick so UI code never reads play-scoped weapon data.
+    ui void DrawWeaponDiagnostics()
+    {
+        Color main = 0x61C6B1;
+        Color steel = 0x778185;
+        Color warn = 0xD3B35B;
+
+        Panel(174, 262, 264, 43, 0x24443F, 100);
+        Text("V.T // WEAPON STATUS", 182, 266, main, 0.22);
+        if (hudDualCooldown > 0 || hudSlideCooldown > 0)
+            TextR(String.Format("DUAL %d | SLIDE %d TICS",
+                hudDualCooldown, hudSlideCooldown), 431, 266, warn, 0.19);
+        if (hudWeaponActionHint != "")
+            Text(hudWeaponActionHint, 182, 277, Font.CR_WHITE, 0.21);
+        if (hudWeaponAmmoHint != "")
+            Text(hudWeaponAmmoHint, 182, 288, steel, 0.21);
+
+        if (hudWeaponWarning != "")
+            Text(hudWeaponWarning, 182, 298, warn, 0.20);
+        else
+            Text("STATUS: CHECK MODE / AMMO ABOVE", 182, 298, main, 0.20);
+    }
 
     ui void DrawCombat()
     {
@@ -9594,6 +9979,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawVitals();
         DrawPowerupTimers();
         DrawCombat();
+        DrawWeaponDiagnostics();
         DrawHelmetGlassDetail();
         DrawFaceNode();
         DrawPeripheralAnalyzer(e);
@@ -9925,7 +10311,8 @@ class TacticalZombieDrop : Actor
             }
             else
             {
-                drop = Spawn("SimpleRifle", Pos);
+                // 35% rifle acquisition on the opening map; otherwise normal ammo.
+                drop = Spawn(random(1, 100) <= 35 ? "SimpleRifle" : "Clip", Pos);
             }
 
             if (drop)
