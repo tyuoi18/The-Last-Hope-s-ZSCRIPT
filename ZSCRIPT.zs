@@ -5199,8 +5199,8 @@ class ServiceRevolver : Weapon
 
 
 
-// Cosmetic, non-droppable milestone reward. It has no damage or screen-tint effect.
-// Only the SimpleRifle PSprite uses the translation below.
+// Non-droppable 150-kill milestone reward: blue palette plus railgun-overdrive
+// ONLY for the SimpleRifle. No global weapon/player buff or screen tint.
 class TLHBlueRiflePower : Inventory
 {
     Default
@@ -5218,8 +5218,8 @@ class TLHBlueRiflePower : Inventory
     }
 }
 
-// First-tier precision rifle: economical one-round fire, deliberate two-round
-// precision shot (M2), optional zoom (M3), and an expensive 3-flak salvo (R).
+// First-tier precision rifle. On the 150-kill blue unlock, M1/M2/R switch
+// to overpowered GaussSlug attacks that consume Cell (plasma) only.
 class SimpleRifle : Weapon
 {
     bool Aiming;
@@ -5237,6 +5237,22 @@ class SimpleRifle : Weapon
         Weapon.AmmoGive2 0; // Never award the same ammo twice on pickup.
         Weapon.AmmoUse2 2;
         Inventory.PickupMessage "Picked up a Simple Rifle.";
+    }
+
+    // Blue mode must check Cells rather than the default Clip ammo. Otherwise
+    // GZDoom could reject blue shots with no bullets, even with ample plasma.
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (Owner && Owner.FindInventory("TLHBlueRiflePower"))
+        {
+            if (sv_infiniteammo || Owner.FindInventory("PowerInfiniteAmmo", true))
+                return true;
+
+            // M1 = 6 cells; M2 = 16 cells. EitherFire is used for selection.
+            int needed = (fireMode == AltFire) ? 16 : 6;
+            return Owner.CountInv("Cell") >= needed;
+        }
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
@@ -5271,6 +5287,12 @@ class SimpleRifle : Weapon
         Loop;
 
     Fire:
+        ASLT A 0
+        {
+            if (player.mo && player.mo.FindInventory("TLHBlueRiflePower"))
+                return ResolveState("BlueFire");
+            return ResolveState(null);
+        }
         ASLT A 2 A_WeaponOffset(0, 35, WOF_INTERPOLATE);
         ASLT B 3
         {
@@ -5288,7 +5310,40 @@ class SimpleRifle : Weapon
         ASLT A 3 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
         Goto Ready;
 
+    // M1 blue: heavy, fast GaussSlug beam. Manual Cell cost avoids spending
+    // Clip and avoids double-charging AmmoType1 on A_FireProjectile.
+    BlueFire:
+        ASLT A 2 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT B 4
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("Cell") < 6)
+            {
+                A_Print("BLUE RIFLE: NEED 6 PLASMA CELLS");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("Cell", 6, TIF_NOTAKEINFINITE);
+            A_GunFlash();
+            A_FireProjectile("GaussSlug", useammo: false);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 49, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 5.5, SPF_INTERPOLATE);
+            A_Recoil(5.5);
+            A_Quake(3, 7, 0, 180);
+        }
+        ASLT B 3 A_WeaponOffset(0, 41, WOF_INTERPOLATE);
+        ASLT A 4 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
+        Goto Ready;
+
     AltFire:
+        ASLT A 0
+        {
+            if (player.mo && player.mo.FindInventory("TLHBlueRiflePower"))
+                return ResolveState("BlueAltFire");
+            return ResolveState(null);
+        }
         ASLT A 2 A_WeaponOffset(0, 33, WOF_INTERPOLATE);
         ASLT B 5
         {
@@ -5303,10 +5358,39 @@ class SimpleRifle : Weapon
         ASLT A 9 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
+    // M2 blue: twin GaussSlugs, slight angular divergence for crowd clearing.
+    BlueAltFire:
+        ASLT A 5 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT B 6
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("Cell") < 16)
+            {
+                A_Print("BLUE RIFLE: NEED 16 PLASMA CELLS");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("Cell", 16, TIF_NOTAKEINFINITE);
+            A_GunFlash();
+            A_FireProjectile("GaussSlug", -1.5, false);
+            A_FireProjectile("GaussSlug", 1.5, false);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 57, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 9.0, SPF_INTERPOLATE);
+            A_Recoil(8.0);
+            A_Quake(5, 11, 0, 260);
+        }
+        ASLT B 6 A_WeaponOffset(0, 46, WOF_INTERPOLATE);
+        ASLT A 10 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
     // R is a limited, high-cost special, NOT a free grenade reload.
     Reload:
         ASLT A 0
         {
+            if (player.mo && player.mo.FindInventory("TLHBlueRiflePower"))
+                return ResolveState("BlueOverdrive");
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite && player.mo.CountInv("RocketAmmo") < 3)
@@ -5327,6 +5411,39 @@ class SimpleRifle : Weapon
         ASLT B 4 A_FireProjectile("FlakGrenade", 0);
         ASLT B 4 A_FireProjectile("FlakGrenade", 5);
         ASLT A 6 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    // R blue: expensive triple GaussSlug fan. Unlike the basic rifle's
+    // flak salvo, the unlocked rifle uses plasma exclusively for all attacks.
+    BlueOverdrive:
+        ASLT A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("Cell") < 24)
+            {
+                A_Print("BLUE RIFLE: NEED 24 PLASMA CELLS FOR OVERDRIVE");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("Cell", 24, TIF_NOTAKEINFINITE);
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+        }
+        ASLT A 8 A_WeaponOffset(0, 43, WOF_INTERPOLATE);
+        ASLT B 7
+        {
+            A_GunFlash();
+            A_FireProjectile("GaussSlug", -3, false);
+            A_FireProjectile("GaussSlug", 0, false);
+            A_FireProjectile("GaussSlug", 3, false);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 62, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 12.0, SPF_INTERPOLATE);
+            A_Recoil(10.0);
+            A_Quake(6, 14, 0, 320);
+        }
+        ASLT B 8 A_WeaponOffset(0, 44, WOF_INTERPOLATE);
+        ASLT A 13 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Zoom:
@@ -8508,7 +8625,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "SIMPLE RIFLE";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = hudBlueRifleUnlocked ? "SIMPLE RIFLE / BLUE RAIL" : "SIMPLE RIFLE";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -8966,7 +9083,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         if (hudBlueRifleEquipped)
         {
             if (hudBlueRifleUnlocked)
-                Text("BLUE FINISH // ONLINE", 25, 53, main, 0.22);
+                Text("BLUE RAIL // PLASMA CELLS", 25, 53, main, 0.22);
             else
                 Text(String.Format("BLUE FINISH %d/%d", hudBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL), 25, 53, warn, 0.22);
         }
