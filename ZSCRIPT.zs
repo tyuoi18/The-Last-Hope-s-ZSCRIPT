@@ -14,7 +14,7 @@ version "4.14"
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
 // Cosmetic reward threshold, credited per player (not per weapon).
-const TLH_BLUE_RIFLE_KILL_GOAL = 150;
+const TLH_BLUE_RIFLE_KILL_GOAL = 60;
 const TLH_STOWED_LAYER = 3; // dedicated folded-launcher overlay; keep PSP_FLASH (1) free
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -7806,6 +7806,12 @@ class TacticalHUDHandler : EventHandler
     int hudBlueRifleKills;
     bool hudBlueRifleEquipped;
     bool hudBlueRifleUnlocked;
+    bool hudBlueRifleBlocked;
+    String hudWeaponActionHint;
+    String hudWeaponAmmoHint;
+    String hudWeaponWarning;
+    int hudDualCooldown;
+    int hudSlideCooldown;
     int hudPlayerHealth;
     int hudArmor;
     int hudArmorMax;
@@ -7918,10 +7924,12 @@ class TacticalHUDHandler : EventHandler
         if (!e.Thing || !e.Thing.bIsMonster || e.Thing.bFriendly)
             return;
 
-        Actor killer = e.DamageSource;
-        if (!killer) killer = e.Thing.target;
-        if (killer && !killer.player && killer.bMISSILE && killer.target && killer.target.player)
-            killer = killer.target;
+        // WorldThingDied exposes the killing source through the victim's
+        // target; DamageSource is a WorldThingDamaged field, not reliable here.
+        Actor killer = e.Thing.target;
+        if ((!killer || !killer.player) && e.Inflictor &&
+            e.Inflictor.target && e.Inflictor.target.player)
+            killer = e.Inflictor.target;
 
         let marine = TacticalPlayer(killer);
         if (!marine || marine.Health <= 0 || marine.FindInventory("TLHBlueRiflePower"))
@@ -7935,7 +7943,15 @@ class TacticalHUDHandler : EventHandler
         {
             marine.GiveInventory("TLHBlueRiflePower", 1);
             marine.A_StartSound("BLUAS", CHAN_ITEM, CHANF_UI, 1.0, ATTN_NONE);
-            marine.A_Print("V.T COMBAT INTERFACE: BLUE RIFLE FINISH UNLOCKED");
+            marine.A_Print("V.T COMBAT INTERFACE: BLUE RAIL UNLOCKED! SIMPLE RIFLE NOW USES PLASMA");
+        }
+        else if (marine.tlhBlueRifleKills == 1 ||
+                 marine.tlhBlueRifleKills % 10 == 0 ||
+                 marine.tlhBlueRifleKills == TLH_BLUE_RIFLE_KILL_GOAL - 1)
+        {
+            marine.A_Print(String.Format("V.T BLUE RAIL: %d/%d KILLS // %d REMAINING",
+                marine.tlhBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL,
+                TLH_BLUE_RIFLE_KILL_GOAL - marine.tlhBlueRifleKills));
         }
     }
 
@@ -8459,6 +8475,12 @@ class TacticalHUDHandler : EventHandler
         hudOnGround = true;
         hudWeaponName = "NONE";
         hudModeName = "TACTICAL STANDARD";
+        hudWeaponActionHint = "";
+        hudWeaponAmmoHint = "";
+        hudWeaponWarning = "";
+        hudDualCooldown = 0;
+        hudSlideCooldown = 0;
+        hudBlueRifleBlocked = false;
 
         // Rebuild the helmet analyzer cache in play context.
         tlhVisorActive = false;
@@ -8544,6 +8566,8 @@ class TacticalHUDHandler : EventHandler
         {
             tlhHUDDualActive = tpState.tlhDualWieldActive;
             hudBlueRifleKills = tpState.tlhBlueRifleKills;
+            hudDualCooldown = max(0, tpState.akimboCooldown);
+            hudSlideCooldown = max(0, tpState.slideCooldown);
         }
 
         hudPlayerHealth = max(0, p.Health);
@@ -8555,6 +8579,7 @@ class TacticalHUDHandler : EventHandler
         let hudModeCvar = CVar.FindCVar("tlh_gamemode");
         int hudModeValue = hudModeCvar ? hudModeCvar.GetInt() : 0;
         hudModeName = GetGameModeName(clamp(hudModeValue, 0, 33));
+        hudBlueRifleBlocked = (hudModeValue == 18);
         UpdateAimTarget(p);
 
         let armor = BasicArmor(p.FindInventory("BasicArmor"));
@@ -8583,6 +8608,98 @@ class TacticalHUDHandler : EventHandler
                 if (bluePalette) hudWeaponTranslation = int(bluePalette.Translation);
             }
             tlhVisorWeaponClass = ready.GetClassName();
+
+            // Sample weapon mechanics in play context: UI reads cached text
+            // instead of querying live weapons or player inventory.
+            if (ready is "SimpleRifle")
+            {
+                if (hudBlueRifleUnlocked)
+                {
+                    hudWeaponActionHint = "BLUE: M1 6 CEL | M2 16 CEL | R 24 CEL";
+                    hudWeaponAmmoHint = String.Format("CEL %d  |  SHOTS M1:%d M2:%d R:%d",
+                        hudCell, hudCell / 6, hudCell / 16, hudCell / 24);
+                    if (hudCell < 6)
+                        hudWeaponWarning = "NO PLASMA: GET AT LEAST 6 CELLS";
+                    else if (hudCell < 16)
+                        hudWeaponWarning = "M1 ONLY: NEED 16 CELLS FOR M2";
+                    else if (hudCell < 24)
+                        hudWeaponWarning = "OVERDRIVE R LOCKED: NEED 24 CELLS";
+                    else
+                        hudWeaponWarning = "BLUE RAIL: ALL MODES AVAILABLE";
+                }
+                else
+                {
+                    hudWeaponActionHint = "M1 1 BUL | M2 2 BUL | R 3 RCK";
+                    hudWeaponAmmoHint = String.Format("BUL %d | RCK %d | M1 SHOTS %d",
+                        hudClip, hudRocket, hudClip);
+                    if (hudClip < 1)
+                        hudWeaponWarning = "NO BULLETS: COLLECT CLIPS";
+                    else if (hudClip < 2)
+                        hudWeaponWarning = "PRECISION M2 NEEDS 2 BULLETS";
+                    else if (hudRocket < 3)
+                        hudWeaponWarning = "FLAK R NEEDS 3 ROCKET AMMO";
+                    else
+                        hudWeaponWarning = "SIMPLE RIFLE: ALL MODES AVAILABLE";
+                }
+            }
+            else if (ready is "ServiceRevolver")
+            {
+                hudWeaponActionHint = "REVOLVER: M1 FIRE | R RELOAD";
+                hudWeaponAmmoHint = String.Format("CYLINDER %d/6 | RESERVE %d",
+                    hudRevolverAmmo, hudClip);
+                if (hudRevolverAmmo <= 0)
+                    hudWeaponWarning = hudClip > 0 ? "CYLINDER EMPTY: PRESS R" : "EMPTY: FIND BULLETS";
+            }
+            else if (ready is "HunterRifle")
+            {
+                hudWeaponActionHint = "HUNTER: M1 FIRE | R RELOAD";
+                hudWeaponAmmoHint = String.Format("MAGAZINE %d/5 | RESERVE %d",
+                    hudHunterAmmo, hudClip);
+                if (hudHunterAmmo <= 0)
+                    hudWeaponWarning = hudClip > 0 ? "MAGAZINE EMPTY: PRESS R" : "EMPTY: FIND BULLETS";
+            }
+            else if (ready is "RecoilPistol")
+            {
+                let pistol = RecoilPistol(ready);
+                hudWeaponActionHint = pistol && pistol.fullAuto ? "PISTOL: FULL AUTO | R SEMI" : "PISTOL: SEMI | R AUTO";
+                hudWeaponAmmoHint = String.Format("BULLETS %d | M1 SHOTS %d", hudClip, hudClip);
+                if (hudClip < 1) hudWeaponWarning = "EMPTY: FIND BULLETS";
+            }
+            else if (ready is "RecoilShotgun")
+            {
+                let shotgun = RecoilShotgun(ready);
+                hudWeaponActionHint = shotgun && shotgun.overdrive ? "SHOTGUN: OVERDRIVE | R STANDARD" : "SHOTGUN: STANDARD | R OVERDRIVE";
+                hudWeaponAmmoHint = String.Format("SHELLS %d | SHOTS %d", hudShell, hudShell);
+                if (hudShell < 1) hudWeaponWarning = "EMPTY: FIND SHOTGUN SHELLS";
+            }
+            else if (ready is "TacticalM4A1")
+            {
+                let m4 = TacticalM4A1(ready);
+                hudWeaponActionHint = m4 && m4.burstMode ? "M4A1: BURST x3 | R AUTO" : "M4A1: FULL AUTO | R BURST";
+                hudWeaponAmmoHint = String.Format("BUL %d | RCK %d | BURSTS %d",
+                    hudClip, hudRocket, hudClip / 3);
+                if (hudClip < 1) hudWeaponWarning = "EMPTY: NEED CLIP AMMO";
+                else if (m4 && m4.burstMode && hudClip < 3)
+                    hudWeaponWarning = "BURST NEEDS 3 BULLETS";
+            }
+            else if (ready is "HeavyChaingun")
+            {
+                hudWeaponActionHint = "CHAINGUN: HEAT / COOLING";
+                hudWeaponAmmoHint = String.Format("BULLETS %d | HEAT %d/300",
+                    hudClip, hudWeaponHeat);
+                if (hudClip < 1) hudWeaponWarning = "EMPTY: NEED CLIP AMMO";
+                else if (hudWeaponHeat >= 250) hudWeaponWarning = "HIGH HEAT: LET THE GUN COOL";
+            }
+            else if (ready.Ammo1 && ready.AmmoUse1 > 0)
+            {
+                // General-purpose shot counter for other ammunition-fed weapons.
+                int available = ready.Ammo1.Amount;
+                int cost = max(1, ready.AmmoUse1);
+                hudWeaponActionHint = String.Format("M1 COST: %d AMMO PER SHOT", cost);
+                hudWeaponAmmoHint = String.Format("AMMO %d | M1 SHOTS LEFT %d",
+                    available, available / cost);
+                if (available < cost) hudWeaponWarning = "OUT OF AMMO: FIND MORE SUPPLIES";
+            }
 
             if (ready is "FastRecoilSSG")
             {
@@ -9089,14 +9206,20 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
         Text("V.T Combat Interface", 25, 17, main, 0.29);
         Text("HELMET // INTERNAL", 25, 29, dim, 0.24);
-        if (hudBlueRifleEquipped)
-        {
-            if (hudBlueRifleUnlocked)
-                Text("BLUE RAIL // PLASMA CELLS", 25, 53, main, 0.22);
-            else
-                Text(String.Format("BLUE FINISH %d/%d", hudBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL), 25, 53, warn, 0.22);
-        }
+        // Visible with ANY weapon, not just while holding the SimpleRifle.
         Text(hudMapName, 25, 40, steel, 0.25);
+        if (hudBlueRifleUnlocked)
+            Text("BLUE RAIL: UNLOCKED", 25, 52, 0x66B9F2, 0.22);
+        else if (hudBlueRifleBlocked)
+            Text("BLUE RAIL: DISABLED IN THIS MODE", 25, 52, warn, 0.20);
+        else
+            Text(String.Format("BLUE RAIL %d/%d  |  %d KILLS LEFT",
+                min(hudBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL),
+                TLH_BLUE_RIFLE_KILL_GOAL,
+                max(0, TLH_BLUE_RIFLE_KILL_GOAL - hudBlueRifleKills)),
+                25, 52, warn, 0.22);
+        SegBar(25, 63, 164, hudBlueRifleUnlocked ? TLH_BLUE_RIFLE_KILL_GOAL : hudBlueRifleKills,
+            TLH_BLUE_RIFLE_KILL_GOAL, 12, hudBlueRifleUnlocked ? 0x66B9F2 : 0xB9A875);
 
         TextC("NEURAL VISOR", 320, 17, dim, 0.25);
         TextC("SYSTEM LINK // 100%", 320, 28, main, 0.25);
@@ -9558,6 +9681,31 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
     // LOWER RIGHT // ARMAMENT + THREAT
     // ========================================================================
 
+
+    // Persistent, non-center-obscuring armament diagnostics. Cached in
+    // WorldTick so UI code never reads play-scoped weapon data.
+    ui void DrawWeaponDiagnostics()
+    {
+        Color main = 0x61C6B1;
+        Color steel = 0x778185;
+        Color warn = 0xD3B35B;
+
+        Panel(174, 262, 264, 43, 0x24443F, 100);
+        Text("V.T // WEAPON STATUS", 182, 266, main, 0.22);
+        if (hudWeaponActionHint != "")
+            Text(hudWeaponActionHint, 182, 277, Font.CR_WHITE, 0.21);
+        if (hudWeaponAmmoHint != "")
+            Text(hudWeaponAmmoHint, 182, 288, steel, 0.21);
+
+        if (hudWeaponWarning != "")
+            Text(hudWeaponWarning, 182, 298, warn, 0.20);
+        else if (hudDualCooldown > 0 || hudSlideCooldown > 0)
+            Text(String.Format("COOLDOWNS: DUAL %d TICS | SLIDE %d TICS",
+                hudDualCooldown, hudSlideCooldown), 182, 298, warn, 0.20);
+        else
+            Text("READY // NO ACTIVE COOLDOWNS", 182, 298, main, 0.20);
+    }
+
     ui void DrawCombat()
     {
         Color main = 0x61C6B1;
@@ -9822,6 +9970,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawVitals();
         DrawPowerupTimers();
         DrawCombat();
+        DrawWeaponDiagnostics();
         DrawHelmetGlassDetail();
         DrawFaceNode();
         DrawPeripheralAnalyzer(e);
