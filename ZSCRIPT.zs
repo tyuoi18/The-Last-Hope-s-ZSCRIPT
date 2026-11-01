@@ -13,6 +13,8 @@ version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
+// Cosmetic reward threshold, credited per player (not per weapon).
+const TLH_BLUE_RIFLE_KILL_GOAL = 150;
 const TLH_STOWED_LAYER = 3; // dedicated folded-launcher overlay; keep PSP_FLASH (1) free
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -1392,7 +1394,9 @@ class RecoilPistol : Pistol replaces Pistol
         {
             A_GunFlash();
             A_FirePistol();
-            A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
+            A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
+            A_Recoil(0.65);
         }
         PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
@@ -1403,7 +1407,9 @@ class RecoilPistol : Pistol replaces Pistol
         {
             A_GunFlash();
             A_FirePistol();
-            A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
+            A_WeaponOffset(0, 35.5, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 0.85, SPF_INTERPOLATE);
+            A_Recoil(0.35);
         }
         PISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG A 0 A_ReFire;
@@ -2107,9 +2113,11 @@ class RecoilShotgun : Shotgun replaces Shotgun
         SHTG A 7
         {
             A_GunFlash();
-            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
             A_FireShotgun();
-            A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
+            A_Recoil(1.5);
+            A_Quake(1, 3, 0, 96);
         }
         SHTG BC 5;
         SHTG D 4;
@@ -3312,7 +3320,10 @@ class TacticalM4A1 : DoomWeapon
         }
         ZHGG A 2
         {
+            A_GunFlash();
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_WeaponOffset(0, 35, WOF_INTERPOLATE);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
         ZHGG B 1;
@@ -3323,7 +3334,10 @@ class TacticalM4A1 : DoomWeapon
         // Three-round burst. Each shot keeps the same readable A0/B0 animation.
         ZHGG A 2
         {
+            A_GunFlash();
             A_FireBullets(5.625, 0, 1, 5, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
         ZHGG B 1;
@@ -5185,22 +5199,42 @@ class ServiceRevolver : Weapon
 
 
 
+// Cosmetic, non-droppable milestone reward. It has no damage or screen-tint effect.
+// Only the SimpleRifle PSprite uses the translation below.
+class TLHBlueRiflePower : Inventory
+{
+    Default
+    {
+        Inventory.MaxAmount 1;
+        Inventory.InterHubAmount 1;
+        +INVENTORY.UNDROPPABLE;
+        +INVENTORY.HUBPOWER;
+        Translation
+            "0:31=0:31",          // retain deep silhouettes
+            "32:79=192:207",      // body / warm details -> blue
+            "80:111=192:207",     // metal -> blue
+            "112:175=192:207",    // other accents -> blue
+            "176:255=192:207";    // highlights -> blue
+    }
+}
+
+// First-tier precision rifle: economical one-round fire, deliberate two-round
+// precision shot (M2), optional zoom (M3), and an expensive 3-flak salvo (R).
 class SimpleRifle : Weapon
 {
-
-bool Aiming;
+    bool Aiming;
 
     Default
     {
         Weapon.SlotNumber 2;
         Weapon.SlotPriority 3.25;
         Weapon.SelectionOrder 325;
-        Weapon.Kickback 125;
+        Weapon.Kickback 70;
         Weapon.AmmoType1 "Clip";
-        Weapon.AmmoGive1 16;
+        Weapon.AmmoGive1 12;
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "Clip";
-		Weapon.AmmoGive2 16;
+        Weapon.AmmoGive2 0; // Never award the same ammo twice on pickup.
         Weapon.AmmoUse2 2;
         Inventory.PickupMessage "Picked up a Simple Rifle.";
     }
@@ -5209,99 +5243,114 @@ bool Aiming;
     {
     Ready:
         PISG A 0;
-
     TLHPickupReadyShim:
         ASLT A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
         }
-        ASLT A 1 A_WeaponReady(WRF_ALLOWRELOAD);
-        Loop;
-
-    Deselect:
-        ASLT A 1 A_Lower;
+        ASLT A 1
+        {
+            double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.25;
+            A_OverlayOffset(PSP_WEAPON, sway, 32 + cos(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.18, 0);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
+        }
         Loop;
 
     Select:
-        ASLT A 1
+        ASLT A 1 A_Raise;
+        Loop;
+
+    Deselect:
+        ASLT A 0
         {
-            A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
-            A_Raise();
+            invoker.Aiming = false;
+            A_ZoomFactor(1.0, ZOOM_INSTANT);
         }
+        ASLT A 1 A_Lower;
         Loop;
 
     Fire:
-        ASLT A 5 A_GunFlash;
-        ASLT B 5
+        ASLT A 2 A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+        ASLT B 3
         {
-            A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
-            A_Recoil(1.5);
+            A_GunFlash();
+            if (invoker.Aiming)
+                A_FireBullets(0.65, 0.45, 1, 8, "BulletPuff");
+            else
+                A_FireBullets(2.2, 1.25, 1, 8, "BulletPuff");
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 0.85, SPF_INTERPOLATE);
+            A_Recoil(0.8);
         }
-        ASLT A 7 A_ReFire;
+        ASLT A 2 A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+        ASLT A 3 { A_WeaponOffset(0, 32, WOF_INTERPOLATE); A_ReFire(); }
         Goto Ready;
 
     AltFire:
-        SHTG B 2
-		{
-            A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
-            A_StartSound("weapons/sshotf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(2.0);
+        ASLT A 2 A_WeaponOffset(0, 33, WOF_INTERPOLATE);
+        ASLT B 5
+        {
+            A_GunFlash();
+            A_FireBullets(0.2, 0.12, 1, 13, "BulletPuff");
+            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_WeaponOffset(0, 43, WOF_INTERPOLATE);
+            A_SetPitch(pitch - 1.65, SPF_INTERPOLATE);
+            A_Recoil(1.5);
         }
-        SHTG C 4;
-        ASLT B 5;
-		
-        ASLT A 5;
+        ASLT B 4 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT A 9 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
-		
-	Reload:
-		ASLT A 3 A_GunFlash;
-		ASLT A 9
-		{
-			A_Print("3/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT A 9
-		{
-			A_Print("2/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT A 9
-		{
-			A_Print("1/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT B 3 A_Print("0/3");
-		SHTG B 4;
-		ASLT B 5;
-		Goto Ready;
-		
-	Zoom:
-		ASLT A 1
-			{
-				if(!invoker.Aiming)
-				{
-					A_ZoomFactor(3.0);
-					invoker.Aiming = True;
-				}
-				else
-				{
-					A_ZoomFactor(1.0);
-					invoker.Aiming = False;
-				}
-			}
-		ASLT A 5;
-		Goto Ready;
+
+    // R is a limited, high-cost special, NOT a free grenade reload.
+    Reload:
+        ASLT A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && player.mo.CountInv("RocketAmmo") < 3)
+            {
+                A_Print("SIMPLE RIFLE: 3 ROCKET AMMO NEEDED FOR FLAK SALVO");
+                return ResolveState("Ready");
+            }
+            if (!infinite)
+                A_TakeInventory("RocketAmmo", 3, TIF_NOTAKEINFINITE);
+            A_StartSound("weapons/sshotc", CHAN_WEAPON);
+        }
+        ASLT A 4 A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+        ASLT B 4
+        {
+            A_FireProjectile("FlakGrenade", -5);
+            A_GunFlash();
+        }
+        ASLT B 4 A_FireProjectile("FlakGrenade", 0);
+        ASLT B 4 A_FireProjectile("FlakGrenade", 5);
+        ASLT A 6 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        Goto Ready;
+
+    Zoom:
+        ASLT A 1
+        {
+            if (!invoker.Aiming)
+            {
+                invoker.Aiming = true;
+                A_ZoomFactor(1.75, ZOOM_INSTANT);
+                A_StartSound("weapons/sshotc", CHAN_WEAPON);
+            }
+            else
+            {
+                invoker.Aiming = false;
+                A_ZoomFactor(1.0, ZOOM_INSTANT);
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+            }
+        }
+        ASLT A 3;
+        Goto Ready;
 
     Flash:
-        ASLF A 3 Bright A_Light1;
-        ASLF B 3 Bright A_Light2;
+        ASLF A 2 Bright A_Light1;
+        ASLF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
@@ -5312,12 +5361,10 @@ bool Aiming;
 
 
 
-
-
-
-
 class TacticalPlayer : DoomPlayer replaces DoomPlayer
 {
+    // Progress for the purely cosmetic blue SimpleRifle reward.
+    int tlhBlueRifleKills;
     int jumpCount;
     int slideCooldown;
     int fallTicks;
@@ -6209,7 +6256,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!isFlashPSP && (isWeaponPSP || isDualPSP))
         {
             let weaponDefault = GetDefaultByType(weapon.GetClass());
-            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
+            let blueRiflePalette = GetDefaultByType("TLHBlueRiflePower");
+            if (weapon is "SimpleRifle" && FindInventory("TLHBlueRiflePower") && blueRiflePalette)
+                psp.Translation = blueRiflePalette.Translation;
+            else
+                psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
@@ -7626,6 +7677,9 @@ class TacticalHUDHandler : EventHandler
     String hudModeName;
     String hudWeaponName;
     int hudMapTime;
+    int hudBlueRifleKills;
+    bool hudBlueRifleEquipped;
+    bool hudBlueRifleUnlocked;
     int hudPlayerHealth;
     int hudArmor;
     int hudArmorMax;
@@ -7730,6 +7784,34 @@ class TacticalHUDHandler : EventHandler
         // observes the configured binding.
     }
 
+
+      // A single lifetime milestone per player. Only actual hostile monster deaths
+    // with a player damage source count; environmental/monster kills do not.
+    override void WorldThingDied(WorldEvent e)
+    {
+        if (!e.Thing || !e.Thing.bIsMonster || e.Thing.bFriendly)
+            return;
+
+        Actor killer = e.DamageSource;
+        if (!killer) killer = e.Thing.target;
+        if (killer && !killer.player && killer.bMISSILE && killer.target && killer.target.player)
+            killer = killer.target;
+
+        let marine = TacticalPlayer(killer);
+        if (!marine || marine.Health <= 0 || marine.FindInventory("TLHBlueRiflePower"))
+            return;
+
+        let mode = CVar.FindCVar("tlh_gamemode");
+        if (mode && mode.GetInt() == 18) return; // Honor No Powerups mode.
+
+        marine.tlhBlueRifleKills++;
+        if (marine.tlhBlueRifleKills >= TLH_BLUE_RIFLE_KILL_GOAL)
+        {
+            marine.GiveInventory("TLHBlueRiflePower", 1);
+            marine.A_StartSound("BLUAS", CHAN_ITEM, CHANF_UI, 1.0, ATTN_NONE);
+            marine.A_Print("V.T COMBAT INTERFACE: BLUE RIFLE FINISH UNLOCKED");
+        }
+    }
 
     override void WorldThingSpawned(WorldEvent e){
         if (!e.Thing) return;
@@ -8323,13 +8405,20 @@ class TacticalHUDHandler : EventHandler
         hudWeaponFlip = false;
         hudWeaponStateScale = (1.0, 1.0);
         hudWeaponTranslation = 0;
+        hudBlueRifleKills = 0;
+        hudBlueRifleEquipped = false;
+        hudBlueRifleUnlocked = p.FindInventory("TLHBlueRiflePower") != null;
 
         UpdateTLHDoomguyFace(p);
         tlhVisorPlayerDead = (p.player.playerstate == PST_DEAD);
         tlhVisorActive = p.FindInventory("PowerInvulnerable") != null;
 
         let tpState = TacticalPlayer(p);
-        if (tpState) tlhHUDDualActive = tpState.tlhDualWieldActive;
+        if (tpState)
+        {
+            tlhHUDDualActive = tpState.tlhDualWieldActive;
+            hudBlueRifleKills = tpState.tlhBlueRifleKills;
+        }
 
         hudPlayerHealth = max(0, p.Health);
         hudFOV = clamp(double(p.player.FOV), 20.0, 160.0);
@@ -8361,6 +8450,12 @@ class TacticalHUDHandler : EventHandler
         Weapon ready = p.player.ReadyWeapon;
         if (ready)
         {
+            hudBlueRifleEquipped = (ready is "SimpleRifle");
+            if (hudBlueRifleEquipped && hudBlueRifleUnlocked)
+            {
+                let bluePalette = GetDefaultByType("TLHBlueRiflePower");
+                if (bluePalette) hudWeaponTranslation = int(bluePalette.Translation);
+            }
             tlhVisorWeaponClass = ready.GetClassName();
 
             if (ready is "FastRecoilSSG")
@@ -8413,7 +8508,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "SIMPLE RIFLE";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -8849,7 +8944,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Corner(12, 349, 1, -1, gasket, 150);
         Corner(628, 349, -1, -1, gasket, 150);
 
-        Text("YRB / SHELL", 23, 246, dim, 0.22);
+        Text("V.T / SHELL", 23, 246, dim, 0.22);
         TextR("HUD-SEAL", 617, 246, dim, 0.22);
         Text("03", 23, 259, steel, 0.22);
         TextR("04", 617, 259, steel, 0.22);
@@ -8866,8 +8961,15 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Color steel = 0x778185;
         Color warn = 0xB9A875;
 
-        Text("YARBIS", 25, 17, main, 0.43);
+        Text("V.T Combat Interface", 25, 17, main, 0.29);
         Text("HELMET // INTERNAL", 25, 29, dim, 0.24);
+        if (hudBlueRifleEquipped)
+        {
+            if (hudBlueRifleUnlocked)
+                Text("BLUE FINISH // ONLINE", 25, 53, main, 0.22);
+            else
+                Text(String.Format("BLUE FINISH %d/%d", hudBlueRifleKills, TLH_BLUE_RIFLE_KILL_GOAL), 25, 53, warn, 0.22);
+        }
         Text(hudMapName, 25, 40, steel, 0.25);
 
         TextC("NEURAL VISOR", 320, 17, dim, 0.25);
@@ -9925,7 +10027,8 @@ class TacticalZombieDrop : Actor
             }
             else
             {
-                drop = Spawn("SimpleRifle", Pos);
+                // 35% rifle acquisition on the opening map; otherwise normal ammo.
+                drop = Spawn(random(1, 100) <= 35 ? "SimpleRifle" : "Clip", Pos);
             }
 
             if (drop)
