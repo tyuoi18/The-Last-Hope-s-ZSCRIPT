@@ -8609,6 +8609,52 @@ class TacticalHUDHandler : EventHandler
             }
             tlhVisorWeaponClass = ready.GetClassName();
 
+            if (ready is "FastRecoilSSG")
+            {
+                tlhSSGPhase = level.time;
+                let ssg = FastRecoilSSG(ready);
+                if (ssg && ssg.akimboState == 0)
+                {
+                    tlhSSGVisible = true;
+
+                    let tp = TacticalPlayer(p);
+                    if (tp)
+                    {
+                        tlhSSGOffsetX = tp.tlhAnimSwayX + tp.tlhAnimInertiaX + tp.tlhAnimLookX * 0.60;
+                        tlhSSGOffsetY = tp.tlhAnimSwayY + tp.tlhAnimInertiaY - tp.tlhAnimLookY * 0.35;
+                        tlhSSGRoll = tp.tlhAnimWeaponKickSide * 1.1 + tp.tlhAnimSwayX * -0.4;
+                        tlhSSGRecoil = tp.tlhAnimWeaponKick;
+                    }
+                }
+            }
+
+            hudWeaponName = ready.GetClassName();
+
+            if (ready is "ServiceRevolver")
+            {
+                let revolver = ServiceRevolver(ready);
+                if (revolver)
+                {
+                    hudRevolverAmmo = revolver.cylinderAmmo;
+                    hudRevolverReserve = hudClip;
+                }
+            }
+            else if (ready is "HunterRifle")
+            {
+                let hunter = HunterRifle(ready);
+                if (hunter)
+                {
+                    hudHunterAmmo = hunter.magazineAmmo;
+                    hudHunterReserve = hudClip;
+                }
+            }
+
+            if (ready is "HeavyChaingun")
+            {
+                let chaingun = HeavyChaingun(ready);
+                if (chaingun) hudWeaponHeat = chaingun.heat;
+            }
+
             // Sample weapon mechanics in play context: UI reads cached text
             // instead of querying live weapons or player inventory.
             if (ready is "SimpleRifle")
@@ -8701,51 +8747,6 @@ class TacticalHUDHandler : EventHandler
                 if (available < cost) hudWeaponWarning = "OUT OF AMMO: FIND MORE SUPPLIES";
             }
 
-            if (ready is "FastRecoilSSG")
-            {
-                tlhSSGPhase = level.time;
-                let ssg = FastRecoilSSG(ready);
-                if (ssg && ssg.akimboState == 0)
-                {
-                    tlhSSGVisible = true;
-
-                    let tp = TacticalPlayer(p);
-                    if (tp)
-                    {
-                        tlhSSGOffsetX = tp.tlhAnimSwayX + tp.tlhAnimInertiaX + tp.tlhAnimLookX * 0.60;
-                        tlhSSGOffsetY = tp.tlhAnimSwayY + tp.tlhAnimInertiaY - tp.tlhAnimLookY * 0.35;
-                        tlhSSGRoll = tp.tlhAnimWeaponKickSide * 1.1 + tp.tlhAnimSwayX * -0.4;
-                        tlhSSGRecoil = tp.tlhAnimWeaponKick;
-                    }
-                }
-            }
-
-            hudWeaponName = ready.GetClassName();
-
-            if (ready is "ServiceRevolver")
-            {
-                let revolver = ServiceRevolver(ready);
-                if (revolver)
-                {
-                    hudRevolverAmmo = revolver.cylinderAmmo;
-                    hudRevolverReserve = hudClip;
-                }
-            }
-            else if (ready is "HunterRifle")
-            {
-                let hunter = HunterRifle(ready);
-                if (hunter)
-                {
-                    hudHunterAmmo = hunter.magazineAmmo;
-                    hudHunterReserve = hudClip;
-                }
-            }
-
-            if (ready is "HeavyChaingun")
-            {
-                let chaingun = HeavyChaingun(ready);
-                if (chaingun) hudWeaponHeat = chaingun.heat;
-            }
 if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "ServiceRevolver") hudWeaponName = "SERVICE REVOLVER";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
@@ -9692,6 +9693,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
         Panel(174, 262, 264, 43, 0x24443F, 100);
         Text("V.T // WEAPON STATUS", 182, 266, main, 0.22);
+        if (hudDualCooldown > 0 || hudSlideCooldown > 0)
+            TextR(String.Format("DUAL %d | SLIDE %d TICS",
+                hudDualCooldown, hudSlideCooldown), 431, 266, warn, 0.19);
         if (hudWeaponActionHint != "")
             Text(hudWeaponActionHint, 182, 277, Font.CR_WHITE, 0.21);
         if (hudWeaponAmmoHint != "")
@@ -9699,9 +9703,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
         if (hudWeaponWarning != "")
             Text(hudWeaponWarning, 182, 298, warn, 0.20);
-        else if (hudDualCooldown > 0 || hudSlideCooldown > 0)
-            Text(String.Format("COOLDOWNS: DUAL %d TICS | SLIDE %d TICS",
-                hudDualCooldown, hudSlideCooldown), 182, 298, warn, 0.20);
         else
             Text("READY // NO ACTIVE COOLDOWNS", 182, 298, main, 0.20);
     }
