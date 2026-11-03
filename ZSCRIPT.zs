@@ -89,6 +89,8 @@ const TLH_MAX_CELLS = 300;
 // The offhand copies only the primary PSprite's rendered sprite/frame, never its
 // executable state sequence, so firing actions and ammo consumption are not duplicated.
 // +user3 is edge-latched until release; the player owns the entrance/exit animation.
+// v50.0.1: keep overlay ownership inside TacticalPlayer and apply the full
+// offscreen-to-right displacement after ordinary procedural sway clamping.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -1259,13 +1261,6 @@ class RecoilPistol : Pistol replaces Pistol
     Deselect:
         PISG A 0
         {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_Lower();
@@ -1275,13 +1270,6 @@ class RecoilPistol : Pistol replaces Pistol
     Select:
         PISG A 0
         {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_Raise();
         }
         Loop;
@@ -1598,13 +1586,6 @@ class OfficerVulkanPistol : Weapon
         PISG A 0
         {
             invoker.weaponMode = 0;
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
@@ -1615,13 +1596,6 @@ class OfficerVulkanPistol : Weapon
         PISG A 0
         {
             invoker.weaponMode = 0;
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         PISG A 1 A_Raise;
         Loop;
@@ -2132,7 +2106,6 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
@@ -2349,13 +2322,6 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     Deselect:
         SHT2 A 0
         {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         SHT2 A 1 A_Lower;
         Loop;
@@ -2363,13 +2329,6 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     Select:
         SHT2 A 0
         {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         SHT2 A 1 A_Raise;
         Loop;
@@ -4698,13 +4657,6 @@ class ServiceRevolver : Weapon
     Deselect:
         RVOL Q 0
         {
-            let tp = TacticalPlayer(player.mo);
-            if (tp && tp.tlhDualWieldWeapon == invoker)
-            {
-                tp.tlhDualWieldActive = false;
-                tp.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         RVOL Q 1 A_Lower;
         Loop;
@@ -4712,13 +4664,6 @@ class ServiceRevolver : Weapon
     Select:
         RVOL Q 0
         {
-            let tp = TacticalPlayer(player.mo);
-            if (tp && tp.tlhDualWieldWeapon == invoker)
-            {
-                tp.tlhDualWieldActive = false;
-                tp.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         RVOL Q 1 A_Raise;
         Loop;
@@ -5444,6 +5389,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (mirror)
                 mirror.Destroy();
 
+            // PlayerInfo.GetPSprite binds Caller to the current ReadyWeapon.
             player.SetPsprite(TLH_DUAL_MIRROR_LAYER, mirrorState);
             mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
             if (!mirror)
@@ -6542,12 +6488,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double totalX = visualOffsetX + swayX + recoilX + drawX;
         if (isDualPSP)
             totalX *= handSign;
-        if (isWeaponPSP && tlhDualWieldWeapon == weapon)
-            totalX += 22.0 * tlhDualWieldBlend;
         double totalY = visualOffsetY + swayY + crouchY + airFloatY +
                         recoilY + landingY + damageY + drawY;
 
         totalX = clamp(totalX, -12.0, 12.0);
+        if (isWeaponPSP && tlhDualWieldWeapon == weapon)
+            totalX += 22.0 * tlhDualWieldBlend;
         totalY = clamp(totalY, -18.0, 18.0);
 
         // Procedural squash/stretch during recoil and landing. Because this is
