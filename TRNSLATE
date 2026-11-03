@@ -1,0 +1,3 @@
+// Electric-blue palette tint for the Blue Simple Rifle PSprite.
+// Applied to both the weapon layer and its muzzle-flash layer by TacticalPlayer.
+BlueSimpleRifle = "0:255=%[0.02,0.08,0.42]:[0.18,0.78,1.50]"
