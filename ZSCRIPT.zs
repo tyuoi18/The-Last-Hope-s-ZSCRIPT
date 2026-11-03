@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v46.1 - compact HUD / feedback / Blue Simple Rifle stencil tint / gameplay fixes
+// TLH v47.0 - movement overhaul / reliable Dual Wield / compact HUD
 // CUSTOM DUAL-WIELD BIND / PROCEDURAL WEAPON PRESENTATION / HELMET INTERIOR HUD
 //
 // R remains untouched. Weapon-switch safety avoids destroying an active weapon.
@@ -13,7 +13,6 @@ version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
-const TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER = 4;
 const TLH_STOWED_LAYER = 3; // reserved folded-launcher layer; PSP_WEAPON (1) and PSP_FLASH (1000) remain engine-owned
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -26,7 +25,6 @@ const TLH_MAX_BULLETS = 300;
 const TLH_MAX_SHELLS = 100;
 const TLH_MAX_ROCKETS = 50;
 const TLH_MAX_CELLS = 300;
-const TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK = 60;
 
 // The Last Hope gameplay modes. The selector is a server CVar so gameplay
 // rules remain authoritative and synchronized in multiplayer. It is defined
@@ -75,9 +73,8 @@ const TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK = 60;
 // nerfed full-kit loot, stronger game-mode transitions, menu-ready CVars, and safer runtime enforcement. All custom enemy variants use
 // valid GZDoom 4.14.2 actor bases such as DoomImp, Fatso, Arachnotron, Revenant,
 // HellKnight, BaronOfHell and Cacodemon.
-// v46.0: per-player map-scoped Blue Simple Rifle unlock, SimpleRifle-only kill credit,
-// MarineRailgun-style hitscan rail mode, safe mode weapon removal, validated horde spawns,
-// throttled corpse scans, and corrected Speedrun cooldown handling.
+// v47.0: sprint stamina, directional dash, momentum slide, coyote jump, air control,
+// unified Dual Wield input and SSG akimbo integration, while retaining prior gameplay fixes.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -5199,46 +5196,10 @@ class ServiceRevolver : Weapon
 
 
 
-// Impact puff used only by SimpleRifle. Kill credit is based on this inflictor.
-class SimpleRifleKillPuff : BulletPuff
-{
-    Default
-    {
-        +PUFFONACTORS
-        +PUFFGETSOWNER
-        DamageType "TLH_SimpleRifle";
-    }
-}
-
-// Monster-side marker: only the most recent damage source is retained.
-// WorldThingDied then awards the kill only if that final source was SimpleRifle.
-class TLHSimpleRifleKillCredit : Inventory
-{
-    Actor killer;
-
-    Default
-    {
-        Inventory.MaxAmount 1;
-        +INVENTORY.UNDROPPABLE
-        +INVENTORY.UNTOSSABLE
-    }
-}
-
-// Map-scoped unlock token. TacticalHUDHandler removes it on map transitions.
-class BlueSimpleRifle : Inventory
-{
-    Default
-    {
-        Inventory.MaxAmount 1;
-        Inventory.PickupMessage "ARSENAL UNLOCKED: BLUE SIMPLE RIFLE // THIS MAP ONLY";
-        +INVENTORY.UNDROPPABLE
-        +INVENTORY.UNTOSSABLE
-    }
-}
-
 class SimpleRifle : Weapon
 {
-    bool Aiming;
+
+bool Aiming;
 
     Default
     {
@@ -5250,39 +5211,9 @@ class SimpleRifle : Weapon
         Weapon.AmmoGive1 16;
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "Clip";
-        Weapon.AmmoGive2 16;
+		Weapon.AmmoGive2 16;
         Weapon.AmmoUse2 2;
-        StencilColor "50 175 255";
         Inventory.PickupMessage "Picked up a Simple Rifle.";
-    }
-
-    bool HasBlueMode()
-    {
-        return Owner && Owner.FindInventory("BlueSimpleRifle") != null;
-    }
-
-    bool CanFireBlue(int cells)
-    {
-        bool infinite = sv_infiniteammo ||
-            (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
-        return infinite || (Owner && Owner.CountInv("Cell") >= cells);
-    }
-
-    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
-    {
-        if (!HasBlueMode())
-            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
-
-        if (!requireAmmo)
-            return true;
-
-        bool infinite = sv_infiniteammo ||
-            (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
-        if (infinite)
-            return true;
-
-        int needed = (fireMode == AltFire) ? 2 : 1;
-        return Owner && Owner.CountInv("Cell") >= needed;
     }
 
     States
@@ -5295,76 +5226,27 @@ class SimpleRifle : Weapon
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            if (invoker.HasBlueMode())
-                return ResolveState("ReadyBlue");
-            return ResolveState("ReadyNormal");
         }
-
-    ReadyNormal:
-        ASLT A 1
-        {
-            if (invoker.HasBlueMode())
-                return ResolveState("ReadyBlue");
-            A_WeaponReady(WRF_ALLOWRELOAD);
-            return ResolveState(null);
-        }
-        Loop;
-
-    ReadyBlue:
-        ASLT A 1
-        {
-            if (!invoker.HasBlueMode())
-            {
-                A_ClearOverlays(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER,
-                    TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER);
-                return ResolveState("ReadyNormal");
-            }
-
-            // A second PSprite draws a subtle electric-blue mask over the
-            // original weapon silhouette. No palette remap or edited sprite.
-            A_Overlay(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER, "BlueTintReady", true);
-            A_WeaponReady(WRF_ALLOWZOOM);
-            return ResolveState(null);
-        }
+        ASLT A 1 A_WeaponReady(WRF_ALLOWRELOAD);
         Loop;
 
     Deselect:
-        ASLT A 1
-        {
-            A_ClearOverlays(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER,
-                TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER);
-            A_Lower();
-        }
+        ASLT A 1 A_Lower;
         Loop;
 
     Select:
         ASLT A 1
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
             A_Raise();
         }
         Loop;
 
     Fire:
-        ASLT A 0
-        {
-            if (invoker.HasBlueMode())
-            {
-                if (!invoker.CanFireBlue(1))
-                {
-                    A_Print("\\c[Blue]BLUE SIMPLE RIFLE // NO PLASMA CELLS");
-                    return ResolveState("ReadyBlue");
-                }
-                return ResolveState("BlueFire");
-            }
-            return ResolveState(null);
-        }
         ASLT A 5 A_GunFlash;
         ASLT B 5
         {
-            A_FireBullets(7.0, 5.5, 8, 4, "SimpleRifleKillPuff");
+            A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
             A_Recoil(1.5);
@@ -5372,147 +5254,61 @@ class SimpleRifle : Weapon
         ASLT A 7 A_ReFire;
         Goto Ready;
 
-    BlueFire:
-        ASLT A 4
-        {
-            A_Overlay(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER, "BlueTintFire");
-            A_GunFlash();
-        }
-        ASLT B 5
-        {
-            bool infinite = sv_infiniteammo ||
-                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite)
-                A_TakeInventory("Cell", 1, TIF_NOTAKEINFINITE);
-
-            // Red/yellow hitscan rail beam, matching the MarineRailgun attack style.
-            // This is not the AMR-99's travelling Gauss slug.
-            A_RailAttack(18, 0, false, 0xFF2525, 0xFFE45C, 0, 0,
-                "SimpleRifleKillPuff", 0, 0, 8192, 4);
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
-            A_Recoil(1.8);
-        }
-        ASLT A 7 A_ReFire;
-        Goto Ready;
-
     AltFire:
-        ASLT A 0
-        {
-            if (invoker.HasBlueMode())
-            {
-                if (!invoker.CanFireBlue(2))
-                {
-                    A_Print("\\c[Blue]BLUE SIMPLE RIFLE // NEED 2 PLASMA CELLS");
-                    return ResolveState("ReadyBlue");
-                }
-                return ResolveState("BlueAltFire");
-            }
-            return ResolveState(null);
-        }
         SHTG B 2
-        {
-            A_FireBullets(4.5, 3.5, 14, 4, "SimpleRifleKillPuff");
+		{
+            A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Recoil(2.0);
         }
         SHTG C 4;
         ASLT B 5;
+		
         ASLT A 5;
         Goto Ready;
-
-    BlueAltFire:
-        ASLT A 4
-        {
-            A_Overlay(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER, "BlueTintAltFire");
-        }
-        ASLT B 6
-        {
-            bool infinite = sv_infiniteammo ||
-                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite)
-                A_TakeInventory("Cell", 2, TIF_NOTAKEINFINITE);
-
-            A_RailAttack(36, 0, false, 0xFF2525, 0xFFE45C, 0, 0,
-                "SimpleRifleKillPuff", 0, 0, 8192, 6);
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(3.0);
-        }
-        ASLT A 10;
-        Goto Ready;
-
-    Reload:
-        ASLT A 0
-        {
-            if (invoker.HasBlueMode())
-                return ResolveState("ReadyBlue");
-            return ResolveState(null);
-        }
-        ASLT A 3 A_GunFlash;
-        ASLT A 9
-        {
-            A_Print("3/3");
-            A_FireProjectile("FlakGrenade");
-            A_GunFlash();
-        }
-        ASLT A 9
-        {
-            A_Print("2/3");
-            A_FireProjectile("FlakGrenade");
-            A_GunFlash();
-        }
-        ASLT A 9
-        {
-            A_Print("1/3");
-            A_FireProjectile("FlakGrenade");
-            A_GunFlash();
-        }
-        ASLT B 3 A_Print("0/3");
-        SHTG B 4;
-        ASLT B 5;
-        Goto Ready;
-
-    Zoom:
-        ASLT A 1
-        {
-            if (!invoker.Aiming)
-            {
-                A_ZoomFactor(3.0);
-                invoker.Aiming = true;
-            }
-            else
-            {
-                A_ZoomFactor(1.0);
-                invoker.Aiming = false;
-            }
-        }
-        ASLT A 5;
-        Goto Ready;
-
-    // Secondary layer: same ASLT frames with a translucent electric-blue
-    // stencil. The source art and its base palette remain unchanged.
-    BlueTintReady:
-        ASLT A 1
-        {
-            A_OverlayFlags(OverlayID(), PSPF_RENDERSTYLE | PSPF_FORCESTYLE | PSPF_FORCEALPHA, true);
-            A_OverlayRenderstyle(OverlayID(), STYLE_TranslucentStencil);
-            A_OverlayAlpha(OverlayID(), 0.24);
-        }
-        Loop;
-
-    BlueTintFire:
-        ASLT A 4;
-        ASLT B 5;
-        ASLT A 7;
-        Goto BlueTintReady;
-
-    BlueTintAltFire:
-        ASLT A 4;
-        ASLT B 6;
-        ASLT A 10;
-        Goto BlueTintReady;
+		
+	Reload:
+		ASLT A 3 A_GunFlash;
+		ASLT A 9
+		{
+			A_Print("3/3");
+			A_FireProjectile("FlakGrenade");
+			A_GunFlash;
+		}
+		ASLT A 9
+		{
+			A_Print("2/3");
+			A_FireProjectile("FlakGrenade");
+			A_GunFlash;
+		}
+		ASLT A 9
+		{
+			A_Print("1/3");
+			A_FireProjectile("FlakGrenade");
+			A_GunFlash;
+		}
+		ASLT B 3 A_Print("0/3");
+		SHTG B 4;
+		ASLT B 5;
+		Goto Ready;
+		
+	Zoom:
+		ASLT A 1
+			{
+				if(!invoker.Aiming)
+				{
+					A_ZoomFactor(3.0);
+					invoker.Aiming = True;
+				}
+				else
+				{
+					A_ZoomFactor(1.0);
+					invoker.Aiming = False;
+				}
+			}
+		ASLT A 5;
+		Goto Ready;
 
     Flash:
         ASLF A 3 Bright A_Light1;
@@ -5524,7 +5320,6 @@ class SimpleRifle : Weapon
         Stop;
     }
 }
-
 
 
 class TacticalPlayer : DoomPlayer replaces DoomPlayer
@@ -6476,8 +6271,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             let weaponDefault = GetDefaultByType(weapon.GetClass());
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
 
-            // Blue Simple Rifle coloring is a dedicated translucent stencil
-            // PSprite layer. The original weapon palette stays untouched.
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
@@ -7968,19 +7761,6 @@ class TacticalHUDHandler : EventHandler
     transient ui Array<String> tlhInputHistory;
     transient ui String tlhHUDDualBindName;
 
-    // Per-player, per-map reward state. Kept on this map handler rather than
-    // TacticalPlayer so progress survives death and pawn replacement.
-    Array<String> tlhBlueRewardMapNames;
-    Array<int> tlhSimpleRifleKillsByPlayer;
-    Array<bool> tlhBlueSimpleRifleUnlockedByPlayer;
-    Array<int> tlhBlueSimpleRifleNoticeByPlayer;
-
-    // UI snapshot for the local player.
-    int hudBlueSimpleRifleKills;
-    bool hudBlueSimpleRifleUnlocked;
-    int hudBlueSimpleRifleNoticeTics;
-    bool hudBlueSimpleRifleActive;
-
     // Short, event-driven feedback indicators used by the compact HUD.
     int hudDamageFlashTics;
     int hudHealFlashTics;
@@ -8061,179 +7841,31 @@ class TacticalHUDHandler : EventHandler
     }
 
 
-    // Keep the map-scoped unlock on the event handler, not the pawn:
-    // Doom replaces the player's actor on respawn, but this handler persists.
-    void EnsureBlueSimpleRiflePlayerState()
-    {
-        while (tlhBlueRewardMapNames.Size() < MAXPLAYERS)
-        {
-            tlhBlueRewardMapNames.Push("");
-            tlhSimpleRifleKillsByPlayer.Push(0);
-            tlhBlueSimpleRifleUnlockedByPlayer.Push(false);
-            tlhBlueSimpleRifleNoticeByPlayer.Push(0);
-        }
-
-        for (int i = 0; i < MAXPLAYERS; i++)
-        {
-            Actor pawn = players[i].mo;
-            if (tlhBlueRewardMapNames[i] != level.MapName || level.maptime == 0)
-            {
-                tlhBlueRewardMapNames[i] = level.MapName;
-                tlhSimpleRifleKillsByPlayer[i] = 0;
-                tlhBlueSimpleRifleUnlockedByPlayer[i] = false;
-                tlhBlueSimpleRifleNoticeByPlayer[i] = 0;
-
-                if (pawn)
-                {
-                    Inventory token = pawn.FindInventory("BlueSimpleRifle");
-                    if (token)
-                    {
-                        pawn.RemoveInventory(token);
-                        token.Destroy();
-                    }
-                }
-            }
-            else if (tlhBlueSimpleRifleNoticeByPlayer[i] > 0)
-            {
-                tlhBlueSimpleRifleNoticeByPlayer[i]--;
-            }
-
-            // Reapply after death/respawn if the player already earned the unlock.
-            if (pawn && tlhBlueSimpleRifleUnlockedByPlayer[i] &&
-                !pawn.FindInventory("BlueSimpleRifle"))
-            {
-                pawn.GiveInventory("BlueSimpleRifle", 1);
-            }
-        }
-    }
-
-    void RegisterBlueSimpleRifleKill(Actor killer)
-    {
-        if (!killer || !killer.player)
-            return;
-
-        EnsureBlueSimpleRiflePlayerState();
-        int playerNum = killer.PlayerNumber();
-        if (playerNum < 0 || playerNum >= MAXPLAYERS ||
-            tlhBlueSimpleRifleUnlockedByPlayer[playerNum])
-            return;
-
-        let modeCvar = CVar.FindCVar("tlh_gamemode");
-        int mode = modeCvar ? modeCvar.GetInt() : 0;
-        let ssgOnlyCvar = CVar.FindCVar("tlh_ssg_only");
-        if (mode == 19 || mode == 27 || (ssgOnlyCvar && ssgOnlyCvar.GetBool()))
-            return;
-
-        tlhSimpleRifleKillsByPlayer[playerNum] =
-            min(TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK,
-                tlhSimpleRifleKillsByPlayer[playerNum] + 1);
-
-        Actor currentPawn = players[playerNum].mo;
-        if (tlhSimpleRifleKillsByPlayer[playerNum] == 30)
-        {
-            if (currentPawn) currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
-            if (playerNum == consoleplayer)
-            {
-                hudFeedbackText = "SIMPLE RIFLE // 30 OF 60";
-                hudFeedbackTics = 35;
-                hudFeedbackColor = 0x32AFFF;
-            }
-        }
-        else if (tlhSimpleRifleKillsByPlayer[playerNum] == 50)
-        {
-            if (currentPawn) currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
-            if (playerNum == consoleplayer)
-            {
-                hudFeedbackText = "SIMPLE RIFLE // 50 OF 60";
-                hudFeedbackTics = 35;
-                hudFeedbackColor = 0x32AFFF;
-            }
-        }
-
-        if (tlhSimpleRifleKillsByPlayer[playerNum] >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK)
-        {
-            tlhBlueSimpleRifleUnlockedByPlayer[playerNum] = true;
-            tlhBlueSimpleRifleNoticeByPlayer[playerNum] = 175;
-            if (playerNum == consoleplayer)
-            {
-                hudFeedbackText = "BLUE SIMPLE RIFLE UNLOCKED";
-                hudFeedbackTics = 70;
-                hudFeedbackColor = 0x32AFFF;
-            }
-
-            // Give to the current pawn, which may already be a replacement
-            // for the pawn that originally dealt the final blow.
-            if (currentPawn)
-                currentPawn.GiveInventory("BlueSimpleRifle", 1);
-
-            if (currentPawn)
-                currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
-        }
-    }
-
+    // Weapon-independent local-player hit and kill feedback.
     override void WorldThingDamaged(WorldEvent e)
     {
-        if (e.Thing && e.Thing.bIsMonster && e.Thing.Health > 0 &&
-            e.DamageSource && e.DamageSource.player &&
-            e.DamageSource.PlayerNumber() == consoleplayer)
-        {
-            hudHitmarkerTics = 8;
-            hudKillConfirmTics = 0;
-            hudHitDamage = max(0, e.Damage);
-        }
-
-        if (!e.Thing || !e.Thing.bIsMonster)
-            return;
-
-        // Any new hit overwrites the credit. This makes the final damaging
-        // source authoritative rather than counting assists or earlier hits.
-        Inventory previous = e.Thing.FindInventory("TLHSimpleRifleKillCredit");
-        if (previous)
-        {
-            e.Thing.RemoveInventory(previous);
-            previous.Destroy();
-        }
-
-        if (e.DamageType != 'TLH_SimpleRifle' ||
+        if (!e.Thing || !e.Thing.bIsMonster || e.Thing.Health <= 0 ||
             !e.DamageSource || !e.DamageSource.player ||
-            !(e.DamageSource is "TacticalPlayer"))
+            e.DamageSource.PlayerNumber() != consoleplayer)
             return;
 
-        e.Thing.GiveInventory("TLHSimpleRifleKillCredit", 1);
-        let credit = TLHSimpleRifleKillCredit(
-            e.Thing.FindInventory("TLHSimpleRifleKillCredit"));
-        if (credit)
-            credit.killer = e.DamageSource;
+        hudHitmarkerTics = 8;
+        hudKillConfirmTics = 0;
+        hudHitDamage = max(0, e.Damage);
     }
 
     override void WorldThingDied(WorldEvent e)
     {
-        if (!e.Thing || !e.Thing.bIsMonster)
+        if (!e.Thing || !e.Thing.bIsMonster ||
+            !e.DamageSource || !e.DamageSource.player ||
+            e.DamageSource.PlayerNumber() != consoleplayer)
             return;
 
-        let credit = TLHSimpleRifleKillCredit(
-            e.Thing.FindInventory("TLHSimpleRifleKillCredit"));
-        Actor killSource = e.DamageSource;
-        if (credit && credit.killer)
-            killSource = credit.killer;
-
-        if (killSource && killSource.player &&
-            killSource.PlayerNumber() == consoleplayer)
-        {
-            hudHitmarkerTics = 0;
-            hudKillConfirmTics = 22;
-            hudFeedbackText = "TARGET ELIMINATED";
-            hudFeedbackTics = 24;
-            hudFeedbackColor = 0xF2D36B;
-        }
-
-        if (!credit || !credit.killer || !credit.killer.player)
-            return;
-
-        RegisterBlueSimpleRifleKill(credit.killer);
-
-        e.Thing.RemoveInventory(credit);
-        credit.Destroy();
+        hudHitmarkerTics = 0;
+        hudKillConfirmTics = 22;
+        hudFeedbackText = "TARGET ELIMINATED";
+        hudFeedbackTics = 24;
+        hudFeedbackColor = 0xF2D36B;
     }
 
     override void WorldThingSpawned(WorldEvent e){
@@ -8722,11 +8354,6 @@ class TacticalHUDHandler : EventHandler
         hudPowerupNames.Clear();
         hudPowerupTics.Clear();
 
-        EnsureBlueSimpleRiflePlayerState();
-
-        // Blue Simple Rifle reward is tracked per player by WorldThingDied().
-        // Only damage from the dedicated SimpleRifle puff can advance the counter.
-
         // Clear AVOIDMELEE from monsters that were already present when the map
         // loaded. Rescan at map start/restart so existing actors are covered too.
         if (tlhNoAvoidMeleeMapName != level.MapName ||
@@ -8767,10 +8394,6 @@ class TacticalHUDHandler : EventHandler
         hudRocket = 0;
         hudCell = 0;
         hudWeaponHeat = 0;
-        hudBlueSimpleRifleKills = 0;
-        hudBlueSimpleRifleUnlocked = false;
-        hudBlueSimpleRifleNoticeTics = 0;
-        hudBlueSimpleRifleActive = false;
         hudFOV = 90.0;
         hudMoveSpeed = 0.0;
         hudVerticalSpeed = 0.0;
@@ -8888,14 +8511,6 @@ class TacticalHUDHandler : EventHandler
         if (tpState)
             tlhHUDDualActive = tpState.tlhDualWieldActive;
 
-        if (consoleplayer >= 0 && consoleplayer < MAXPLAYERS)
-        {
-            hudBlueSimpleRifleKills = tlhSimpleRifleKillsByPlayer[consoleplayer];
-            hudBlueSimpleRifleUnlocked = tlhBlueSimpleRifleUnlockedByPlayer[consoleplayer];
-            hudBlueSimpleRifleNoticeTics = tlhBlueSimpleRifleNoticeByPlayer[consoleplayer];
-        }
-        hudBlueSimpleRifleActive = (p.FindInventory("BlueSimpleRifle") != null);
-
         hudPlayerHealth = max(0, p.Health);
         hudFOV = clamp(double(p.player.FOV), 20.0, 160.0);
         hudMoveSpeed = sqrt(p.Vel.X * p.Vel.X + p.Vel.Y * p.Vel.Y);
@@ -8978,7 +8593,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "SimpleRifle") hudWeaponName = hudBlueSimpleRifleActive ? "BLUE SIMPLE RIFLE" : "STREET SWEEPER";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -9666,16 +9281,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             profileY = 1.14;
             accentStrength = 1.10;
         }
-        else if (cls == "SimpleRifle" && hudBlueSimpleRifleActive)
-        {
-            // Keep the optional preview neutral. The actual gun receives the
-            // blue tint through its dedicated translucent PSprite layer.
-            primary = 0xB8C0C2;
-            secondary = 0x596164;
-            profileX = 1.0;
-            profileY = 1.0;
-            accentStrength = 1.0;
-        }
         else if (cls == "HellfireProjector")
         {
             // Red nozzle + light-gray lower body.
@@ -9937,16 +9542,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 hudHunterAmmo <= 1 ? warn : Font.CR_WHITE, 0.25);
             Text("RESERVE", 518, 317, dim, 0.21);
             TextR(String.Format("%03d", hudHunterReserve), 609, 317, Font.CR_WHITE, 0.23);
-        }
-        else if (tlhVisorWeaponClass == "SimpleRifle" && hudBlueSimpleRifleActive)
-        {
-            Text("CEL", 518, 306, dim, 0.21);
-            TextR(String.Format("%03d", hudCell), 555, 306,
-                hudCell <= 2 ? warn : Font.CR_WHITE, 0.24);
-            Text("TYPE", 564, 306, dim, 0.21);
-            TextR("RAIL", 609, 306, 0x32AFFF, 0.24);
-            Text("AMMO", 518, 317, dim, 0.21);
-            TextR("PLASMA", 609, 317, 0x32AFFF, 0.23);
         }
         else
         {
@@ -10221,31 +9816,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
     }
 
-    // Persistent progress is based only on this player's SimpleRifle kills.
-    ui void DrawBlueSimpleRifleProgress()
-    {
-        Color electricBlue = 0x32AFFF;
-
-        if (hudBlueSimpleRifleNoticeTics > 0)
-        {
-            TextC("ARSENAL UNLOCKED // BLUE SIMPLE RIFLE",
-                320, 57, electricBlue, 0.38);
-        }
-        else if (hudBlueSimpleRifleUnlocked)
-        {
-            TextC("BLUE SIMPLE RIFLE // ACTIVE UNTIL NEXT MAP",
-                320, 57, electricBlue, 0.30);
-        }
-        else
-        {
-            int progress = clamp(hudBlueSimpleRifleKills, 0, TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK);
-            TextC(String.Format("SIMPLE RIFLE KILLS // %02d/60",
-                progress), 320, 57, electricBlue, 0.30);
-            SegBar(253, 66, 134, progress,
-                TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK, 12, electricBlue);
-        }
-    }
-
     // ========================================================================
     // ROOT YARBIS VISOR
     // ========================================================================
@@ -10311,28 +9881,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             int color = (i == rows - 1) ? Font.CR_WHITE : 0x667176;
             TextR(tlhInputHistory[index], 632, 32 + i * 7.0,
                 color, 0.18);
-        }
-    }
-
-    ui void DrawCompactBlueSimpleRifleProgress()
-    {
-        Color blue = 0x32AFFF;
-        if (hudBlueSimpleRifleNoticeTics > 0)
-        {
-            TextC("BLUE SIMPLE RIFLE UNLOCKED", 320, 38, blue, 0.27);
-        }
-        else if (hudBlueSimpleRifleUnlocked)
-        {
-            TextC("BLUE SIMPLE RIFLE ACTIVE // THIS MAP", 320, 38, blue, 0.23);
-        }
-        else
-        {
-            int progress = clamp(hudBlueSimpleRifleKills, 0,
-                TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK);
-            TextC(String.Format("SIMPLE RIFLE %02d/60", progress),
-                320, 36, 0x667176, 0.21);
-            SegBar(282, 45, 76, progress,
-                TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK, 8, blue);
         }
     }
 
@@ -10404,12 +9952,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         int dim = 0x667176;
         int main = 0xB8C0C2;
         int warn = 0xD3B35B;
-        int blue = 0x32AFFF;
 
         Line(486, 292, 632, 292, dim, 120, 0.6);
-        TextR(hudWeaponName, 632, 298,
-            (tlhVisorWeaponClass == "SimpleRifle" && hudBlueSimpleRifleActive)
-                ? blue : main, 0.22);
+        TextR(hudWeaponName, 632, 298, main, 0.22);
 
         if (tlhVisorWeaponClass == "ServiceRevolver")
         {
@@ -10422,11 +9967,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             TextR(String.Format("MAG %02d/05   RES %03d",
                 hudHunterAmmo, hudHunterReserve), 632, 310,
                 hudHunterAmmo <= 1 ? warn : Font.CR_WHITE, 0.20);
-        }
-        else if (tlhVisorWeaponClass == "SimpleRifle" && hudBlueSimpleRifleActive)
-        {
-            TextR(String.Format("PLASMA %03d   //   RAIL",
-                hudCell), 632, 310, hudCell <= 2 ? warn : blue, 0.20);
         }
         else
         {
@@ -10515,7 +10055,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawCompactHeader();
         DrawCompactInput();
         DrawCompactInputHistory();
-        DrawCompactBlueSimpleRifleProgress();
         DrawCompactPowerupTimers();
         DrawCompactTelemetry();
         DrawCompactVitals();
