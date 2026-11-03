@@ -6045,6 +6045,35 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         wasOnGround = onGround;
     }
 
+    // Remove weapons only after neither the weapon switch nor a live PSprite
+    // still references them. Game-mode loadouts may replace the current weapon.
+    void CleanupDeferredWeaponRemovals()
+    {
+        PSprite weaponPSprite = player ? player.FindPSprite(PSP_WEAPON) : null;
+
+        for (int i = 0; i < tlhDeferredWeaponRemovals.Size();)
+        {
+            Weapon oldWeapon = tlhDeferredWeaponRemovals[i];
+            if (!oldWeapon)
+            {
+                tlhDeferredWeaponRemovals.Delete(i);
+                continue;
+            }
+
+            if (player && (player.ReadyWeapon == oldWeapon ||
+                player.PendingWeapon == oldWeapon ||
+                (weaponPSprite && weaponPSprite.Caller == oldWeapon)))
+            {
+                i++;
+                continue;
+            }
+
+            RemoveInventory(oldWeapon);
+            oldWeapon.Destroy();
+            tlhDeferredWeaponRemovals.Delete(i);
+        }
+    }
+
     // ========================================================================
     // PLAYER CORPSE SMELL REACTION
     // ========================================================================
