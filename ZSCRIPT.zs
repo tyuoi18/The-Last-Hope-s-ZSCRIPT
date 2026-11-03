@@ -5179,10 +5179,30 @@ class ServiceRevolver : Weapon
         Goto Ready;
 
     Deselect:
+        RVOL Q 0
+        {
+            let tp = TacticalPlayer(player.mo);
+            if (tp && tp.tlhDualWieldWeapon == invoker)
+            {
+                tp.tlhDualWieldActive = false;
+                tp.tlhDualWieldWeapon = null;
+            }
+            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+        }
         RVOL Q 1 A_Lower;
         Loop;
 
     Select:
+        RVOL Q 0
+        {
+            let tp = TacticalPlayer(player.mo);
+            if (tp && tp.tlhDualWieldWeapon == invoker)
+            {
+                tp.tlhDualWieldActive = false;
+                tp.tlhDualWieldWeapon = null;
+            }
+            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+        }
         RVOL Q 1 A_Raise;
         Loop;
 
@@ -5625,8 +5645,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhCorpseReactionPlayed;
     int tlhCorpseScanCooldown;
 
-    // Centralized dual-wield state. The active KEYCONF binding uses BT_USER3,
-    // avoiding a netevent round-trip for a local player command.
+    // Centralized dual-wield state. Compatible weapon Ready loops expose the
+    // native User3 state through WRF_ALLOWUSER3; this player owns the shared mode.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     int tlhDualWieldToggleCooldown;
