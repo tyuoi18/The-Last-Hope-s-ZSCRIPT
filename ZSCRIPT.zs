@@ -8346,7 +8346,28 @@ class TacticalHUDHandler : EventHandler
             {
                 let ownedSimpleRifle = SimpleRifle(rewardPlayer.FindInventory("SimpleRifle"));
                 if (ownedSimpleRifle)
+                {
                     ownedSimpleRifle.tlhBlueModeActive = tlhBlueSimpleRifleUnlocked;
+
+                    // Recolor the actual first-person weapon PSprite, not a
+                    // separate inventory weapon or the disabled visor preview.
+                    PSprite riflePSprite = players[rewardPlayerNum].FindPSprite(PSP_WEAPON);
+                    if (riflePSprite && riflePSprite.Caller == ownedSimpleRifle)
+                    {
+                        if (tlhBlueSimpleRifleUnlocked)
+                        {
+                            let bluePalette = GetDefaultByType("TLHBlueSimpleRiflePalette");
+                            if (bluePalette)
+                                riflePSprite.Translation = bluePalette.Translation;
+                        }
+                        else
+                        {
+                            let rifleDefault = GetDefaultByType(ownedSimpleRifle.GetClass());
+                            riflePSprite.Translation = rifleDefault ?
+                                rifleDefault.Translation : ownedSimpleRifle.Translation;
+                        }
+                    }
+                }
             }
         }
 
