@@ -4896,7 +4896,7 @@ $1
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
         TacticalPlayer tp = TacticalPlayer(Owner);
-        if (tp && tp.tlhBlueSimpleRifleUnlocked)
+        if (fireMode == PrimaryFire && tp && tp.tlhBlueSimpleRifleUnlocked)
         {
             Inventory cells = Owner.FindInventory("Cell");
             return cells && cells.Amount >= 1;
@@ -7842,15 +7842,11 @@ class TacticalHUDHandler : EventHandler
     override void WorldThingDied(WorldEvent e)
     {
         if (!e.Thing || !e.Thing.bIsMonster ||
-            !e.DamageSource || !e.DamageSource.player ||
-            e.DamageSource.PlayerNumber() != consoleplayer)
+            !e.DamageSource || !e.DamageSource.player)
             return;
 
-        hudHitmarkerTics = 0;
-        hudKillConfirmTics = 22;
-
-        // Count kills made with the Simple Rifle only. The map-scoped counter
-        // belongs to TacticalPlayer, so dying does not erase earned progress.
+        // Count the killer's Simple Rifle kills on the authoritative game side,
+        // independently of which player owns the local HUD.
         int killerNum = e.DamageSource.PlayerNumber();
         if (killerNum >= 0 && killerNum < MAXPLAYERS)
         {
@@ -7871,6 +7867,12 @@ class TacticalHUDHandler : EventHandler
             }
         }
 
+        // The visual kill confirmation is local-player-only.
+        if (killerNum != consoleplayer)
+            return;
+
+        hudHitmarkerTics = 0;
+        hudKillConfirmTics = 22;
         hudFeedbackText = "TARGET ELIMINATED";
         hudFeedbackTics = 24;
         hudFeedbackColor = 0xF2D36B;
