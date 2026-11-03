@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.9 - apply dual-hand transforms in weapon PSpriteTick; original right, mirror left
+// TLH v52.10 - state-authored primary-hand offset; original right, mirrored offhand left
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -103,7 +103,8 @@ const TLH_MAX_CELLS = 300;
 // v52.5: scope SimpleRifle PSprite states explicitly as weapon states to disambiguate action self.
 // v52.7: remove the invalid default-class tint lookup and apply the named BlueSimpleRifle TRNSLATE directly to PSprites.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
-// v52.9: route compatible weapon PSprite transforms through Weapon.PSpriteTick so weapon state actions cannot overwrite the primary-hand shift.
+// v52.9: tried routing compatible weapon transforms through Weapon.PSpriteTick.
+// v52.10: move the primary-hand shift into each compatible weapon's A_OverlayOffset/A_WeaponOffset wrappers, preventing state actions from overwriting it.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -1208,13 +1209,28 @@ class HookChainsaw : Chainsaw replaces Chainsaw
 
 class RecoilPistol : Pistol replaces Pistol
 {
-    override void PSpriteTick(PSprite psp)
+    // Weapon-state offset wrappers keep the primary hand shifted right even
+    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
+    double GetTLHDualPrimaryStateOffset()
     {
-        Super.PSpriteTick(psp);
         let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer)
-            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
+            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        return 0.0;
     }
+
+    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+    }
+
+    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+            wx += GetTLHDualPrimaryStateOffset();
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
 
 
     bool fullAuto;
@@ -1260,13 +1276,13 @@ class RecoilPistol : Pistol replaces Pistol
             A_OverlayScale(PSP_WEAPON, 0.92, 0.92);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
         PISG A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -1343,8 +1359,8 @@ class RecoilPistol : Pistol replaces Pistol
         Goto FinishReload;
 
     FinishReload:
-        PISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        PISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        PISG A 2 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
+        PISG A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
 
@@ -1366,8 +1382,8 @@ class RecoilPistol : Pistol replaces Pistol
             A_FirePistol();
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        PISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        PISG C 3 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG B 3 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     FireAuto:
@@ -1377,7 +1393,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_FirePistol();
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
-        PISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG C 2 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG A 0 A_ReFire;
         Goto Ready;
 
@@ -1490,13 +1506,28 @@ class RecoilPistol : Pistol replaces Pistol
 
 class OfficerVulkanPistol : Weapon
 {
-    override void PSpriteTick(PSprite psp)
+    // Weapon-state offset wrappers keep the primary hand shifted right even
+    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
+    double GetTLHDualPrimaryStateOffset()
     {
-        Super.PSpriteTick(psp);
         let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer)
-            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
+            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        return 0.0;
     }
+
+    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+    }
+
+    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+            wx += GetTLHDualPrimaryStateOffset();
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
 
 
     int weaponMode;
@@ -1565,14 +1596,14 @@ class OfficerVulkanPistol : Weapon
             A_OverlayScale(PSP_WEAPON, 0.78, 0.88);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
         PISG A 1
         {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -1588,8 +1619,8 @@ class OfficerVulkanPistol : Weapon
         }
         PISG A 1
         {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -1636,29 +1667,29 @@ class OfficerVulkanPistol : Weapon
         PISG B 4
         {
             A_GunFlash();
-            A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+            A_TLHDualWeaponOffset(0, 37, WOF_INTERPOLATE);
             A_FireBullets(2.0, 0, 1, 8, "BulletPuff");
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Quake(1, 2, 0, 100);
             A_Recoil(1.4);
         }
-        PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        PISG B 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        PISG C 3 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG B 3 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     FireAuto:
         PISG B 3
         {
             A_GunFlash();
-            A_WeaponOffset(0, 38, WOF_INTERPOLATE);
+            A_TLHDualWeaponOffset(0, 38, WOF_INTERPOLATE);
             A_FireBullets(3.0, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Quake(1.8, 3.0, 0, 100);
             A_Recoil(1.8);
         }
-        PISG C 2 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG C 2 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
         PISG A 0 A_ReFire;
         Goto Ready;
 
@@ -1809,8 +1840,8 @@ class OfficerVulkanPistol : Weapon
         Goto FinishReload;
 
     FinishReload:
-        PISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
-        PISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        PISG A 2 A_TLHDualWeaponOffset(0, 42, WOF_INTERPOLATE);
+        PISG A 2 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
         Goto Ready;
 
 
@@ -1837,24 +1868,24 @@ class OfficerVulkanPistol : Weapon
     SwitchLauncherLower:
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -2.0);
         }
         PISG A 0
         {
             invoker.weaponMode = 1;
-            A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto ReadyLauncher;
 
@@ -1872,24 +1903,24 @@ class OfficerVulkanPistol : Weapon
     SwitchPistolLower:
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 1.0);
         }
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 2.0);
         }
         PISG A 0
         {
             invoker.weaponMode = 0;
-            A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
         PISG A 3
         {
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
         }
         Goto Ready;
 
@@ -2083,13 +2114,28 @@ class RecoilShotgun : Shotgun replaces Shotgun
 
 class FastRecoilSSG : SuperShotgun replaces SuperShotgun
 {
-    override void PSpriteTick(PSprite psp)
+    // Weapon-state offset wrappers keep the primary hand shifted right even
+    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
+    double GetTLHDualPrimaryStateOffset()
     {
-        Super.PSpriteTick(psp);
         let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer)
-            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
+            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        return 0.0;
     }
+
+    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+    }
+
+    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+            wx += GetTLHDualPrimaryStateOffset();
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
 
 
     bool dragonBreath;
@@ -2133,13 +2179,13 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, 0, 32);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
         }
         SHT2 A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -2153,8 +2199,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
 
             return ResolveState("SetDragon");
         }
-        SHT2 A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        SHT2 A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        SHT2 A 2 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
+        SHT2 A 2 A_TLHDualWeaponOffset(0, 42, WOF_INTERPOLATE);
         Goto SetDragon;
 
     SetDragon:
@@ -2176,8 +2222,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto FinishReload;
 
     FinishReload:
-        SHT2 A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        SHT2 A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        SHT2 A 2 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
+        SHT2 A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     FireDualLeft:
@@ -2264,7 +2310,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
             A_GunFlash();
-            A_WeaponOffset(0, 41, WOF_INTERPOLATE);
+            A_TLHDualWeaponOffset(0, 41, WOF_INTERPOLATE);
             A_FireBullets(11.2, 7.1, 20, 5, "BulletPuff", 0);
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -4524,13 +4570,28 @@ class HunterRifle : Weapon
 // RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 class ServiceRevolver : Weapon
 {
-    override void PSpriteTick(PSprite psp)
+    // Weapon-state offset wrappers keep the primary hand shifted right even
+    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
+    double GetTLHDualPrimaryStateOffset()
     {
-        Super.PSpriteTick(psp);
         let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer)
-            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
+            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        return 0.0;
     }
+
+    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+    }
+
+    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+            wx += GetTLHDualPrimaryStateOffset();
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
 
 
     // Six-shot cylinder. Clip ammo is held in reserve and transferred on reload.
@@ -4635,7 +4696,7 @@ class ServiceRevolver : Weapon
             let tp = TacticalPlayer(player.mo);
             double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
             double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
-            A_OverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
+            A_TLHDualOverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
             A_WeaponReady(readyFlags);
         }
         Loop;
@@ -4684,11 +4745,11 @@ class ServiceRevolver : Weapon
             return ResolveState(null);
         }
         RVOL Q 5
-        {            A_OverlayOffset(PSP_WEAPON, 2, 39, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 2, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -4.0);
         }
         RVOL Q 8
-        {            A_OverlayOffset(PSP_WEAPON, 4, 43, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 4, 43, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -9.0);
         }
         RVOL Q 10
@@ -4714,11 +4775,11 @@ class ServiceRevolver : Weapon
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
         }
         RVOL Q 7
-        {            A_OverlayOffset(PSP_WEAPON, 1, 36, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 1, 36, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL Q 5
-        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
             
         }
@@ -4757,7 +4818,7 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.6, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
 
             if (!infinite && invoker.cylinderAmmo == 1)
@@ -4766,11 +4827,11 @@ class ServiceRevolver : Weapon
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 2
-        {            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         RVOL Q 4
-        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         Goto Ready;
@@ -4794,7 +4855,7 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.2, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
             A_Recoil(1.4);
 
@@ -4831,7 +4892,7 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.2, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
             A_Recoil(1.4);
 
@@ -4874,7 +4935,7 @@ class ServiceRevolver : Weapon
         // M4A1-style burst rhythm: show the pre-shot A frame for one tic,
         // then the B firing frame; repeat for each cartridge.
         RVOL A 1
-        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         RVOL B 1
@@ -4885,11 +4946,11 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.7, 0.3, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -2.4);
         }
         RVOL A 1
-        {            A_OverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.8);
         }
         RVOL B 1
@@ -4900,11 +4961,11 @@ class ServiceRevolver : Weapon
             A_FireBullets(1.8, 0.7, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.0);
         }
         RVOL A 1
-        {            A_OverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.0);
         }
         RVOL B 1
@@ -4915,17 +4976,17 @@ class ServiceRevolver : Weapon
             A_FireBullets(3.0, 1.0, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -3.8);
             if (!infinite && invoker.cylinderAmmo <= 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 3
-        {            A_OverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -1.3);
         }
         RVOL Q 4
-        {            A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         Goto Ready;
@@ -5506,24 +5567,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         mirror.InterpolateTic = primary.InterpolateTic;
     }
 
-    // Compatible weapons call this from their native PSpriteTick callback.
-    // That callback runs after the current frame's authored overlay actions,
-    // so the original hand's rightward shift is no longer overwritten by
-    // A_OverlayOffset/A_WeaponReady during the same PSprite update.
-    void ProcessTLHWeaponPSpriteTick(PSprite psp)
-    {
-        if (!psp || !player || !player.ReadyWeapon ||
-            psp.Caller != player.ReadyWeapon)
-            return;
-
-        ApplyTLHWeaponPSpriteMotion(psp);
-
-        // Sync the visual-only left hand after the original weapon has received
-        // its final transform for this tic.
-        if (psp.ID == PSP_WEAPON)
-            UpdateTLHDualWieldPresentation(psp);
-    }
-
     override void Tick()
     {
         Super.Tick();
@@ -6035,19 +6078,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         PSprite weaponPSP = player.FindPSprite(PSP_WEAPON);
         PSprite flashPSP = player.FindPSprite(PSP_FLASH);
 
-        // Dual-compatible weapons run their transforms from Weapon.PSpriteTick,
-        // after authored state actions. All other weapons retain the player-tick
-        // path so their existing procedural motion remains unchanged.
-        bool usesWeaponPSpriteTick = SupportsTLHProceduralDualWield(player.ReadyWeapon);
-        if (weaponPSP && !usesWeaponPSpriteTick)
-            ApplyTLHWeaponPSpriteMotion(weaponPSP);
-        if (flashPSP && !usesWeaponPSpriteTick)
-            ApplyTLHWeaponPSpriteMotion(flashPSP);
+        if (weaponPSP) ApplyTLHWeaponPSpriteMotion(weaponPSP);
+        if (flashPSP) ApplyTLHWeaponPSpriteMotion(flashPSP);
 
-        // Keep fallback presentation for any future compatible weapon without
-        // the native callback. Current dual-wield weapons sync from PSpriteTick.
-        if (!usesWeaponPSpriteTick)
-            UpdateTLHDualWieldPresentation(weaponPSP);
+        // Duplicate the final visible primary frame on the mirrored layer.
+        UpdateTLHDualWieldPresentation(weaponPSP);
 
         wasOnGround = onGround;
     }
@@ -6593,9 +6628,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                         recoilY + landingY + damageY + drawY;
 
         totalX = clamp(totalX, -12.0, 12.0);
-        // Keep the muzzle flash aligned with the shifted primary weapon.
-        if ((isWeaponPSP || isFlashPSP) && tlhDualWieldWeapon == weapon)
-            totalX += 36.0 * GetTLHDualPrimarySlide();
+        // The dual-hand horizontal offset is authored by the active weapon's
+        // state wrappers so it cannot be overwritten by frame actions.
         totalY = clamp(totalY, -18.0, 18.0);
 
         // Only a real firing event applies transient squash/stretch. The
