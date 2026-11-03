@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.14 - remove procedural HUD sprite scaling from firing and reload
+// TLH v52.15 - synchronize muzzle flash motion with weapon PSprite
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -6579,7 +6579,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double weight = GetTLHWeaponMotionWeight(weapon);
         double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
         double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
-        double weaponFactor = isWeaponPSP ? 1.0 : 0.42;
+        // The flash is a separate PSprite, but it must inherit the exact same
+        // procedural delta as the weapon to stay locked to the muzzle.
+        double weaponFactor = 1.0;
 
         double worldRightX = sin(angle);
         double worldRightY = -cos(angle);
@@ -6592,7 +6594,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double swayRoll = -tlhAnimSwayX * 0.62;
         double inertiaRoll = -tlhAnimInertiaX * 0.40;
         double lookRoll = -tlhAnimLookX * 0.52;
-        double recoilRoll = tlhAnimWeaponKickSide * (isWeaponPSP ? 1.15 : 0.38);
+        double recoilRoll = tlhAnimWeaponKickSide * 1.15;
         double landingRoll = tlhAnimLandingKick * 0.10;
         double stopRoll = tlhAnimStopKick * 0.24;
 
@@ -6621,12 +6623,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double crouchY = -(1.0 - crouchFactor) * (1.4 + 1.2 * weight);
         double airFloatY = airBlend * cos(double(level.time) * 0.09 * TLH_RAD_TO_DEG) * 0.35;
-        double recoilY = -tlhAnimWeaponKick * (isWeaponPSP ? 0.92 : 0.30);
-        double recoilX = tlhAnimWeaponKickSide * (isWeaponPSP ? 0.56 : 0.20);
-        double landingY = tlhAnimLandingKick * (isWeaponPSP ? 0.30 : 0.12);
-        double damageY = tlhAnimDamageKick * (isWeaponPSP ? 0.12 : 0.05);
-        double drawY = tlhAnimDrawKick * (isWeaponPSP ? 0.72 : 0.28);
-        double drawX = -tlhAnimDrawKick * (isWeaponPSP ? 0.06 : 0.02);
+        double recoilY = -tlhAnimWeaponKick * 0.92;
+        double recoilX = tlhAnimWeaponKickSide * 0.56;
+        double landingY = tlhAnimLandingKick * 0.30;
+        double damageY = tlhAnimDamageKick * 0.12;
+        double drawY = tlhAnimDrawKick * 0.72;
+        double drawX = -tlhAnimDrawKick * 0.06;
 
         double totalX = visualOffsetX + swayX + recoilX + drawX;
         double totalY = visualOffsetY + swayY + crouchY + airFloatY +
@@ -6657,10 +6659,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
 
 
-    // Per-weapon presentation profile. This changes only the first-person
-    // appearance. Damage, spread, ammo use and all gameplay values remain
-    // untouched. Importantly, the multiplier is applied to the live PSprite,
-    // so Fire/AltFire/Reload/Select/Ready frames inherit the same shape.
+    // Per-weapon motion profile. This changes only first-person offsets,
+    // base roll and sway. Damage, spread, ammo use and authored sprite scale
+    // remain untouched.
     void GetTLHWeaponVisualProfile(Weapon weapon,
         out double offsetX, out double offsetY,
         out double baseRoll, out double sway)
