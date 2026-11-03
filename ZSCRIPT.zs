@@ -5549,8 +5549,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // avoiding a netevent round-trip for a local player command.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
-    bool tlhDashRequested;
-    bool tlhProneBindHeld;
+    int tlhDualWieldToggleCooldown;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5757,7 +5756,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool ToggleTLHDualWield()
     {
         if (!player || player.playerstate != PST_LIVE ||
-            player.PendingWeapon != WP_NOCHANGE)
+            player.PendingWeapon != WP_NOCHANGE ||
+            tlhDualWieldToggleCooldown > 0)
             return false;
 
         Weapon weapon = player.ReadyWeapon;
@@ -5768,8 +5768,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         String transitionName = currentlyEnabled ? "DualOffStart" : "DualOnStart";
         State transition = weapon.FindStateByString(transitionName);
 
-        if (!transition || !TryModeToggle())
+        if (!transition)
             return false;
+
+        // Dual Wield has its own cooldown. It must not share the zoom/stance
+        // latch, because +user3 is an independent player-command button.
+        tlhDualWieldToggleCooldown = 12;
 
         // This is the sole authoritative switch. Weapon state entry points
         // animate their own transitions and retain their own shot/ammo logic.
@@ -5784,10 +5788,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Super.Tick();
         if (!player || !player.mo) return;
 
-        // InputProcess forwards +user2 as a one-shot event. Consume it once,
-        // independent of player.oldbuttons or weapon-ready input filtering.
-        bool tlhDashPressedThisTic = tlhDashRequested;
-        tlhDashRequested = false;
+        // Read the raw player command buttons directly. BT_USER1..3 are
+        // script-reserved buttons and are independent of weapon PSprite flags.
+        // The oldbuttons comparison turns held buttons into one-shot presses.
+        int bt = player.cmd.buttons;
+        int obt = player.oldbuttons;
+        bool tlhDashPressedThisTic = (bt & BT_USER2) != 0 && (obt & BT_USER2) == 0;
+        bool tlhDualWieldPressedThisTic = (bt & BT_USER3) != 0 && (obt & BT_USER3) == 0;
 
         CleanupDeferredWeaponRemovals();
 
@@ -5827,8 +5834,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
-            tlhDashRequested = false;
-            tlhProneBindHeld = false;
+            tlhDualWieldToggleCooldown = 0;
             tlhIsSprinting = false;
             tlhIsSliding = false;
             tlhSlideTics = 0;
@@ -5860,9 +5866,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         EnforceAmmoCap("Cell", TLH_MAX_CELLS);
 
         bool onGround = (Pos.Z <= floorz + 0.5);
-        int bt = player.cmd.buttons;
-        int obt = player.oldbuttons;
-
         double forwardInput = 0.0;
         double sideInput = 0.0;
         if (bt & BT_FORWARD) forwardInput += 1.0;
@@ -5896,7 +5899,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Weapon proneWeapon = player.ReadyWeapon;
         bool hunterRifleEquipped = proneWeapon && proneWeapon is "HunterRifle";
         bool proneRequested = (hunterRifleEquipped &&
-            (tlhProneBindHeld || (bt & BT_USER1) != 0) &&
+            (bt & BT_USER1) != 0 &&
             onGround && !isSlamming);
         if (proneRequested)
         {
@@ -5942,6 +5945,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         ResetTLHDualForWeaponSwitch();
+        if (tlhDualWieldPressedThisTic)
+            ToggleTLHDualWield();
         RestoreTLHOwnedWeaponTranslations();
 
         int gameMode = GetGameMode();
@@ -6088,6 +6093,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // ------------------------------------------------------------
         if (akimboCooldown > 0)
             akimboCooldown--;
+        if (tlhDualWieldToggleCooldown > 0)
+            tlhDualWieldToggleCooldown--;
 
         if (!(bt & BT_ZOOM))
             akimboButtonHeld = false;
@@ -8168,9 +8175,6 @@ class TacticalHUDHandler : EventHandler
     // INPUT OBSERVER
     // ------------------------------------------------------------------------
     transient ui bool tlhInputM3Down;
-    transient ui bool tlhInputUser1Down;
-    transient ui bool tlhInputUser2Down;
-    transient ui bool tlhInputUser3Down;
     transient ui String tlhInputLast;
     String tlhNoAvoidMeleeMapName;
     bool tlhNoAvoidMeleeScanned;
@@ -8530,7 +8534,11 @@ class TacticalHUDHandler : EventHandler
     }
 
 
-    override bool InputProcess(InputEvent e){
+    override bool InputProcess(InputEvent e)
+    {
+        // This handler is now an observer for the optional input HUD only.
+        // Tactical actions are read deterministically from PlayerInfo.cmd.buttons
+        // in TacticalPlayer.Tick(), not dispatched through network events.
         if (e.Type == InputEvent.Type_KeyDown ||
             e.Type == InputEvent.Type_KeyUp)
         {
@@ -8550,56 +8558,10 @@ class TacticalHUDHandler : EventHandler
                 tlhHUDDualBindName = keyName;
             }
 
-            // These gameplay controls normally require WRF_ALLOWUSER# on the
-            // currently equipped weapon to enter its User# state. TLH does not
-            // use those weapon states: route configured bindings as net events
-            // so they work independently of weapon class and PSprite state.
-            bool isUser1Bind = (binding ~== "+user1" || binding ~== "-user1");
-            bool isUser2Bind = (binding ~== "+user2" || binding ~== "-user2");
-            bool isUser3Bind = (binding ~== "+user3" || binding ~== "-user3");
-
-            if (isUser1Bind)
-            {
-                if (inputDown && !tlhInputUser1Down)
-                {
-                    tlhInputUser1Down = true;
-                    EventHandler.SendNetworkEvent("tlh_prone", 1);
-                }
-                else if (!inputDown && tlhInputUser1Down)
-                {
-                    tlhInputUser1Down = false;
-                    EventHandler.SendNetworkEvent("tlh_prone", 0);
-                }
-            }
-            else if (isUser2Bind)
-            {
-                if (inputDown && !tlhInputUser2Down)
-                {
-                    tlhInputUser2Down = true;
-                    EventHandler.SendNetworkEvent("tlh_dash");
-                }
-                else if (!inputDown)
-                {
-                    tlhInputUser2Down = false;
-                }
-            }
-            else if (isUser3Bind)
-            {
-                if (inputDown && !tlhInputUser3Down)
-                {
-                    tlhInputUser3Down = true;
-                    EventHandler.SendNetworkEvent("tlh_dualwield");
-                }
-                else if (!inputDown)
-                {
-                    tlhInputUser3Down = false;
-                }
-            }
-
             if (binding != "")
                 keyName = keyName .. " <" .. binding .. ">";
 
-            if (e.Type == InputEvent.Type_KeyDown)
+            if (inputDown)
             {
                 tlhInputLast = "DOWN " .. keyName;
                 tlhInputHistory.Push("DN  " .. historyKeyName);
@@ -8613,65 +8575,17 @@ class TacticalHUDHandler : EventHandler
             if (tlhInputHistory.Size() > 64)
                 tlhInputHistory.Delete(0);
 
-            // M3 is not represented by a BT_* gameplay button, so keep its
-            // actual physical key state here. All other live states below use
-            // PlayerInfo.cmd.buttons and therefore remain synchronized with
-            // gameplay input.
             if (e.KeyScan == InputEvent.KEY_MOUSE3 ||
                 keyName ~== "MOUSE3" ||
                 keyName ~== "MOUSE 3")
             {
-                tlhInputM3Down = (e.Type == InputEvent.Type_KeyDown);
+                tlhInputM3Down = inputDown;
             }
         }
 
-        // Never consume input. GZDoom continues dispatching the event to the
-        // actual game responder after this observer returns false.
+        // Observe only. Never consume the user's configured key binding.
         return false;
     }
-
-
-    override void NetworkProcess(ConsoleEvent e)
-    {
-        if (e.Name ~== "tlh_dualwield" ||
-            e.Name ~== "tlh_dash" ||
-            e.Name ~== "tlh_prone")
-        {
-            int playerNum = e.Player;
-            if (playerNum < 0 || playerNum >= MAXPLAYERS)
-                return;
-
-            let p = players[playerNum].mo;
-            if (!p || !p.player || p.Health <= 0)
-                return;
-
-            let tp = TacticalPlayer(p);
-            if (!tp)
-                return;
-
-            if (e.Name ~== "tlh_dualwield")
-            {
-                bool toggled = tp.ToggleTLHDualWield();
-                if (playerNum == consoleplayer)
-                {
-                    hudFeedbackText = toggled
-                        ? (tp.tlhDualWieldActive ? "DUAL WIELD ENABLED" : "DUAL WIELD DISABLED")
-                        : "DUAL WIELD UNAVAILABLE";
-                    hudFeedbackTics = 30;
-                    hudFeedbackColor = toggled ? 0x83C99B : 0xD3B35B;
-                }
-            }
-            else if (e.Name ~== "tlh_dash")
-            {
-                tp.tlhDashRequested = true;
-            }
-            else if (e.Name ~== "tlh_prone")
-            {
-                tp.tlhProneBindHeld = (e.Args[0] != 0);
-            }
-        }
-    }
-
 
     int GetTLHFaceHealthBand(Actor p)
     {
