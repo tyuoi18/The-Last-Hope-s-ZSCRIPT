@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.0 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.1 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -97,7 +97,7 @@ const TLH_MAX_CELLS = 300;
 // or WRF_ALLOWUSER3; only the inert mirror holder and weapon firing routines remain.
 // v51.0.1: print an explicit ENABLED/DISABLED confirmation when the command arrives.
 // v51.0.2: copy the primary PSprite interpolation marker after mirroring its offsets.
-// v52.0: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
+// v52.1: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
 // Blue mode consumes Cell ammo and uses a cyan MarineRailgun-style A_RailAttack.
 // Add a continuously refreshed tactical minimap and lightweight screen-space pseudo-shader overlays.
 // TacticalM4A1 returns to its stock ZHGG sprite placement without procedural HUD sway/scale/rotation.
