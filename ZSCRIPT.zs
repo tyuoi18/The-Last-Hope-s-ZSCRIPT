@@ -5326,6 +5326,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 {
     int jumpCount;
     int slideCooldown;
+    int tlhCoyoteTics;
+    int tlhSlideTics;
+    int tlhDashTics;
+    int tlhDashCooldown;
+    int tlhSprintRecoveryTics;
+    double tlhSprintStamina;
+    bool tlhMovementInitialized;
+    bool tlhIsSprinting;
+    bool tlhIsSliding;
     int fallTicks;
     int akimboCooldown;
     double maximumFallSpeed;
@@ -5512,17 +5521,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!weapon)
             return false;
 
-        if (weapon is "RecoilPistol")
-            return true;
-
-        if (weapon is "TacticalM4A1")
+        if (weapon is "RecoilPistol" ||
+            weapon is "TacticalM4A1" ||
+            weapon is "FastRecoilSSG")
             return true;
 
         if (weapon is "OfficerVulkanPistol")
         {
             let vulkan = OfficerVulkanPistol(weapon);
-            if (vulkan && vulkan.weaponMode == 0)
-                return true;
+            return vulkan && vulkan.weaponMode == 0;
         }
 
         return false;
@@ -5536,20 +5543,22 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (weapon is "RecoilPistol")
         {
             let pistol = RecoilPistol(weapon);
-            if (pistol)
-                pistol.dualWield = enabled;
+            if (pistol) pistol.dualWield = enabled;
         }
         else if (weapon is "TacticalM4A1")
         {
             let m4 = TacticalM4A1(weapon);
-            if (m4)
-                m4.dualWield = enabled;
+            if (m4) m4.dualWield = enabled;
         }
         else if (weapon is "OfficerVulkanPistol")
         {
             let vulkan = OfficerVulkanPistol(weapon);
-            if (vulkan)
-                vulkan.dualWield = enabled;
+            if (vulkan) vulkan.dualWield = enabled;
+        }
+        else if (weapon is "FastRecoilSSG")
+        {
+            let ssg = FastRecoilSSG(weapon);
+            if (ssg) ssg.akimboState = enabled ? 1 : 0;
         }
     }
 
@@ -5569,30 +5578,42 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
     }
 
-    void ToggleTLHDualWield()
+    bool ToggleTLHDualWield()
     {
+        if (!player || player.playerstate != PST_LIVE ||
+            player.PendingWeapon != WP_NOCHANGE)
+            return false;
+
         Weapon weapon = player.ReadyWeapon;
-
         if (!IsTLHDoubleTapWeapon(weapon))
-            return;
+            return false;
 
-        bool enable = !tlhDualWieldActive;
+        bool currentlyEnabled = (tlhDualWieldActive && tlhDualWieldWeapon == weapon);
+        String transitionName;
 
-        tlhDualWieldActive = enable;
-
-        if (enable)
-            tlhDualWieldWeapon = weapon;
+        if (weapon is "FastRecoilSSG")
+        {
+            let ssg = FastRecoilSSG(weapon);
+            if (!ssg) return false;
+            currentlyEnabled = (ssg.akimboState == 1);
+            transitionName = currentlyEnabled ? "SSGLower" : "AkimboLower";
+        }
         else
-            tlhDualWieldWeapon = null;
+        {
+            transitionName = currentlyEnabled ? "DualOffStart" : "DualOnStart";
+        }
 
-        SetTLHWeaponDualFlag(weapon, enable);
+        // Resolve the transition first. If a weapon is missing one of these
+        // states, do not leave its dual flag active without the matching PSprite.
+        State transition = weapon.FindStateByString(transitionName);
+        if (!transition)
+            return false;
 
-        State transition = weapon.FindStateByString(
-            enable ? "DualOnStart" : "DualOffStart"
-        );
-
-        if (transition)
-            player.SetPsprite(PSP_WEAPON, transition);
+        SetTLHWeaponDualFlag(weapon, !currentlyEnabled);
+        tlhDualWieldActive = !currentlyEnabled;
+        tlhDualWieldWeapon = !currentlyEnabled ? weapon : null;
+        player.SetPsprite(PSP_WEAPON, transition);
+        return true;
     }
 
     override void Tick()
@@ -5608,6 +5629,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player || !player.mo) return;
 
         CleanupDeferredWeaponRemovals();
+
+        if (!tlhMovementInitialized)
+        {
+            tlhMovementInitialized = true;
+            tlhSprintStamina = 100.0;
+            tlhCoyoteTics = 0;
+            tlhSlideTics = 0;
+            tlhDashTics = 0;
+            tlhDashCooldown = 0;
+            tlhSprintRecoveryTics = 0;
+            tlhIsSprinting = false;
+            tlhIsSliding = false;
+            wasOnGround = (Pos.Z <= floorz + 0.5);
+        }
 
         if (player.playerstate == PST_DEAD)
         {
@@ -5629,6 +5664,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
+            tlhIsSprinting = false;
+            tlhIsSliding = false;
+            tlhSlideTics = 0;
+            tlhDashTics = 0;
+            tlhCoyoteTics = 0;
+            tlhSprintStamina = 100.0;
+            tlhMovementInitialized = false;
             return;
         }
 
@@ -5654,6 +5696,24 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         bool onGround = (Pos.Z <= floorz + 0.5);
         int bt = player.cmd.buttons;
         int obt = player.oldbuttons;
+
+        double forwardInput = 0.0;
+        double sideInput = 0.0;
+        if (bt & BT_FORWARD) forwardInput += 1.0;
+        if (bt & BT_BACK) forwardInput -= 1.0;
+        if (bt & BT_MOVERIGHT) sideInput += 1.0;
+        if (bt & BT_MOVELEFT) sideInput -= 1.0;
+        bool hasMoveInput = (abs(forwardInput) + abs(sideInput)) > 0.0;
+
+        if (onGround)
+            tlhCoyoteTics = 5;
+        else if (tlhCoyoteTics > 0)
+            tlhCoyoteTics--;
+
+        if (tlhSlideTics > 0) tlhSlideTics--;
+        if (tlhDashTics > 0) tlhDashTics--;
+        if (tlhDashCooldown > 0) tlhDashCooldown--;
+        if (slideCooldown > 0) slideCooldown--;
 
         // M3 (+user1) only puts the player prone when the Hunter Rifle is equipped.
         // The stance lowers the hitbox and view, dampens movement, and enables
@@ -5725,6 +5785,82 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         ApplyGameModeTick(gameMode, onGround, bt);
 
+        // Directional dash: Q (+user2), available on ground or in the air.
+        // It preserves some incoming velocity and defaults to the facing direction.
+        if (gameMode != 1 && (bt & BT_USER2) && !(obt & BT_USER2) &&
+            tlhDashCooldown <= 0 && tlhSprintStamina >= 30.0 &&
+            !tlhProneActive && !isSlamming && !tlhIsSliding &&
+            player.PendingWeapon == WP_NOCHANGE)
+        {
+            double dashX = cos(angle) * forwardInput - sin(angle) * sideInput;
+            double dashY = sin(angle) * forwardInput + cos(angle) * sideInput;
+            double dashLength = sqrt(dashX * dashX + dashY * dashY);
+
+            if (dashLength < 0.001)
+            {
+                dashX = cos(angle);
+                dashY = sin(angle);
+            }
+            else
+            {
+                dashX /= dashLength;
+                dashY /= dashLength;
+            }
+
+            Vel.XY = (Vel.X * 0.30 + dashX * 14.0,
+                      Vel.Y * 0.30 + dashY * 14.0);
+            double dashSpeed = Vel.XY.Length();
+            if (dashSpeed > 19.0)
+                Vel.XY *= 19.0 / dashSpeed;
+
+            tlhSprintStamina = max(0.0, tlhSprintStamina - 30.0);
+            tlhSprintRecoveryTics = 22;
+            tlhDashTics = 6;
+            tlhDashCooldown = 42;
+            A_StartSound("weapons/sshotc", CHAN_BODY);
+            Spawn("SlideSmoke", Pos - (0, 0, 18));
+        }
+
+        // Sprint uses the stock Run key and adds limited forward momentum.
+        bool sprintRequested = gameMode != 1 &&
+            (bt & BT_SPEED) != 0 && forwardInput > 0.0 &&
+            onGround && !tlhProneActive && !isSlamming &&
+            !tlhIsSliding && tlhDashTics == 0 &&
+            tlhSprintStamina > 0.5;
+
+        tlhIsSprinting = sprintRequested;
+        if (sprintRequested)
+        {
+            Thrust(0.22, angle);
+            if (sideInput != 0.0)
+                Thrust(0.10 * sideInput, angle + 90.0);
+
+            tlhSprintStamina = max(0.0, tlhSprintStamina - 0.48);
+            tlhSprintRecoveryTics = 18;
+
+            double sprintSpeed = Vel.XY.Length();
+            if (sprintSpeed > 18.5)
+                Vel.XY *= 18.5 / sprintSpeed;
+        }
+        else
+        {
+            if (tlhSprintRecoveryTics > 0)
+                tlhSprintRecoveryTics--;
+            else
+                tlhSprintStamina = min(100.0,
+                    tlhSprintStamina + (onGround ? 0.36 : 0.20));
+        }
+
+        // Mild air steering. Classic Doom, water, prone and slam states remain unchanged.
+        if (gameMode != 1 && !onGround && !isSlamming &&
+            !tlhProneActive && waterlevel == 0 && hasMoveInput)
+        {
+            if (forwardInput != 0.0)
+                Thrust(0.10 * forwardInput, angle);
+            if (sideInput != 0.0)
+                Thrust(0.075 * sideInput, angle + 90.0);
+        }
+
         // Health and armor limits depend on the selected ruleset.
         int healthCap = TLH_MAX_HEALTH;
         int armorCap = TLH_MAX_ARMOR;
@@ -5782,11 +5918,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             akimboButtonHeld = false;
 
         // ------------------------------------------------------------
-        // Double jump
+        // Coyote jump + one midair jump.
+        // The grace window catches a jump a few tics after leaving a ledge.
         // ------------------------------------------------------------
-        if ((bt & BT_JUMP) && !(obt & BT_JUMP))
+        if ((bt & BT_JUMP) && !(obt & BT_JUMP) &&
+            gameMode != 1 && !onGround && waterlevel == 0 && !isSlamming)
         {
-            if (gameMode != 1 && !onGround && jumpCount == 0 && waterlevel == 0 && !isSlamming)
+            if (tlhCoyoteTics > 0)
+            {
+                Vel.Z = max(Vel.Z, 8.8);
+                tlhCoyoteTics = 0;
+            }
+            else if (jumpCount == 0)
             {
                 Vel.Z = 12.0;
                 jumpCount = 1;
@@ -5812,6 +5955,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             {
                 Spawn("SlamExplosion", Pos);
                 isSlamming = false;
+                tlhIsSliding = false;
+                tlhSlideTics = 0;
+                tlhSprintStamina = min(100.0, tlhSprintStamina + 10.0);
                 maximumFallSpeed = 0;
                 fallTicks = 0;
             }
@@ -5835,33 +5981,64 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         // ------------------------------------------------------------
-        // Slide / Ground Pound
+        // Momentum slide / ground pound.
+        // Tap crouch at speed to enter a low, steerable slide.
+        // Air crouch preserves some horizontal momentum when starting the slam.
         // ------------------------------------------------------------
         if (gameMode != 1 && (bt & BT_CROUCH) && !(obt & BT_CROUCH))
         {
-            if (onGround && Vel.XY.Length() > 2.0 && slideCooldown == 0)
+            double entrySpeed = Vel.XY.Length();
+            if (onGround && entrySpeed >= 6.0 && slideCooldown <= 0 &&
+                !tlhProneActive && tlhDashTics == 0)
             {
-                Thrust(25, angle);
-                slideCooldown = 35;
+                tlhSlideTics = 26;
+                tlhIsSliding = true;
+                slideCooldown = 48;
+                Vel.XY *= 1.16;
+
+                double slideSpeed = Vel.XY.Length();
+                if (slideSpeed > 20.0)
+                    Vel.XY *= 20.0 / slideSpeed;
+
+                Height = min(Height, FullHeight * 0.64);
+                tlhSprintStamina = min(100.0, tlhSprintStamina + 4.0);
                 A_StartSound("weapons/sshoto", CHAN_BODY);
+                Spawn("SlideSmoke", Pos - (0, 0, 18));
             }
-            else if (!onGround && !isSlamming)
+            else if (!onGround && !isSlamming && !tlhProneActive)
             {
-                Vel.XY = (0, 0);
-                Vel.Z = -50.0;
+                Vel.XY *= 0.82;
+                Vel.Z = -42.0;
                 isSlamming = true;
+                tlhDashTics = 0;
                 A_StartSound("weapons/rocklf", CHAN_BODY);
             }
         }
 
-        if (slideCooldown > 15 && onGround)
+        if (tlhIsSliding)
         {
-            if ((level.maptime & 3) == 0)
-                Spawn("SlideSmoke", Pos - (0, 0, 20));
-        }
+            if (!onGround || isSlamming || tlhSlideTics <= 0 ||
+                Vel.XY.Length() < 4.0)
+            {
+                tlhIsSliding = false;
+                tlhSlideTics = 0;
+                Height = FullHeight * clamp(player.crouchfactor, 0.0, 1.0);
+            }
+            else
+            {
+                if (forwardInput > 0.0) Thrust(0.045, angle);
+                if (sideInput != 0.0) Thrust(0.025 * sideInput, angle + 90.0);
+                Vel.XY *= 0.988;
+                Height = min(Height, FullHeight * 0.64);
 
-        if (slideCooldown > 0)
-            slideCooldown--;
+                if ((level.maptime & 3) == 0)
+                    Spawn("SlideSmoke", Pos - (0, 0, 18));
+            }
+        }
+        else if (tlhSlideTics > 0)
+        {
+            tlhSlideTics = 0;
+        }
 
         let m60 = M60MachineGun(player.ReadyWeapon);
         if (m60 && m60.braced && onGround)
@@ -7732,6 +7909,11 @@ class TacticalHUDHandler : EventHandler
     int hudRocket;
     int hudCell;
     int hudWeaponHeat;
+    double hudSprintStamina;
+    bool hudIsSprinting;
+    bool hudIsSliding;
+    int hudDashTics;
+    int hudDashCooldown;
     transient Array<String> hudPowerupNames;
     transient Array<int> hudPowerupTics;
     int hudLiveEnemies;
@@ -8179,7 +8361,17 @@ class TacticalHUDHandler : EventHandler
                 {
                     let tp = TacticalPlayer(p);
                     if (tp)
-                        tp.ToggleTLHDualWield();
+                    {
+                        bool toggled = tp.ToggleTLHDualWield();
+                        if (playerNum == consoleplayer)
+                        {
+                            hudFeedbackText = toggled
+                                ? (tp.tlhDualWieldActive ? "DUAL WIELD ENABLED" : "DUAL WIELD DISABLED")
+                                : "DUAL WIELD UNAVAILABLE";
+                            hudFeedbackTics = 30;
+                            hudFeedbackColor = toggled ? 0x83C99B : 0xD3B35B;
+                        }
+                    }
                 }
             }
         }
@@ -8394,6 +8586,11 @@ class TacticalHUDHandler : EventHandler
         hudRocket = 0;
         hudCell = 0;
         hudWeaponHeat = 0;
+        hudSprintStamina = 100.0;
+        hudIsSprinting = false;
+        hudIsSliding = false;
+        hudDashTics = 0;
+        hudDashCooldown = 0;
         hudFOV = 90.0;
         hudMoveSpeed = 0.0;
         hudVerticalSpeed = 0.0;
@@ -8509,7 +8706,19 @@ class TacticalHUDHandler : EventHandler
 
         let tpState = TacticalPlayer(p);
         if (tpState)
+        {
             tlhHUDDualActive = tpState.tlhDualWieldActive;
+            if (p.player.ReadyWeapon is "FastRecoilSSG")
+            {
+                let ssgHUD = FastRecoilSSG(p.player.ReadyWeapon);
+                if (ssgHUD) tlhHUDDualActive = (ssgHUD.akimboState == 1);
+            }
+            hudSprintStamina = tpState.tlhSprintStamina;
+            hudIsSprinting = tpState.tlhIsSprinting;
+            hudIsSliding = tpState.tlhIsSliding;
+            hudDashTics = tpState.tlhDashTics;
+            hudDashCooldown = tpState.tlhDashCooldown;
+        }
 
         hudPlayerHealth = max(0, p.Health);
         hudFOV = clamp(double(p.player.FOV), 20.0, 160.0);
@@ -9884,6 +10093,40 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
     }
 
+    ui void DrawCompactMovementStatus()
+    {
+        int stamina = int(clamp(hudSprintStamina, 0.0, 100.0));
+        int stateColor = 0x7E969C;
+        String movementState = "DASH READY";
+
+        if (hudDashTics > 0)
+        {
+            movementState = "DASH";
+            stateColor = 0xE2D18B;
+        }
+        else if (hudIsSliding)
+        {
+            movementState = "SLIDE";
+            stateColor = 0xE2D18B;
+        }
+        else if (hudIsSprinting)
+        {
+            movementState = "SPRINT";
+            stateColor = 0x83C99B;
+        }
+        else if (hudDashCooldown > 0)
+        {
+            movementState = String.Format("DASH %02d",
+                (hudDashCooldown + 34) / 35);
+        }
+
+        TextC(String.Format("%s  //  STAMINA %03d%%",
+            movementState, stamina), 320, 37, stateColor, 0.21);
+        SegBar(286, 45, 68, stamina, 100, 8,
+            stamina <= 20 ? 0xD65B55 :
+            stamina <= 45 ? 0xD3B35B : 0x77C98A);
+    }
+
     ui void DrawCompactPowerupTimers()
     {
         int count = hudPowerupNames.Size();
@@ -10055,6 +10298,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawCompactHeader();
         DrawCompactInput();
         DrawCompactInputHistory();
+        DrawCompactMovementStatus();
         DrawCompactPowerupTimers();
         DrawCompactTelemetry();
         DrawCompactVitals();
