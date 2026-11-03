@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v48.2 - direct BT_USER input / reliable procedural Dual Wield / movement overhaul
+// TLH v48.3 - SSG HUD null-reference fix / direct BT_USER input / procedural Dual Wield
 // WEAPON-AGNOSTIC DUAL-WIELD / WEAPON-INDEPENDENT INPUT ROUTING / HELMET HUD
 //
 // R remains untouched. Dual Wield is driven by a shared player state and a
@@ -80,6 +80,8 @@ const TLH_MAX_CELLS = 300;
 // network events and received by NetworkProcess, so the actions never ran.
 // v48.2: read BT_USER1/2/3 directly from player.cmd.buttons in TacticalPlayer.Tick;
 // edge detection uses player.oldbuttons and Dual Wield has an independent cooldown.
+// v48.3: reuse the null-checked TacticalPlayer pointer in the SSG HUD branch,
+// preventing an address-zero VM abort when the pawn is not a TacticalPlayer.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -8962,18 +8964,17 @@ class TacticalHUDHandler : EventHandler
             {
                 tlhSSGPhase = level.time;
                 let ssg = FastRecoilSSG(ready);
-                if (ssg && !TacticalPlayer(p).tlhDualWieldActive)
+                // tpState was null-checked above. Reuse that safe pointer here:
+                // directly recasting and dereferencing TacticalPlayer(p) can
+                // abort the VM with "tried to read from address zero".
+                if (ssg && tpState && !tpState.tlhDualWieldActive)
                 {
                     tlhSSGVisible = true;
 
-                    let tp = TacticalPlayer(p);
-                    if (tp)
-                    {
-                        tlhSSGOffsetX = tp.tlhAnimSwayX + tp.tlhAnimInertiaX + tp.tlhAnimLookX * 0.60;
-                        tlhSSGOffsetY = tp.tlhAnimSwayY + tp.tlhAnimInertiaY - tp.tlhAnimLookY * 0.35;
-                        tlhSSGRoll = tp.tlhAnimWeaponKickSide * 1.1 + tp.tlhAnimSwayX * -0.4;
-                        tlhSSGRecoil = tp.tlhAnimWeaponKick;
-                    }
+                    tlhSSGOffsetX = tpState.tlhAnimSwayX + tpState.tlhAnimInertiaX + tpState.tlhAnimLookX * 0.60;
+                    tlhSSGOffsetY = tpState.tlhAnimSwayY + tpState.tlhAnimInertiaY - tpState.tlhAnimLookY * 0.35;
+                    tlhSSGRoll = tpState.tlhAnimWeaponKickSide * 1.1 + tpState.tlhAnimSwayX * -0.4;
+                    tlhSSGRecoil = tpState.tlhAnimWeaponKick;
                 }
             }
 
