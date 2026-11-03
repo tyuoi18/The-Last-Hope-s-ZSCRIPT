@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.2 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.3 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -99,6 +99,7 @@ const TLH_MAX_CELLS = 300;
 // v51.0.2: copy the primary PSprite interpolation marker after mirroring its offsets.
 // v52.1: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
 // v52.2: resolve ambiguous weapon-state self references with explicit invoker.Owner;
+// v52.3: use a class-typed palette default lookup and keep Blue unlock progress in the HUD handler so it survives respawn.
 // apply a dedicated electric-blue palette translation to the active Simple Rifle PSprite.
 // Blue mode consumes Cell ammo and uses a cyan MarineRailgun-style A_RailAttack.
 // Add a continuously refreshed tactical minimap and lightweight screen-space pseudo-shader overlays.
@@ -6331,7 +6332,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!isWeaponPSP && !isFlashPSP)
             return;
 
-        if (isWeaponPSP || isFlashPSP)
+        if (isWeaponPSP)
+        {
+            let weaponDefault = GetDefaultByType(weapon.GetClass());
+            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
+        }
+        else if (isFlashPSP && weapon is "SimpleRifle")
         {
             let weaponDefault = GetDefaultByType(weapon.GetClass());
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
@@ -6341,7 +6347,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // palette remap. Apply it to both the gun and muzzle-flash PSprites.
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
-            let blueTint = GetDefaultByType("TLHBlueSimpleRifleTint");
+            let blueTint = GetDefaultByType(TLHBlueSimpleRifleTint);
             if (blueTint)
                 psp.Translation = blueTint.Translation;
         }
@@ -7779,6 +7785,11 @@ class TacticalHUDHandler : EventHandler
     int hudCell;
     int hudBlueSimpleRifleKills;
     bool hudBlueSimpleRifleUnlocked;
+
+    // EventHandler-owned progress survives pawn death/respawn within a map.
+    int tlhBlueSimpleRifleMapKills[MAXPLAYERS];
+    bool tlhBlueSimpleRifleMapUnlocked[MAXPLAYERS];
+    String tlhBlueSimpleRifleMapName[MAXPLAYERS];
     int hudWaterLevel;
     int hudWeaponHeat;
     double hudSprintStamina;
@@ -7917,24 +7928,42 @@ class TacticalHUDHandler : EventHandler
             !e.DamageSource || !e.DamageSource.player)
             return;
 
-        // Count the killer's Simple Rifle kills on the authoritative game side,
-        // independently of which player owns the local HUD.
+        // Count the killer's Simple Rifle kills on the authoritative game side.
         int killerNum = e.DamageSource.PlayerNumber();
         if (killerNum >= 0 && killerNum < MAXPLAYERS)
         {
-            Actor killerPawn = players[killerNum].mo;
-            TacticalPlayer killer = TacticalPlayer(killerPawn);
-            Weapon killerWeapon = players[killerNum].ReadyWeapon;
-            if (killer && killerWeapon && killerWeapon is "SimpleRifle" &&
-                killer.tlhBlueSimpleRifleMap == level.MapName &&
-                !killer.tlhBlueSimpleRifleUnlocked)
+            if (tlhBlueSimpleRifleMapName[killerNum] != level.MapName)
             {
-                killer.tlhBlueSimpleRifleKills = min(60, killer.tlhBlueSimpleRifleKills + 1);
-                if (killer.tlhBlueSimpleRifleKills >= 60)
+                tlhBlueSimpleRifleMapName[killerNum] = level.MapName;
+                tlhBlueSimpleRifleMapKills[killerNum] = 0;
+                tlhBlueSimpleRifleMapUnlocked[killerNum] = false;
+            }
+
+            Weapon killerWeapon = players[killerNum].ReadyWeapon;
+            if (killerWeapon && killerWeapon is "SimpleRifle" &&
+                !tlhBlueSimpleRifleMapUnlocked[killerNum])
+            {
+                tlhBlueSimpleRifleMapKills[killerNum] =
+                    min(60, tlhBlueSimpleRifleMapKills[killerNum] + 1);
+
+                Actor killerPawn = players[killerNum].mo;
+                TacticalPlayer killer = TacticalPlayer(killerPawn);
+                if (killer)
                 {
-                    killer.tlhBlueSimpleRifleUnlocked = true;
-                    killerPawn.A_Print("\\c[Blue]BLUE SIMPLE RIFLE UNLOCKED: PLASMA RAIL MODE");
-                    killerPawn.A_StartSound("weapons/railgf", CHAN_BODY);
+                    killer.tlhBlueSimpleRifleMap = level.MapName;
+                    killer.tlhBlueSimpleRifleKills = tlhBlueSimpleRifleMapKills[killerNum];
+                }
+
+                if (tlhBlueSimpleRifleMapKills[killerNum] >= 60)
+                {
+                    tlhBlueSimpleRifleMapUnlocked[killerNum] = true;
+                    if (killer)
+                        killer.tlhBlueSimpleRifleUnlocked = true;
+                    if (killerPawn)
+                    {
+                        killerPawn.A_Print("\\c[Blue]BLUE SIMPLE RIFLE UNLOCKED: PLASMA RAIL MODE");
+                        killerPawn.A_StartSound("weapons/railgf", CHAN_BODY);
+                    }
                 }
             }
         }
@@ -8457,7 +8486,30 @@ class TacticalHUDHandler : EventHandler
         tlhFacePreviousHealth = currentHealth;
     }
 
+    void SyncBlueSimpleRifleProgress()
+    {
+        for (int i = 0; i < MAXPLAYERS; i++)
+        {
+            if (tlhBlueSimpleRifleMapName[i] != level.MapName)
+            {
+                tlhBlueSimpleRifleMapName[i] = level.MapName;
+                tlhBlueSimpleRifleMapKills[i] = 0;
+                tlhBlueSimpleRifleMapUnlocked[i] = false;
+            }
+
+            Actor pawn = players[i].mo;
+            TacticalPlayer tp = TacticalPlayer(pawn);
+            if (tp)
+            {
+                tp.tlhBlueSimpleRifleMap = level.MapName;
+                tp.tlhBlueSimpleRifleKills = tlhBlueSimpleRifleMapKills[i];
+                tp.tlhBlueSimpleRifleUnlocked = tlhBlueSimpleRifleMapUnlocked[i];
+            }
+        }
+    }
+
     override void WorldTick(){
+        SyncBlueSimpleRifleProgress();
         bool refreshHUDActorCache = (tlhHUDActorScanCooldown <= 0);
         if (refreshHUDActorCache)
             tlhHUDActorScanCooldown = 3;
