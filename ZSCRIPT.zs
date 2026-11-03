@@ -5195,15 +5195,6 @@ class ServiceRevolver : Weapon
 
 
 
-class TLHBlueSimpleRiflePalette : Actor
-{
-    Default
-    {
-        // Indexed palette translation used only while SimpleRifle's blue mode is active.
-        Translation "0:255=192:207";
-    }
-}
-
 class SimpleRifle : Weapon
 {
     bool Aiming;
@@ -6065,19 +6056,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             {
                 let classDefault = GetDefaultByType(item.GetClass());
                 if (classDefault)
-                {
-                    let simpleRifle = SimpleRifle(item);
-                    if (simpleRifle && simpleRifle.tlhBlueModeActive)
-                    {
-                        let bluePalette = GetDefaultByType("TLHBlueSimpleRiflePalette");
-                        item.Translation = bluePalette ?
-                            bluePalette.Translation : classDefault.Translation;
-                    }
-                    else
-                    {
-                        item.Translation = classDefault.Translation;
-                    }
-                }
+                    item.Translation = classDefault.Translation;
             }
             item = nextItem;
         }
@@ -6310,22 +6289,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!isWeaponPSP && !isFlashPSP && !isDualPSP)
             return;
 
-        // Apply the weapon's embedded palette to every non-flash PSprite state.
-        // This is the procedural part: the same mapping follows Ready, Fire,
-        // Reload, Select, Deselect and the dual-wield overlay automatically.
+        // Preserve each weapon's regular class translation. The SimpleRifle's
+        // blue mode is rendered with a transparent HUD color overlay, not a
+        // palette remap or modified sprite colors.
         if (!isFlashPSP && (isWeaponPSP || isDualPSP))
         {
-            let simpleRifle = SimpleRifle(weapon);
-            if (simpleRifle && simpleRifle.tlhBlueModeActive)
-            {
-                let bluePalette = GetDefaultByType("TLHBlueSimpleRiflePalette");
-                psp.Translation = bluePalette ? bluePalette.Translation : weapon.Translation;
-            }
-            else
-            {
-                let weaponDefault = GetDefaultByType(weapon.GetClass());
-                psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
-            }
+            let weaponDefault = GetDefaultByType(weapon.GetClass());
+            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
@@ -8359,28 +8329,7 @@ class TacticalHUDHandler : EventHandler
             {
                 let ownedSimpleRifle = SimpleRifle(rewardPlayer.FindInventory("SimpleRifle"));
                 if (ownedSimpleRifle)
-                {
                     ownedSimpleRifle.tlhBlueModeActive = tlhBlueSimpleRifleUnlocked;
-
-                    // Recolor the actual first-person weapon PSprite, not a
-                    // separate inventory weapon or the disabled visor preview.
-                    PSprite riflePSprite = players[rewardPlayerNum].FindPSprite(PSP_WEAPON);
-                    if (riflePSprite && riflePSprite.Caller == ownedSimpleRifle)
-                    {
-                        if (tlhBlueSimpleRifleUnlocked)
-                        {
-                            let bluePalette = GetDefaultByType("TLHBlueSimpleRiflePalette");
-                            if (bluePalette)
-                                riflePSprite.Translation = bluePalette.Translation;
-                        }
-                        else
-                        {
-                            let rifleDefault = GetDefaultByType(ownedSimpleRifle.GetClass());
-                            riflePSprite.Translation = rifleDefault ?
-                                rifleDefault.Translation : ownedSimpleRifle.Translation;
-                        }
-                    }
-                }
             }
         }
 
@@ -8498,9 +8447,8 @@ class TacticalHUDHandler : EventHandler
             powerItem = nextPowerItem;
         }
 
-        // Avoid querying a live PSprite/State while GZDoom changes weapons.
-        // The engine keeps drawing the real weapon; the HUD preview is disabled
-        // because reading its transient state here is unnecessary and fragile.
+        // Sample only the stable current weapon PSprite in play context.
+        // RenderOverlay consumes this cache; it never queries transient states.
         hudWeaponTextureValid = false;
         hudWeaponTextureClass = "";
         hudWeaponFlip = false;
@@ -8545,6 +8493,29 @@ class TacticalHUDHandler : EventHandler
         Weapon ready = p.player.ReadyWeapon;
         if (ready)
         {
+            // Read the current PSprite frame once per WorldTick. The guards
+            // avoid sampling during weapon switches or invalid transitional frames.
+            PSprite weaponPSprite = p.player.FindPSprite(PSP_WEAPON);
+            if (weaponPSprite && weaponPSprite.Caller == ready &&
+                weaponPSprite.CurState && weaponPSprite.CurState.ValidateSpriteFrame())
+            {
+                TextureID sampledTexture;
+                bool sampledFlip = false;
+                Vector2 sampledScale = (1.0, 1.0);
+                [sampledTexture, sampledFlip, sampledScale] =
+                    weaponPSprite.CurState.GetSpriteTexture(0, 0, ready.Scale);
+
+                if (sampledTexture.IsValid())
+                {
+                    hudWeaponTexture = sampledTexture;
+                    hudWeaponFlip = sampledFlip;
+                    hudWeaponStateScale = sampledScale;
+                    hudWeaponTranslation = int(ready.Translation);
+                    hudWeaponTextureClass = ready.GetClassName();
+                    hudWeaponTextureValid = true;
+                }
+            }
+
             tlhVisorWeaponClass = ready.GetClassName();
             if (ready is "SimpleRifle")
             {
@@ -9255,16 +9226,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
         String cls = weapon.GetClassName();
 
-        let simpleRifle = SimpleRifle(weapon);
-        if (cls == "SimpleRifle" && simpleRifle && simpleRifle.tlhBlueModeActive)
-        {
-            primary = 0x32AFFF;
-            secondary = 0x32AFFF;
-            profileX = 1.0;
-            profileY = 1.02;
-            accentStrength = 1.0;
-        }
-        else if (cls == "OfficerVulkanPistol")
+        if (cls == "OfficerVulkanPistol")
         {
             // Red/orange parts become steel-gray; original gray becomes darker.
             primary = 0x6E7775;
@@ -9421,21 +9383,15 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         double cx = 485.0 + liveBobX;
         double cy = 294.0 + liveBobY;
 
-        // --------------------------------------------------------------------
-        // TRUE PALETTE TRANSLATION, NOT TINT
-        // --------------------------------------------------------------------
-        // DTA_TranslationIndex alone is not enough for the HUD path when the
-        // source is rendered through the truecolor/Vulkan drawer. DTA_Indexed
-        // explicitly tells GZDoom to treat the source as an indexed image and
-        // combine it with the supplied translation table. This is the same
-        // translation system used by GZDoom's indexed HUD sprite rendering,
-        // without putting a translucent color filter over the weapon.
-        //
-        // The translation comes from the weapon class, so Ready/Fire/Reload/
-        // Select/Deselect frames all use the same authored weapon design.
+        // Keep the source sprite and its authored palette intact. In Blue mode,
+        // DTA_ColorOverlay lays a translucent electric-blue sheet over the
+        // image; alpha controls the strength of the tint without remapping pixels.
         int hudTranslation = hudWeaponTranslation;
         if (hudTranslation == 0)
             hudTranslation = int(weapon.Translation);
+
+        Color spriteTint = tlhVisorBlueSimpleRifleActive ?
+            Color(112, 24, 142, 255) : Color(0, 0, 0, 0);
 
         Screen.DrawTexture(
             tex, false,
@@ -9446,6 +9402,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             DTA_VirtualHeight, 360,
             DTA_TranslationIndex, hudTranslation,
             DTA_Indexed, true,
+            DTA_ColorOverlay, spriteTint,
             DTA_FlipX, flip,
             DTA_Rotate, liveRoll,
             DTA_RenderStyle, STYLE_Normal,
