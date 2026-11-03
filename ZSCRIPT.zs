@@ -6064,7 +6064,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             {
                 let classDefault = GetDefaultByType(item.GetClass());
                 if (classDefault)
-                    item.Translation = classDefault.Translation;
+                {
+                    let simpleRifle = SimpleRifle(item);
+                    if (simpleRifle && simpleRifle.tlhBlueModeActive)
+                    {
+                        let bluePalette = GetDefaultByType("TLHBlueSimpleRiflePalette");
+                        item.Translation = bluePalette ?
+                            bluePalette.Translation : classDefault.Translation;
+                    }
+                    else
+                    {
+                        item.Translation = classDefault.Translation;
+                    }
+                }
             }
             item = nextItem;
         }
