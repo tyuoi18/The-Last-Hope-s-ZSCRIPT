@@ -9431,6 +9431,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 DTA_VirtualHeight, 360,
                 DTA_TranslationIndex, hudTranslation,
                 DTA_Indexed, true,
+                DTA_ColorOverlay, spriteTint,
                 DTA_FlipX, !flip,
                 DTA_Rotate, -liveRoll,
                 DTA_RenderStyle, STYLE_Normal,
