@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v51.0.1 - add explicit confirmation for network-routed Dual Wield toggles
+// TLH v51.0.2 - synchronize mirrored PSprite interpolation
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -96,6 +96,7 @@ const TLH_MAX_CELLS = 300;
 // NetworkCommandProcess. Dual Wield no longer depends on weapon-native User3 states
 // or WRF_ALLOWUSER3; only the inert mirror holder and weapon firing routines remain.
 // v51.0.1: print an explicit ENABLED/DISABLED confirmation when the command arrives.
+// v51.0.2: copy the primary PSprite interpolation marker after mirroring its offsets.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -5377,6 +5378,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // stored coordinate below. At full blend the hands sit on opposite sides.
         mirror.x = 44.0 * blend - primary.x;
         mirror.y = primary.y + (1.0 - blend) * 54.0;
+        // Match the engine's one-tic interpolation marker after copying offsets.
+        mirror.InterpolateTic = primary.InterpolateTic;
     }
 
     override void Tick()
