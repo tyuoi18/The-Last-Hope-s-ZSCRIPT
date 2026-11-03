@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v51.0.2 - synchronize mirrored PSprite interpolation
+// TLH v52.0 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -97,6 +97,10 @@ const TLH_MAX_CELLS = 300;
 // or WRF_ALLOWUSER3; only the inert mirror holder and weapon firing routines remain.
 // v51.0.1: print an explicit ENABLED/DISABLED confirmation when the command arrives.
 // v51.0.2: copy the primary PSprite interpolation marker after mirroring its offsets.
+// v52.0: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
+// Blue mode consumes Cell ammo and uses a cyan MarineRailgun-style A_RailAttack.
+// Add a continuously refreshed tactical minimap and lightweight screen-space pseudo-shader overlays.
+// TacticalM4A1 returns to its stock ZHGG sprite placement without procedural HUD sway/scale/rotation.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -2943,40 +2947,14 @@ class TacticalM4A1 : DoomWeapon
     States
     {
     Ready:
-        PISG A 0;
-
-    TLHPickupReadyShim:
-        ZHGG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.98, 0.98);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, 0, 32);
-            A_OverlayRotate(PSP_WEAPON, 0);
-            return ResolveState(null);
-        }
-        ZHGG A 1
-        {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
-        }
+        ZHGG A 1 A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         Loop;
 
 
     Deselect:
-        ZHGG A 0
-        {
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
         ZHGG A 1 A_Lower;
         Loop;
     Select:
-        ZHGG A 0
-        {
-            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
-        }
         ZHGG A 1 A_Raise;
         Loop;
 
@@ -4914,12 +4892,18 @@ class ServiceRevolver : Weapon
 
 
 
-class SimpleRifle : Weapon
-{
-
-bool Aiming;
-
-    Default
+$1
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        TacticalPlayer tp = TacticalPlayer(Owner);
+        if (tp && tp.tlhBlueSimpleRifleUnlocked)
+        {
+            Inventory cells = Owner.FindInventory("Cell");
+            return cells && cells.Amount >= 1;
+        }
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+Default
     {
         Weapon.SlotNumber 2;
         Weapon.SlotPriority 3.25;
@@ -4961,6 +4945,13 @@ bool Aiming;
         Loop;
 
     Fire:
+        ASLT A 0
+        {
+            TacticalPlayer tp = TacticalPlayer(Owner);
+            if (tp && tp.tlhBlueSimpleRifleUnlocked)
+                return ResolveState("BlueFire");
+            return ResolveState(null);
+        }
         ASLT A 5 A_GunFlash;
         ASLT B 5
         {
@@ -4970,6 +4961,21 @@ bool Aiming;
             A_Recoil(1.5);
         }
         ASLT A 7 A_ReFire;
+        Goto Ready;
+
+    BlueFire:
+        ASLT A 2 A_GunFlash;
+        ASLT B 4
+        {
+            if (Owner)
+                Owner.TakeInventory("Cell", 1);
+            A_RailAttack(42, 0, false, 0x36BFFF, 0xD9F7FF,
+                RGF_FULLBRIGHT, 0, "BulletPuff", 0, 0, 8192, 9, 1.0, 1.0);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
+            A_Recoil(2.2);
+        }
+        ASLT A 6 A_ReFire;
         Goto Ready;
 
     AltFire:
@@ -5060,6 +5066,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool isSlamming;
     bool wasOnGround;
     bool akimboButtonHeld;
+
+    // Blue Simple Rifle progression is owned by the player and scoped to one map.
+    int tlhBlueSimpleRifleKills;
+    bool tlhBlueSimpleRifleUnlocked;
+    String tlhBlueSimpleRifleMap;
 
     // Weapons removed by a game-mode transition are destroyed after the
     // player PSprite has stopped using their states.
@@ -5386,6 +5397,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     {
         Super.Tick();
         if (!player || !player.mo) return;
+
+        // The Blue Simple Rifle is a map-local mastery reward. Death does not reset it.
+        if (tlhBlueSimpleRifleMap != level.MapName)
+        {
+            tlhBlueSimpleRifleMap = level.MapName;
+            tlhBlueSimpleRifleKills = 0;
+            tlhBlueSimpleRifleUnlocked = false;
+        }
 
         // Dash/prone remain player-level script buttons. Dual Wield is toggled
         // by TacticalHUDHandler.InputProcess/NetworkCommandProcess, not weapon states.
@@ -7686,6 +7705,9 @@ class TacticalHUDHandler : EventHandler
     int hudShell;
     int hudRocket;
     int hudCell;
+    int hudBlueSimpleRifleKills;
+    bool hudBlueSimpleRifleUnlocked;
+    int hudWaterLevel;
     int hudWeaponHeat;
     double hudSprintStamina;
     bool hudIsSprinting;
@@ -7746,6 +7768,7 @@ class TacticalHUDHandler : EventHandler
     int tlhVisorTime;
     String tlhVisorWeaponClass;
     transient Array<Actor> tlhVisorEnemies;
+    transient Array<Actor> tlhMinimapEnemies;
     transient Array<Actor> tlhVisorWeapons;
     transient Array<Actor> tlhVisorProjectiles;
     transient Array<String> tlhVisorEnemyNames;
@@ -7825,6 +7848,29 @@ class TacticalHUDHandler : EventHandler
 
         hudHitmarkerTics = 0;
         hudKillConfirmTics = 22;
+
+        // Count kills made with the Simple Rifle only. The map-scoped counter
+        // belongs to TacticalPlayer, so dying does not erase earned progress.
+        int killerNum = e.DamageSource.PlayerNumber();
+        if (killerNum >= 0 && killerNum < MAXPLAYERS)
+        {
+            Actor killerPawn = players[killerNum].mo;
+            TacticalPlayer killer = TacticalPlayer(killerPawn);
+            Weapon killerWeapon = players[killerNum].ReadyWeapon;
+            if (killer && killerWeapon && killerWeapon is "SimpleRifle" &&
+                killer.tlhBlueSimpleRifleMap == level.MapName &&
+                !killer.tlhBlueSimpleRifleUnlocked)
+            {
+                killer.tlhBlueSimpleRifleKills = min(60, killer.tlhBlueSimpleRifleKills + 1);
+                if (killer.tlhBlueSimpleRifleKills >= 60)
+                {
+                    killer.tlhBlueSimpleRifleUnlocked = true;
+                    killerPawn.A_Print("\\c[Blue]BLUE SIMPLE RIFLE UNLOCKED: PLASMA RAIL MODE");
+                    killerPawn.A_StartSound("weapons/railgf", CHAN_BODY);
+                }
+            }
+        }
+
         hudFeedbackText = "TARGET ELIMINATED";
         hudFeedbackTics = 24;
         hudFeedbackColor = 0xF2D36B;
@@ -8415,6 +8461,7 @@ class TacticalHUDHandler : EventHandler
         if (refreshHUDActorCache)
         {
             tlhVisorEnemies.Clear();
+            tlhMinimapEnemies.Clear();
             tlhVisorWeapons.Clear();
             tlhVisorProjectiles.Clear();
             tlhVisorEnemyNames.Clear();
@@ -8517,6 +8564,8 @@ class TacticalHUDHandler : EventHandler
         if (tpState)
         {
             tlhHUDDualActive = tpState.tlhDualWieldActive;
+            hudBlueSimpleRifleKills = tpState.tlhBlueSimpleRifleKills;
+            hudBlueSimpleRifleUnlocked = tpState.tlhBlueSimpleRifleUnlocked;
             hudSprintStamina = tpState.tlhSprintStamina;
             hudIsSprinting = tpState.tlhIsSprinting;
             hudIsSliding = tpState.tlhIsSliding;
@@ -8525,6 +8574,7 @@ class TacticalHUDHandler : EventHandler
         }
 
         hudPlayerHealth = max(0, p.Health);
+        hudWaterLevel = p.waterlevel;
         hudFOV = clamp(double(p.player.FOV), 20.0, 160.0);
         hudMoveSpeed = sqrt(p.Vel.X * p.Vel.X + p.Vel.Y * p.Vel.Y);
         hudVerticalSpeed = p.Vel.Z;
@@ -8636,6 +8686,13 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             if (mo.bIsMonster && mo.Health > 0)
             {
                 hudLiveEnemies++;
+                if (tlhMinimapEnemies.Size() < 64)
+                {
+                    double mdx = mo.Pos.X - p.Pos.X;
+                    double mdy = mo.Pos.Y - p.Pos.Y;
+                    if (mdx * mdx + mdy * mdy <= 1200.0 * 1200.0)
+                        tlhMinimapEnemies.Push(mo);
+                }
 
                 if (tlhVisorActive && tlhVisorEnemies.Size() < 32)
                 {
@@ -10026,6 +10083,15 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             hudLiveEnemies, hudKills, hudTotalEnemies),
             632, 331, hudLiveEnemies > 0 ? Font.CR_RED : dim, 0.19);
 
+        if (tlhVisorWeaponClass == "SimpleRifle")
+        {
+            TextR(hudBlueSimpleRifleUnlocked ? "BLUE RAIL MODE // CELL AMMO" :
+                String.Format("BLUE RIFLE %02d/60", hudBlueSimpleRifleKills),
+                632, 342, hudBlueSimpleRifleUnlocked ? 0x48BFFF : 0x8A9DA3, 0.19);
+            if (!hudBlueSimpleRifleUnlocked)
+                SegBar(574, 349, 54, hudBlueSimpleRifleKills, 60, 8, 0x48BFFF);
+        }
+
         if (tlhVisorWeaponClass == "HeavyChaingun")
         {
             TextR(String.Format("HEAT %03d%%",
@@ -10091,6 +10157,78 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             TextC(hudFeedbackText, 320, 54, hudFeedbackColor, 0.23);
     }
 
+    ui void DrawTacticalMinimap(Actor p)
+    {
+        if (!p) return;
+        double x0 = 8, y0 = 112, w = 94, h = 72;
+        Color frame = 0x6B8990;
+        Color grid = 0x34474D;
+        Panel(x0, y0, w, h, frame, 155);
+        Text("LOCAL MAP", x0 + 5, y0 + 4, 0xA9C0C5, 0.19);
+        Line(x0 + w * 0.5, y0 + 15, x0 + w * 0.5, y0 + h - 4, grid, 120, 0.5);
+        Line(x0 + 4, y0 + 43, x0 + w - 4, y0 + 43, grid, 120, 0.5);
+        double ca = cos(p.Angle);
+        double sa = sin(p.Angle);
+        for (int i = 0; i < tlhMinimapEnemies.Size(); i++)
+        {
+            Actor enemy = tlhMinimapEnemies[i];
+            if (!enemy || enemy.Health <= 0) continue;
+            double dx = enemy.Pos.X - p.Pos.X;
+            double dy = enemy.Pos.Y - p.Pos.Y;
+            double forward = dx * ca + dy * sa;
+            double side = -dx * sa + dy * ca;
+            double mx = x0 + w * 0.5 + side * 0.045;
+            double my = y0 + 43 - forward * 0.045;
+            if (mx < x0 + 3 || mx > x0 + w - 3 || my < y0 + 16 || my > y0 + h - 3)
+                continue;
+            Line(mx - 1.2, my, mx + 1.2, my, 0xE16A60, 220, 1.0);
+            Line(mx, my - 1.2, mx, my + 1.2, 0xE16A60, 220, 1.0);
+        }
+        Line(x0 + w * 0.5, y0 + 37, x0 + w * 0.5 - 3.2, y0 + 45, 0x66D6C8, 240, 1.1);
+        Line(x0 + w * 0.5, y0 + 37, x0 + w * 0.5 + 3.2, y0 + 45, 0x66D6C8, 240, 1.1);
+        Line(x0 + w * 0.5 - 3.2, y0 + 45, x0 + w * 0.5 + 3.2, y0 + 45, 0x66D6C8, 240, 1.1);
+        TextR(String.Format("%02d", tlhMinimapEnemies.Size()), x0 + w - 5, y0 + 4, 0xE16A60, 0.19);
+    }
+
+    ui void DrawPseudoShaderOverlay(Actor p)
+    {
+        if (!p) return;
+        int pulse = 28 + int(18.0 * (0.5 + 0.5 *
+            sin(double(level.time) * 0.11 * TLH_RAD_TO_DEG)));
+        Color edge = 0x6B9AA2;
+        if (hudPlayerHealth > 0 && hudPlayerHealth < 35)
+        {
+            edge = 0xC94E4A;
+            pulse = 48 + int(45.0 * (0.5 + 0.5 *
+                sin(double(level.time) * 0.19 * TLH_RAD_TO_DEG)));
+        }
+        else if (hudWaterLevel > 0)
+        {
+            edge = 0x3C9FC7;
+            pulse = 42;
+        }
+        Line(0, 0, 640, 0, edge, pulse, 2.0);
+        Line(0, 360, 640, 360, edge, pulse, 2.0);
+        Line(0, 0, 0, 360, edge, pulse, 2.0);
+        Line(640, 0, 640, 360, edge, pulse, 2.0);
+        if (hudWaterLevel > 0)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                double y = 92 + ((level.time * 0.7 + i * 47) % 170);
+                Line(110, y, 530, y, 0x4BAACB, 18, 0.45);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                double y = 126 + i * 54 + ((level.time + i * 13) % 18);
+                Line(2, y, 638, y, 0xA8C0C5, 9, 0.35);
+            }
+        }
+    }
+
     override void RenderOverlay(RenderEvent e)
     {
         if (consoleplayer < 0 || consoleplayer >= MAXPLAYERS) return;
@@ -10110,7 +10248,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawPeripheralAnalyzer(e);
         DrawSSGChainCompact();
         DrawAimTargetLabel(p, e);
+        DrawTacticalMinimap(p);
         DrawCompactFeedback();
+        DrawPseudoShaderOverlay(p);
     }
 
 }
