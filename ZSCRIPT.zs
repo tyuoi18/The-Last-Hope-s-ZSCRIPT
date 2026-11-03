@@ -1,12 +1,12 @@
 // ============================================================================
-// TLH v50.0 - shared PSprite mirroring and edge-latched Dual Wield controller
+// TLH v50.0.2 - live PSprite mirroring and procedural Dual Wield controller
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield is driven by a shared player state and a
-// common weapon-state contract, not a list of concrete weapon classes.
-// Compatible weapons expose User3, DualOnStart, DualOffStart, FireDualLeft
-// and FireDualRight. GZDoom's WRF_ALLOWUSER3 dispatches the bind natively.
-// TacticalPlayer applies reversible procedural PSprite transforms for motion.
+// minimal weapon contract, not copied left-hand animation trees.
+// Compatible weapons expose User3, DualMirrorHold, FireDualLeft and FireDualRight.
+// User3 is only an input entry point; TacticalPlayer owns the toggle and animation.
+// The offhand is a render-only PSprite that mirrors the live primary sprite/frame.
 // Hellfire uses the Rocket Launcher sprite family at reduced HUD/drop scale.
 // ============================================================================
 
