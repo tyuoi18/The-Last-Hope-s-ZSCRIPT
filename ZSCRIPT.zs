@@ -6350,6 +6350,29 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else
             tlhAnimLastFlashPSPState = psp.CurState;
 
+        // TacticalM4A1 deliberately opts out of every global procedural HUD
+        // transform. The previous tic's transform was already removed above.
+        if (weapon is "TacticalM4A1")
+        {
+            if (isWeaponPSP)
+            {
+                tlhAnimAppliedWeaponX = 0;
+                tlhAnimAppliedWeaponY = 0;
+                tlhAnimAppliedWeaponRoll = 0;
+                tlhAnimAppliedWeaponScaleX = 1.0;
+                tlhAnimAppliedWeaponScaleY = 1.0;
+            }
+            else
+            {
+                tlhAnimAppliedFlashX = 0;
+                tlhAnimAppliedFlashY = 0;
+                tlhAnimAppliedFlashRoll = 0;
+                tlhAnimAppliedFlashScaleX = 1.0;
+                tlhAnimAppliedFlashScaleY = 1.0;
+            }
+            return;
+        }
+
         double visualScaleX = 1.0;
         double visualScaleY = 1.0;
         double visualOffsetX = 0.0;
