@@ -5,7 +5,7 @@
 // R remains untouched. Weapon-switch safety avoids destroying an active weapon.
 // Native weapon states remain authoritative; TacticalPlayer applies reversible
 // procedural PSprite transforms for visual motion. Dual Wield is activated
-// through the custom KEYCONF netevent.
+// through the KEYCONF +user3 button; the legacy netevent remains supported.
 // Hellfire uses the Rocket Launcher sprite family at reduced HUD/drop scale.
 // ============================================================================
 
@@ -6023,7 +6023,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         // ------------------------------------------------------------
-        // M3 / conversion cooldown.
+        // Shared cooldown for stance/mode and Dual Wield transitions.
         // ------------------------------------------------------------
         if (akimboCooldown > 0)
             akimboCooldown--;
