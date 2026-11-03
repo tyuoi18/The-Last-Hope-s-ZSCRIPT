@@ -1,6 +1,6 @@
 // ============================================================================
-// TLH v49.1 - fix ZScript StateLabel conversions and Service Revolver ready return
-// WEAPON-AGNOSTIC DUAL-WIELD / WEAPON-INDEPENDENT INPUT ROUTING / HELMET HUD
+// TLH v50.0 - shared PSprite mirroring and edge-latched Dual Wield controller
+// PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield is driven by a shared player state and a
 // common weapon-state contract, not a list of concrete weapon classes.
@@ -13,7 +13,7 @@
 version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
-const TLH_AKIMBO_LAYER = 2;
+const TLH_DUAL_MIRROR_LAYER = 2;
 const TLH_STOWED_LAYER = 3; // reserved folded-launcher layer; PSP_WEAPON (1) and PSP_FLASH (1000) remain engine-owned
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -85,6 +85,10 @@ const TLH_MAX_CELLS = 300;
 // remove M4A1 from the compatibility set and implement cylinder-aware ServiceRevolver dual fire.
 // v49.1: replace String-valued ternaries passed to ResolveState with explicit
 // StateLabel branches, and return ResolveState(null) from the ServiceRevolver ready shim.
+// v50.0: replace per-weapon left-hand animation states with a live PSprite mirror.
+// The offhand copies only the primary PSprite's rendered sprite/frame, never its
+// executable state sequence, so firing actions and ammo consumption are not duplicated.
+// +user3 is edge-latched until release; the player owns the entrance/exit animation.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -1222,9 +1226,6 @@ class RecoilPistol : Pistol replaces Pistol
     TLHPickupReadyShim:
         PISG A 0
         {
-            if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("ReadyDual");
-
             A_OverlayScale(PSP_WEAPON, 0.92, 0.92);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
@@ -1241,87 +1242,20 @@ class RecoilPistol : Pistol replaces Pistol
         Loop;
 
 
-    ReadyDual:
-        PISG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.90, 0.90);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, -42, 46);
-            A_OverlayRotate(PSP_WEAPON, 0);
-            return ResolveState(null);
-        }
-        PISG A 1
-        {
-            double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
-            A_OverlayOffset(PSP_WEAPON, -42 + sway, 46 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.16, 0);
-            A_OverlayRotate(PSP_WEAPON, -1.0 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
-        }
-        Loop;
-
-    PistolLeftDraw:
-        PISG A 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
-        }
-        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
-        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
-        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 42, 46, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
-        Goto PistolLeftIdle;
-
-    PistolLeftHolster:
-        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
-        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+    DualMirrorHold:
+        TNT1 A -1;
         Stop;
 
-    PistolLeftIdle:
-        PISG A 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.88, 0.88);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, 42 + sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.55, 46 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.35, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, 1.5 + sin(level.time * 0.021 * TLH_RAD_TO_DEG) * 0.35);
-            return ResolveState(null);
-        }
-        Loop;
-
-    PistolLeftFire:
-        PISG B 1;
-        PISF A 1 Bright;
-        PISG A 1;
-        Goto PistolLeftIdle;
-
-    DualPistolFlash:
-        PISF A 1 Bright A_Light1;
-        Goto LightDone;
-
-
     User3:
-        PISG A 0
+        TNT1 A 0
         {
             let tp = TacticalPlayer(player.mo);
-            if (!tp)
-                return ResolveState("Ready");
-
-            if (!tp.ToggleTLHDualWield(invoker))
-            {
-                A_StartSound("weapons/sshoto", CHAN_WEAPON);
-                A_Print("DUAL WIELD: UNAVAILABLE OR BUSY");
-                if (tp.tlhDualWieldActive)
-                    return ResolveState("ReadyDual");
-                return ResolveState("Ready");
-            }
-
-            if (tp.tlhDualWieldActive)
-                return ResolveState("DualOnStart");
-            return ResolveState("DualOffStart");
+            if (tp)
+                tp.ToggleTLHDualWield(invoker);
         }
+        Goto Ready;
+
+
     Deselect:
         PISG A 0
         {
@@ -1331,7 +1265,7 @@ class RecoilPistol : Pistol replaces Pistol
                 tlhDualOwner.tlhDualWieldActive = false;
                 tlhDualOwner.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
             A_Lower();
@@ -1347,7 +1281,7 @@ class RecoilPistol : Pistol replaces Pistol
                 tlhDualOwner.tlhDualWieldActive = false;
                 tlhDualOwner.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_Raise();
         }
         Loop;
@@ -1407,51 +1341,6 @@ class RecoilPistol : Pistol replaces Pistol
         Goto Ready;
 
 
-    DualOnStart:
-        PISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 41, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -32, 50, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -42, 56, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -7.0); }
-        PISG A 0
-        {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = true;
-                tlhDualOwner.tlhDualWieldWeapon = invoker;
-            }
-            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftDraw");
-            A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Print("PISTOL: DUAL WIELD");
-            return ResolveState(null);
-        }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -42, 46, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
-        Goto ReadyDual;
-
-
-    DualOffStart:
-        PISG A 3
-        {
-            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftHolster");
-            A_OverlayOffset(PSP_WEAPON, -24, 53, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.5);
-        }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 62, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.0); }
-        PISG A 0
-        {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
-            A_StartSound("weapons/sshotl", CHAN_WEAPON);
-            A_Print("PISTOL: SINGLE WIELD");
-            return ResolveState(null);
-        }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
-        Goto Ready;
-
     Fire:
         PISG A 0
         {
@@ -1489,7 +1378,7 @@ class RecoilPistol : Pistol replaces Pistol
         PISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("ReadyDual");
+                return ResolveState("Ready");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -1500,7 +1389,6 @@ class RecoilPistol : Pistol replaces Pistol
                 mo.LineAttack(shotAngle, 2048, shotPitch, 7, "Normal", "BulletPuff", 0, null, 0, 0, -22.0);
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Overlay(TLH_AKIMBO_LAYER, "PistolLeftFire");
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
             A_Recoil(2);
             return ResolveState(null);
@@ -1510,14 +1398,14 @@ class RecoilPistol : Pistol replaces Pistol
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ATTACK))
                 return ResolveState("FireDualLeft");
-            return ResolveState("ReadyDual");
+            return ResolveState("Ready");
         }
 
     FireDualRight:
         PISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("ReadyDual");
+                return ResolveState("Ready");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -1538,7 +1426,7 @@ class RecoilPistol : Pistol replaces Pistol
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ALTATTACK))
                 return ResolveState("FireDualRight");
-            return ResolveState("ReadyDual");
+            return ResolveState("Ready");
         }
 
     AltFire:
@@ -1655,9 +1543,6 @@ class OfficerVulkanPistol : Weapon
     TLHPickupReadyShim:
         PISG A 0
         {
-            if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("ReadyDual");
-
             if (invoker.weaponMode == 1)
                 return ResolveState("ReadyLauncher");
 
@@ -1678,66 +1563,6 @@ class OfficerVulkanPistol : Weapon
         Loop;
 
 
-    ReadyDual:
-        PISG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.76, 0.86);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
-            A_OverlayOffset(PSP_WEAPON, -40, 46);
-            A_OverlayRotate(PSP_WEAPON, 0);
-            return ResolveState(null);
-        }
-        PISG A 1
-        {
-            double sway = sin(level.time * 0.032 * TLH_RAD_TO_DEG) * 0.45;
-            A_OverlayOffset(PSP_WEAPON, -40 + sway, 46 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.15, 0);
-            A_OverlayRotate(PSP_WEAPON, -1.2 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
-        }
-        Loop;
-
-    OfficerPistolLeftDraw:
-        PISG A 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.76, 0.86);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
-        }
-        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
-        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
-        PISG A 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 40, 46, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
-        Goto OfficerPistolLeftIdle;
-
-    OfficerPistolLeftHolster:
-        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
-        PISG A 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
-        Stop;
-
-    OfficerPistolLeftIdle:
-        PISG A 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.76, 0.86);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, 40 + sin(level.time * 0.03 * TLH_RAD_TO_DEG) * 0.55, 46 + cos(level.time * 0.025 * TLH_RAD_TO_DEG) * 0.35, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, 1.4 + sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.30);
-            return ResolveState(null);
-        }
-        Loop;
-
-    OfficerPistolLeftFire:
-        PISG B 1;
-        PISF A 1 Bright;
-        PISG A 1;
-        Goto OfficerPistolLeftIdle;
-
-    DualPistolFlash:
-        PISF A 1 Bright A_Light1;
-        Goto LightDone;
-
     ReadyLauncher:
         PISG A 0
         {
@@ -1750,31 +1575,25 @@ class OfficerVulkanPistol : Weapon
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
         }
         Loop;
 
 
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
+
     User3:
-        PISG A 0
+        TNT1 A 0
         {
             let tp = TacticalPlayer(player.mo);
-            if (!tp)
-                return ResolveState("Ready");
-
-            if (!tp.ToggleTLHDualWield(invoker))
-            {
-                A_StartSound("weapons/sshoto", CHAN_WEAPON);
-                A_Print("DUAL WIELD: UNAVAILABLE OR BUSY");
-                if (tp.tlhDualWieldActive)
-                    return ResolveState("ReadyDual");
-                return ResolveState("Ready");
-            }
-
-            if (tp.tlhDualWieldActive)
-                return ResolveState("DualOnStart");
-            return ResolveState("DualOffStart");
+            if (tp && invoker.weaponMode == 0)
+                tp.ToggleTLHDualWield(invoker);
         }
+        Goto Ready;
+
+
     Deselect:
         PISG A 0
         {
@@ -1785,7 +1604,7 @@ class OfficerVulkanPistol : Weapon
                 tlhDualOwner.tlhDualWieldActive = false;
                 tlhDualOwner.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
             A_OverlayAlpha(PSP_WEAPON, 1.0);
         }
@@ -1802,7 +1621,7 @@ class OfficerVulkanPistol : Weapon
                 tlhDualOwner.tlhDualWieldActive = false;
                 tlhDualOwner.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         PISG A 1 A_Raise;
         Loop;
@@ -1855,7 +1674,7 @@ class OfficerVulkanPistol : Weapon
         PISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("ReadyDual");
+                return ResolveState("Ready");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -1866,7 +1685,6 @@ class OfficerVulkanPistol : Weapon
                 mo.LineAttack(shotAngle, 2048, shotPitch, 8, "Normal", "BulletPuff", 0, null, 0, 0, -20.0);
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftFire");
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_Quake(1.2, 2.0, 0, 80);
             A_Recoil(1.5);
@@ -1877,14 +1695,14 @@ class OfficerVulkanPistol : Weapon
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ATTACK))
                 return ResolveState("FireDualLeft");
-            return ResolveState("ReadyDual");
+            return ResolveState("Ready");
         }
 
     FireDualRight:
         PISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("ReadyDual");
+                return ResolveState("Ready");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -1906,7 +1724,7 @@ class OfficerVulkanPistol : Weapon
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ALTATTACK))
                 return ResolveState("FireDualRight");
-            return ResolveState("ReadyDual");
+            return ResolveState("Ready");
         }
 
     FireLauncher:
@@ -2004,57 +1822,9 @@ class OfficerVulkanPistol : Weapon
         Goto Ready;
 
 
-    DualOnStart:
-        PISG A 2 { A_OverlayOffset(PSP_WEAPON, -16, 41, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.5); }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -32, 50, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -4.5); }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -40, 56, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -7.0); }
-        PISG A 0
-        {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = true;
-                tlhDualOwner.tlhDualWieldWeapon = invoker;
-            }
-            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftDraw");
-            A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Print("OFFICER VULKAN: DUAL WIELD");
-            return ResolveState(null);
-        }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, -40, 46, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
-        Goto ReadyDual;
-
-
-    DualOffStart:
-        PISG A 3
-        {
-            A_Overlay(TLH_AKIMBO_LAYER, "OfficerPistolLeftHolster");
-            A_OverlayOffset(PSP_WEAPON, -24, 53, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.5);
-        }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 62, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, -1.0); }
-        PISG A 0
-        {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
-            A_StartSound("weapons/sshotl", CHAN_WEAPON);
-            A_Print("OFFICER VULKAN: SINGLE WIELD");
-            return ResolveState(null);
-        }
-        PISG A 3 { A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
-        Goto Ready;
-
     Zoom:
         PISG A 0
         {
-            if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("ReadyDual");
-
             if (invoker.weaponMode == 1)
                 return ResolveState("SwitchToPistol");
 
@@ -2359,13 +2129,10 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     TLHPickupReadyShim:
         SHT2 A 0
         {
-            if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("ReadyAkimbo");
-
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
@@ -2378,50 +2145,9 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
         Loop;
 
-    ReadyAkimbo:
-        PISG A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.84, 0.92);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayOffset(PSP_WEAPON, 42 + sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 46 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftIdle");
-            return ResolveState(null);
-        }
-        PISG A 1
-        {
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
-        }
-        Loop;
-
-    SSGPistolLeftIdle:
-        PISG A 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.84, 0.92);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, -45 + sin(level.time * 1.9480565) * 0.50, 66 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.35, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, -1.2 + sin(level.time * 0.021 * TLH_RAD_TO_DEG) * 0.32);
-            return ResolveState(null);
-        }
-        Loop;
-
-    SSGPistolLeftFire:
-        PISG B 1;
-        PISF A 1 Bright;
-        PISG A 1;
-        Goto SSGPistolLeftIdle;
-
-    PistolAkimboFlash:
-        PISF A 1 Bright A_Light1;
-        Goto LightDone;
-
     Reload:
         SHT2 A 0
         {
-            if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("ReadyAkimbo");
-
             if (invoker.dragonBreath)
                 return ResolveState("SetBuckshot");
 
@@ -2454,20 +2180,13 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         SHT2 A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
-    FireAkimbo:
-        PISG A 0
-        {
-            return ResolveState("FireDualLeft");
-        }
-
-    // M1 fires the left pistol and animates its dedicated overlay.
     FireDualLeft:
         PISG A 0
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
-                return ResolveState("ReadyAkimbo");
+                return ResolveState("Ready");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -2478,7 +2197,6 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
                 mo.LineAttack(shotAngle, 2048, shotPitch, 5, "Normal",
                     "BulletPuff", 0, null, 0, 0, -22.0);
             }
-            A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftFire");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
             A_Recoil(1.5);
@@ -2489,7 +2207,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             if (player.cmd.buttons & BT_ATTACK)
                 return ResolveState("FireDualLeft");
-            return ResolveState("ReadyAkimbo");
+            return ResolveState("Ready");
         }
 
     // M2 fires the right pistol through the main weapon PSprite.
@@ -2499,7 +2217,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
-                return ResolveState("ReadyAkimbo");
+                return ResolveState("Ready");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -2510,7 +2228,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
                 mo.LineAttack(shotAngle, 2048, shotPitch, 5, "Normal",
                     "BulletPuff", 0, null, 0, 0, 22.0);
             }
-            A_GunFlash("PistolAkimboFlash");
+            A_GunFlash();
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
             A_Recoil(1.5);
@@ -2521,18 +2239,15 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             if (player.cmd.buttons & BT_ALTATTACK)
                 return ResolveState("FireDualRight");
-            return ResolveState("ReadyAkimbo");
+            return ResolveState("Ready");
         }
 
     // Retained compatibility state for old save-state references.
-    DoFireAkimbo:
-        PISG A 0 { return ResolveState("FireDualLeft"); }
-
     Fire:
         SHT2 A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("FireAkimbo");
+                return ResolveState("FireDualLeft");
 
             if (invoker.dragonBreath)
                 return ResolveState("FireDragon");
@@ -2614,119 +2329,23 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto Ready;
 
     Zoom:
-        SHT2 A 0
-        {
-            if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("SwitchToSSG");
+        SHT2 A 0;
+        Goto Ready;
 
-            return ResolveState("SwitchToAkimbo");
-        }
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
 
-    SwitchToAkimbo:
-        SHT2 A 0
+    User3:
+        TNT1 A 0
         {
             let tp = TacticalPlayer(player.mo);
-            if (tp && !tp.TryAkimboToggle())
-                return ResolveState("Ready");
-
-            A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            return ResolveState("AkimboLower");
-        }
-
-    DualOnStart:
-    AkimboLower:
-        SHT2 A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.0);
-        }
-        SHT2 A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -2.0);
-        }
-        SHT2 A 0
-        {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = true;
-                tlhDualOwner.tlhDualWieldWeapon = invoker;
-            }
-            A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftIdle");
-            A_Print("SSG: AKIMBO PISTOLS");
-            return ResolveState(null);
-        }
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
-        }
-        Goto ReadyAkimbo;
-
-    SwitchToSSG:
-        PISG A 0
-        {
-            let tp = TacticalPlayer(player.mo);
-            if (tp && !tp.TryAkimboToggle())
-                return ResolveState("ReadyAkimbo");
-
-            A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            return ResolveState("SSGLower");
-        }
-
-    DualOffStart:
-    SSGLower:
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 44, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 1.0);
-        }
-        PISG A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 2.0);
-        }
-        PISG A 0
-        {
-            let tlhDualOwner = TacticalPlayer(player.mo);
-            if (tlhDualOwner)
-            {
-                tlhDualOwner.tlhDualWieldActive = false;
-                tlhDualOwner.tlhDualWieldWeapon = null;
-            }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
-            A_Print("SSG: SINGLE SHOTGUN");
-            return ResolveState(null);
-        }
-        SHT2 A 3
-        {
-            A_OverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
+            if (tp)
+                tp.ToggleTLHDualWield(invoker);
         }
         Goto Ready;
 
 
-    User3:
-        PISG A 0
-        {
-            let tp = TacticalPlayer(player.mo);
-            if (!tp)
-                return ResolveState("Ready");
-
-            if (!tp.ToggleTLHDualWield(invoker))
-            {
-                A_StartSound("weapons/sshoto", CHAN_WEAPON);
-                A_Print("DUAL WIELD: UNAVAILABLE OR BUSY");
-                if (tp.tlhDualWieldActive)
-                    return ResolveState("ReadyAkimbo");
-                return ResolveState("Ready");
-            }
-
-            if (tp.tlhDualWieldActive)
-                return ResolveState("DualOnStart");
-            return ResolveState("DualOffStart");
-        }
     Deselect:
         SHT2 A 0
         {
@@ -2736,7 +2355,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
                 tlhDualOwner.tlhDualWieldActive = false;
                 tlhDualOwner.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         SHT2 A 1 A_Lower;
         Loop;
@@ -2750,7 +2369,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
                 tlhDualOwner.tlhDualWieldActive = false;
                 tlhDualOwner.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         SHT2 A 1 A_Raise;
         Loop;
@@ -3413,7 +3032,7 @@ class TacticalM4A1 : DoomWeapon
     Deselect:
         ZHGG A 0
         {
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         ZHGG A 1 A_Lower;
@@ -3421,7 +3040,7 @@ class TacticalM4A1 : DoomWeapon
     Select:
         ZHGG A 0
         {
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         ZHGG A 1 A_Raise;
         Loop;
@@ -4090,7 +3709,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         {
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayOffset(PSP_WEAPON, 0, 32);
             A_OverlayRotate(PSP_WEAPON, 0);
             return ResolveState(null);
@@ -4107,7 +3726,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     Deselect:
         PLSG A 0
         {
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         PLSG A 1 A_Lower;
@@ -4116,7 +3735,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     Select:
         PLSG A 0
         {
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
             A_OverlayRotate(PSP_WEAPON, 0);
         }
         PLSG A 1 A_Raise;
@@ -5010,10 +4629,6 @@ class ServiceRevolver : Weapon
     TLHPickupReadyShim:
         RVOL Q 0
         {
-            let tp = TacticalPlayer(player.mo);
-            if (tp && tp.tlhDualWieldActive && tp.tlhDualWieldWeapon == invoker)
-                return ResolveState("ReadyDual");
-
             A_OverlayScale(PSP_WEAPON, 1.0, 1.0);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
@@ -5062,140 +4677,23 @@ class ServiceRevolver : Weapon
             double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
             double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
             A_OverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
-            A_WeaponReady(readyFlags);
+            A_WeaponReady(readyFlags | WRF_ALLOWUSER3);
         }
         Loop;
 
-    ReadyDual:
-        RVOL Q 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.90, 0.94);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(PSP_WEAPON, -38, 45);
-            A_OverlayRotate(PSP_WEAPON, -0.8);
-            A_Overlay(TLH_AKIMBO_LAYER, "ServiceRevolverLeftIdle");
-            return ResolveState(null);
-        }
-        RVOL Q 1
-        {
-            if (!(player.cmd.buttons & BT_ATTACK))
-                invoker.triggerLatched = false;
-            if (!(player.cmd.buttons & BT_RELOAD))
-                invoker.reloadLatched = false;
-            if (!(player.cmd.buttons & BT_ALTATTACK))
-                invoker.altTriggerLatched = false;
-
-            int readyFlags = WRF_NoBob | WRF_ALLOWUSER3;
-            if (!invoker.reloadLatched)
-                readyFlags |= WRF_ALLOWRELOAD;
-            if (invoker.triggerLatched || invoker.altTriggerLatched)
-                readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
-
-            let tp = TacticalPlayer(player.mo);
-            double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
-            double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
-            A_OverlayOffset(PSP_WEAPON, -38 + swayX, 45.0 + swayY, 0);
-            A_WeaponReady(readyFlags);
-        }
-        Loop;
-
-    ServiceRevolverLeftDraw:
-        RVOL Q 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.90, 0.94);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, 5.0);
-        }
-        RVOL Q 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 18, 60, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
-        RVOL Q 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 34, 51, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 1.0); }
-        RVOL Q 3 { A_OverlayOffset(TLH_AKIMBO_LAYER, 38, 45, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
-        Goto ServiceRevolverLeftIdle;
-
-    ServiceRevolverLeftHolster:
-        RVOL Q 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 24, 58, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 3.0); }
-        RVOL Q 2 { A_OverlayOffset(TLH_AKIMBO_LAYER, 0, 70, WOF_INTERPOLATE); A_OverlayRotate(TLH_AKIMBO_LAYER, 0); }
+    DualMirrorHold:
+        TNT1 A -1;
         Stop;
 
-    ServiceRevolverLeftIdle:
-        RVOL Q 1
-        {
-            A_OverlayScale(TLH_AKIMBO_LAYER, 0.90, 0.94);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_MIRROR, true);
-            A_OverlayFlags(TLH_AKIMBO_LAYER, PSPF_PLAYERTRANSLATED, true);
-            A_OverlayOffset(TLH_AKIMBO_LAYER, 38 + sin(level.time * 0.031 * TLH_RAD_TO_DEG) * 0.45,
-                45 + cos(level.time * 0.026 * TLH_RAD_TO_DEG) * 0.30, 0);
-            A_OverlayRotate(TLH_AKIMBO_LAYER, 1.1 + sin(level.time * 0.020 * TLH_RAD_TO_DEG) * 0.28);
-            return ResolveState(null);
-        }
-        Loop;
-
-    ServiceRevolverLeftFire:
-        RVOL B 1;
-        RVOL Q 1;
-        Goto ServiceRevolverLeftIdle;
-
     User3:
-        RVOL Q 0
+        TNT1 A 0
         {
             let tp = TacticalPlayer(player.mo);
-            if (!tp)
-                return ResolveState("Ready");
-
-            if (!tp.ToggleTLHDualWield(invoker))
-            {
-                A_StartSound("weapons/sshoto", CHAN_WEAPON);
-                A_Print("DUAL WIELD: UNAVAILABLE OR BUSY");
-                if (tp.tlhDualWieldActive)
-                    return ResolveState("ReadyDual");
-                return ResolveState("Ready");
-            }
-
-            if (tp.tlhDualWieldActive)
-                return ResolveState("DualOnStart");
-            return ResolveState("DualOffStart");
+            if (tp)
+                tp.ToggleTLHDualWield(invoker);
         }
-
-    DualOnStart:
-        RVOL Q 3
-        {
-            A_OverlayOffset(PSP_WEAPON, -18, 42, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -2.0);
-        }
-        RVOL Q 3
-        {
-            A_OverlayOffset(PSP_WEAPON, -38, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -4.0);
-        }
-        RVOL Q 0
-        {
-            A_Overlay(TLH_AKIMBO_LAYER, "ServiceRevolverLeftDraw");
-            A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Print("SERVICE REVOLVER: DUAL WIELD");
-            return ResolveState(null);
-        }
-        RVOL Q 3 { A_OverlayOffset(PSP_WEAPON, -38, 45, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
-        Goto ReadyDual;
-
-    DualOffStart:
-        RVOL Q 3
-        {
-            A_Overlay(TLH_AKIMBO_LAYER, "ServiceRevolverLeftHolster");
-            A_OverlayOffset(PSP_WEAPON, -20, 52, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 2.0);
-        }
-        RVOL Q 3 { A_OverlayOffset(PSP_WEAPON, 0, 42, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 1.0); }
-        RVOL Q 0
-        {
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
-            A_StartSound("weapons/sshotl", CHAN_WEAPON);
-            A_Print("SERVICE REVOLVER: SINGLE WIELD");
-            return ResolveState(null);
-        }
-        RVOL Q 3 { A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE); A_OverlayRotate(PSP_WEAPON, 0); }
         Goto Ready;
+
 
     Deselect:
         RVOL Q 0
@@ -5206,7 +4704,7 @@ class ServiceRevolver : Weapon
                 tp.tlhDualWieldActive = false;
                 tp.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         RVOL Q 1 A_Lower;
         Loop;
@@ -5220,7 +4718,7 @@ class ServiceRevolver : Weapon
                 tp.tlhDualWieldActive = false;
                 tp.tlhDualWieldWeapon = null;
             }
-            A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_ClearOverlays(TLH_DUAL_MIRROR_LAYER, TLH_DUAL_MIRROR_LAYER);
         }
         RVOL Q 1 A_Raise;
         Loop;
@@ -5352,14 +4850,13 @@ class ServiceRevolver : Weapon
             {
                 A_StartSound("weapons/sshoto", CHAN_WEAPON);
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
-                return ResolveState("ReadyDual");
+                return ResolveState("Ready");
             }
 
             if (!infinite)
                 invoker.cylinderAmmo--;
 
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
-            A_Overlay(TLH_AKIMBO_LAYER, "ServiceRevolverLeftFire");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.2, SPF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
@@ -5377,7 +4874,7 @@ class ServiceRevolver : Weapon
         {
             if ((player.cmd.buttons & BT_ATTACK) && !invoker.triggerLatched)
                 return ResolveState("FireDualLeft");
-            return ResolveState("ReadyDual");
+            return ResolveState("Ready");
         }
 
     FireDualRight:
@@ -5390,7 +4887,7 @@ class ServiceRevolver : Weapon
             {
                 A_StartSound("weapons/sshoto", CHAN_WEAPON);
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
-                return ResolveState("ReadyDual");
+                return ResolveState("Ready");
             }
 
             if (!infinite)
@@ -5414,7 +4911,7 @@ class ServiceRevolver : Weapon
         {
             if ((player.cmd.buttons & BT_ALTATTACK) && !invoker.altTriggerLatched)
                 return ResolveState("FireDualRight");
-            return ResolveState("ReadyDual");
+            return ResolveState("Ready");
         }
 
     // Fan the Hammer: three fast, progressively less accurate shots. It uses
@@ -5669,6 +5166,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     int tlhDualWieldToggleCooldown;
+    bool tlhDualWieldInputLatched;
+    double tlhDualWieldBlend;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5828,20 +5327,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // CENTRAL DUAL-WIELD CONTROL
     // ========================================================================
 
-    // A weapon opts into the shared Dual Wield controller by providing the
-    // four state entry points below. No concrete class casts or weapon registry
-    // are needed here; attack behavior remains owned by each weapon's states.
+    // Dual Wield compatibility is a gameplay contract, not a list of
+    // hand-animation labels. A compatible weapon supplies two firing routes,
+    // a native input entry point and one inert state used as a PSprite holder.
     bool SupportsTLHProceduralDualWield(Weapon weapon)
     {
-        if (!weapon)
-            return false;
-
-        // User3 is the engine-native +user3 entry point. A weapon is only
-        // supported if its Ready states enable WRF_ALLOWUSER3 and this state
-        // routes the press into the shared transition contract.
-        return weapon.FindStateByString("User3") &&
-               weapon.FindStateByString("DualOnStart") &&
-               weapon.FindStateByString("DualOffStart") &&
+        return weapon &&
+               weapon.FindStateByString("User3") &&
+               weapon.FindStateByString("DualMirrorHold") &&
                weapon.FindStateByString("FireDualLeft") &&
                weapon.FindStateByString("FireDualRight");
     }
@@ -5851,9 +5344,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player)
             return;
 
-        PSprite dualPSP = player.FindPSprite(TLH_AKIMBO_LAYER);
-        if (dualPSP)
-            dualPSP.Destroy();
+        PSprite mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
+        if (mirror)
+            mirror.Destroy();
     }
 
     void ResetTLHDualForWeaponSwitch()
@@ -5861,43 +5354,127 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player)
             return;
 
-        if (tlhDualWieldWeapon && tlhDualWieldWeapon != player.ReadyWeapon)
+        Weapon selected = player.ReadyWeapon;
+        if (tlhDualWieldWeapon && tlhDualWieldWeapon != selected)
         {
-            tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
+            tlhDualWieldWeapon = null;
+            tlhDualWieldBlend = 0.0;
             ClearTLHDualOverlay();
         }
 
-        if (player.ReadyWeapon && !SupportsTLHProceduralDualWield(player.ReadyWeapon))
+        if (selected && !SupportsTLHProceduralDualWield(selected))
         {
             tlhDualWieldActive = false;
             tlhDualWieldWeapon = null;
+            tlhDualWieldBlend = 0.0;
             ClearTLHDualOverlay();
         }
     }
 
+    // The native User3 state may be revisited while +user3 is held.
+    // This latch converts the held command into one toggle per press/release.
     bool ToggleTLHDualWield(Weapon weapon)
     {
+        if (tlhDualWieldInputLatched)
+            return false;
+
+        tlhDualWieldInputLatched = true;
+
         if (!player || player.playerstate != PST_LIVE ||
             player.PendingWeapon != WP_NOCHANGE ||
             weapon == null || weapon != player.ReadyWeapon ||
-            tlhDualWieldToggleCooldown > 0)
+            tlhDualWieldToggleCooldown > 0 ||
+            !SupportsTLHProceduralDualWield(weapon))
             return false;
 
-        if (!SupportsTLHProceduralDualWield(weapon))
-            return false;
-
-        bool currentlyEnabled = (tlhDualWieldActive && tlhDualWieldWeapon == weapon);
-        String transitionName = currentlyEnabled ? "DualOffStart" : "DualOnStart";
-        if (!weapon.FindStateByString(transitionName))
-            return false;
-
-        // Called from the weapon's native User3 state. Do not set the PSprite
-        // here: the User3 state returns the matching transition itself.
-        tlhDualWieldToggleCooldown = 12;
-        tlhDualWieldActive = !currentlyEnabled;
-        tlhDualWieldWeapon = !currentlyEnabled ? weapon : null;
+        tlhDualWieldActive = !(tlhDualWieldActive && tlhDualWieldWeapon == weapon);
+        // Retain the weapon reference during the exit animation.
+        tlhDualWieldWeapon = weapon;
+        tlhDualWieldToggleCooldown = 8;
         return true;
+    }
+
+    void UpdateTLHDualWieldBlend()
+    {
+        if (tlhDualWieldActive)
+        {
+            tlhDualWieldBlend += (1.0 - tlhDualWieldBlend) * 0.28;
+            if (tlhDualWieldBlend >= 0.985)
+                tlhDualWieldBlend = 1.0;
+        }
+        else
+        {
+            tlhDualWieldBlend *= 0.70;
+            if (tlhDualWieldBlend <= 0.015)
+                tlhDualWieldBlend = 0.0;
+        }
+    }
+
+    // The second PSprite is pinned to an inert state. Every tic it receives
+    // only the visible sprite ID/frame and presentation data from PSP_WEAPON.
+    // It never executes the weapon's Fire/Reload actions, so the visual clone
+    // cannot spend ammo or apply damage a second time.
+    void UpdateTLHDualWieldPresentation(PSprite primary)
+    {
+        if (!player || !player.ReadyWeapon || !primary)
+            return;
+
+        Weapon weapon = player.ReadyWeapon;
+        if (tlhDualWieldWeapon != weapon)
+        {
+            ClearTLHDualOverlay();
+            return;
+        }
+
+        if (!tlhDualWieldActive && tlhDualWieldBlend <= 0.0)
+        {
+            ClearTLHDualOverlay();
+            tlhDualWieldWeapon = null;
+            return;
+        }
+
+        State mirrorState = weapon.FindStateByString("DualMirrorHold");
+        if (!mirrorState)
+            return;
+
+        PSprite mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
+        if (!mirror || mirror.Caller != weapon)
+        {
+            if (mirror)
+                mirror.Destroy();
+
+            player.SetPsprite(TLH_DUAL_MIRROR_LAYER, mirrorState);
+            mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
+            if (!mirror)
+                return;
+        }
+
+        if (mirror.CurState != mirrorState)
+            mirror.SetState(mirrorState);
+
+        // Mirror the rendered frame, not the executable state machine.
+        mirror.Sprite = primary.Sprite;
+        mirror.Frame = primary.Frame;
+        mirror.Tics = -1;
+        mirror.Translation = primary.Translation;
+        mirror.scale = primary.scale;
+        mirror.baseScale = primary.baseScale;
+        mirror.pivot = primary.pivot;
+        mirror.rotation = -primary.rotation;
+        mirror.alpha = primary.alpha;
+        mirror.bFlip = !primary.bFlip;
+        mirror.bMirror = true;
+        mirror.bAddBob = false;
+        mirror.bAddWeapon = false;
+        mirror.bCVarFast = primary.bCVarFast;
+        mirror.bPowDouble = primary.bPowDouble;
+
+        double blend = tlhDualWieldBlend;
+        // bMirror reverses the X origin during rendering, hence the inverse
+        // stored coordinate below. At full blend the hands sit on opposite sides.
+        mirror.x = 44.0 * blend - primary.x;
+        mirror.y = primary.y + (1.0 - blend) * 54.0;
     }
 
     override void Tick()
@@ -5909,6 +5486,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // weapon-native User3 state, enabled by WRF_ALLOWUSER3 in Ready states.
         int bt = player.cmd.buttons;
         int obt = player.oldbuttons;
+        if (!(bt & BT_USER3))
+            tlhDualWieldInputLatched = false;
         bool tlhDashPressedThisTic = (bt & BT_USER2) != 0 && (obt & BT_USER2) == 0;
 
         CleanupDeferredWeaponRemovals();
@@ -5950,6 +5529,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
             tlhDualWieldToggleCooldown = 0;
+            tlhDualWieldInputLatched = false;
+            tlhDualWieldBlend = 0.0;
             tlhIsSprinting = false;
             tlhIsSliding = false;
             tlhSlideTics = 0;
@@ -6060,6 +5641,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         ResetTLHDualForWeaponSwitch();
+        UpdateTLHDualWieldBlend();
         RestoreTLHOwnedWeaponTranslations();
 
         int gameMode = GetGameMode();
@@ -6403,11 +5985,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // so the same shared model can animate every TLH weapon consistently.
         PSprite weaponPSP = player.FindPSprite(PSP_WEAPON);
         PSprite flashPSP = player.FindPSprite(PSP_FLASH);
-        PSprite dualPSP = player.FindPSprite(TLH_AKIMBO_LAYER);
 
         if (weaponPSP) ApplyTLHWeaponPSpriteMotion(weaponPSP);
         if (flashPSP) ApplyTLHWeaponPSpriteMotion(flashPSP);
-        if (dualPSP) ApplyTLHWeaponPSpriteMotion(dualPSP);
+
+        // Duplicate the final visible primary frame on the mirrored layer.
+        UpdateTLHDualWieldPresentation(weaponPSP);
 
         wasOnGround = onGround;
     }
@@ -6787,7 +6370,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         bool isWeaponPSP = (psp.ID == PSP_WEAPON);
         bool isFlashPSP = (psp.ID == PSP_FLASH);
-        bool isDualPSP = (psp.ID == TLH_AKIMBO_LAYER);
+        bool isDualPSP = (psp.ID == TLH_DUAL_MIRROR_LAYER);
         if (!isWeaponPSP && !isFlashPSP && !isDualPSP)
             return;
 
@@ -6959,6 +6542,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double totalX = visualOffsetX + swayX + recoilX + drawX;
         if (isDualPSP)
             totalX *= handSign;
+        if (isWeaponPSP && tlhDualWieldWeapon == weapon)
+            totalX += 22.0 * tlhDualWieldBlend;
         double totalY = visualOffsetY + swayY + crouchY + airFloatY +
                         recoilY + landingY + damageY + drawY;
 
