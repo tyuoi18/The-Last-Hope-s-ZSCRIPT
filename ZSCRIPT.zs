@@ -8503,8 +8503,7 @@ class TacticalHUDHandler : EventHandler
                 bool sampledFlip = false;
                 Vector2 sampledScale = (1.0, 1.0);
                 [sampledTexture, sampledFlip, sampledScale] =
-                    weaponPSprite.CurState.GetSpriteTexture(
-                        0, 0, ready.Scale, weaponPSprite.Sprite, weaponPSprite.Frame);
+                    weaponPSprite.CurState.GetSpriteTexture(0, 0, ready.Scale);
 
                 if (sampledTexture.IsValid())
                 {
