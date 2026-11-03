@@ -1,5 +1,8 @@
 // The Last Hope custom controls.
 addkeysection "The Last Hope" TheLastHope
 addmenukey "Toggle Dual Wield" "netevent tlh_dualwield"
+addmenukey "Tactical Dash" "+user2"
 addmenukey "Go Prone (hold)" "+user1"
+defaultbind "G" "netevent tlh_dualwield"
+defaultbind "Q" "+user2"
 bind "MOUSE3" "+user1"
