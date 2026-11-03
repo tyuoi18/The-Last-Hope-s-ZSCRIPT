@@ -1219,12 +1219,12 @@ class RecoilPistol : Pistol replaces Pistol
         return 0.0;
     }
 
-    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
         A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
     }
 
-    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
             wx += GetTLHDualPrimaryStateOffset();
@@ -1516,12 +1516,12 @@ class OfficerVulkanPistol : Weapon
         return 0.0;
     }
 
-    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
         A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
     }
 
-    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
             wx += GetTLHDualPrimaryStateOffset();
@@ -2124,12 +2124,12 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         return 0.0;
     }
 
-    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
         A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
     }
 
-    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
             wx += GetTLHDualPrimaryStateOffset();
@@ -4580,12 +4580,12 @@ class ServiceRevolver : Weapon
         return 0.0;
     }
 
-    void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
         A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
     }
 
-    void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
             wx += GetTLHDualPrimaryStateOffset();
