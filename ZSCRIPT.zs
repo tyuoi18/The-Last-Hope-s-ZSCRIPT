@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.3 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.4 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -100,6 +100,7 @@ const TLH_MAX_CELLS = 300;
 // v52.1: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
 // v52.2: resolve ambiguous weapon-state self references with explicit invoker.Owner;
 // v52.3: use a class-typed palette default lookup and keep Blue unlock progress in the HUD handler so it survives respawn.
+// v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
 // apply a dedicated electric-blue palette translation to the active Simple Rifle PSprite.
 // Blue mode consumes Cell ammo and uses a cyan MarineRailgun-style A_RailAttack.
 // Add a continuously refreshed tactical minimap and lightweight screen-space pseudo-shader overlays.
@@ -8781,7 +8782,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = hudBlueSimpleRifleUnlocked ? "BLUE SIMPLE RIFLE" : "SIMPLE RIFLE";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -10212,7 +10213,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         if (tlhVisorWeaponClass == "SimpleRifle")
         {
             TextR(hudBlueSimpleRifleUnlocked ? "BLUE RAIL MODE // CELL AMMO" :
-                String.Format("BLUE RIFLE %02d/60", hudBlueSimpleRifleKills),
+                String.Format("BLUE SIMPLE RIFLE %02d/60", hudBlueSimpleRifleKills),
                 632, 342, hudBlueSimpleRifleUnlocked ? 0x48BFFF : 0x8A9DA3, 0.19);
             if (!hudBlueSimpleRifleUnlocked)
                 SegBar(574, 349, 54, hudBlueSimpleRifleKills, 60, 8, 0x48BFFF);
