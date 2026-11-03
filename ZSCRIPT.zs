@@ -5265,7 +5265,8 @@ class SimpleRifle : Weapon
         bool infinite = sv_infiniteammo ||
             (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
 
-        int use = ammouse >= 0 ? ammouse : (altFire ? AmmoUse2 : AmmoUse1);
+        int use = (ammouse >= 0 && (bDehAmmo || forceammouse)) ?
+            ammouse : (altFire ? AmmoUse2 : AmmoUse1);
 
         if (checkEnough && !CheckAmmo(altFire ? AltFire : PrimaryFire,
             false, false, ammouse))
