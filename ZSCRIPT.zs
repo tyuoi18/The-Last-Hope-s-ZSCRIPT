@@ -13,7 +13,7 @@ version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
-const TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER = 3;
+const TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER = 4;
 const TLH_STOWED_LAYER = 3; // dedicated folded-launcher overlay; keep PSP_FLASH (1) free
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -5252,7 +5252,7 @@ class SimpleRifle : Weapon
         Weapon.AmmoType2 "Clip";
         Weapon.AmmoGive2 16;
         Weapon.AmmoUse2 2;
-        StencilColor "32AFFF";
+        StencilColor "50 175 255";
         Inventory.PickupMessage "Picked up a Simple Rifle.";
     }
 
@@ -5496,7 +5496,7 @@ class SimpleRifle : Weapon
     BlueTintReady:
         ASLT A 1
         {
-            A_OverlayFlags(OverlayID(), PSPF_RENDERSTYLE | PSPF_FORCEALPHA, true);
+            A_OverlayFlags(OverlayID(), PSPF_RENDERSTYLE | PSPF_FORCESTYLE | PSPF_FORCEALPHA, true);
             A_OverlayRenderstyle(OverlayID(), STYLE_TranslucentStencil);
             A_OverlayAlpha(OverlayID(), 0.24);
         }
@@ -10299,6 +10299,21 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         TextR(recent, 632, 23, idle, 0.20);
     }
 
+    // Keep a short rolling input history visible without restoring the old,
+    // oversized right-side logger panel.
+    ui void DrawCompactInputHistory()
+    {
+        int count = tlhInputHistory.Size();
+        int rows = min(4, count);
+        for (int i = 0; i < rows; i++)
+        {
+            int index = count - rows + i;
+            int color = (i == rows - 1) ? Font.CR_WHITE : 0x667176;
+            TextR(tlhInputHistory[index], 632, 32 + i * 7.0,
+                color, 0.18);
+        }
+    }
+
     ui void DrawCompactBlueSimpleRifleProgress()
     {
         Color blue = 0x32AFFF;
@@ -10481,6 +10496,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             Line(320 + size, 180 + size, 322, 182, marker, 220, 1.0);
             if (hudKillConfirmTics > 0)
                 TextC("KILL", 320, 194, yellow, 0.22);
+            else
+                TextC(String.Format("-%d", hudHitDamage), 320, 194,
+                    Font.CR_WHITE, 0.19);
         }
 
         if (hudFeedbackTics > 0 && hudFeedbackText != "")
@@ -10496,6 +10514,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
         DrawCompactHeader();
         DrawCompactInput();
+        DrawCompactInputHistory();
         DrawCompactBlueSimpleRifleProgress();
         DrawCompactPowerupTimers();
         DrawCompactTelemetry();
