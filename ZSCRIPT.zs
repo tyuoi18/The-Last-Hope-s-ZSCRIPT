@@ -4898,10 +4898,11 @@ class SimpleRifle : Weapon
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
         TacticalPlayer tp = TacticalPlayer(Owner);
-        if (fireMode == PrimaryFire && tp && tp.tlhBlueSimpleRifleUnlocked)
+        if (tp && tp.tlhBlueSimpleRifleUnlocked)
         {
             Inventory cells = Owner.FindInventory("Cell");
-            return cells && cells.Amount >= 1;
+            int cellCost = (fireMode == AltFire) ? 2 : 1;
+            return cells && cells.Amount >= cellCost;
         }
         return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
@@ -4981,8 +4982,15 @@ Default
         Goto Ready;
 
     AltFire:
+        ASLT A 0
+        {
+            TacticalPlayer tp = TacticalPlayer(Owner);
+            if (tp && tp.tlhBlueSimpleRifleUnlocked)
+                return ResolveState("BlueAltFire");
+            return ResolveState(null);
+        }
         SHTG B 2
-		{
+        {
             A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -4990,8 +4998,22 @@ Default
         }
         SHTG C 4;
         ASLT B 5;
-		
         ASLT A 5;
+        Goto Ready;
+
+    BlueAltFire:
+        ASLT A 3 A_GunFlash;
+        ASLT B 6
+        {
+            if (Owner)
+                Owner.TakeInventory("Cell", 2);
+            A_RailAttack(78, 0, false, 0x238DFF, 0xE4FAFF,
+                RGF_FULLBRIGHT, 0, "BulletPuff", 0.35, 0.15, 8192, 12, 0.75, 1.0);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
+            A_Recoil(3.4);
+        }
+        ASLT A 8 A_ReFire;
         Goto Ready;
 		
 	Reload:
