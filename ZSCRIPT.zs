@@ -1,6 +1,6 @@
 // ============================================================================
-// TLH v48.0 - procedural Dual Wield controller / movement overhaul / compact HUD
-// WEAPON-AGNOSTIC DUAL-WIELD CONTROL / PROCEDURAL PRESENTATION / HELMET HUD
+// TLH v48.1 - event-routed tactical binds / procedural Dual Wield / movement overhaul
+// WEAPON-AGNOSTIC DUAL-WIELD / WEAPON-INDEPENDENT INPUT ROUTING / HELMET HUD
 //
 // R remains untouched. Dual Wield is driven by a shared player state and a
 // common weapon-state contract, not a list of concrete weapon classes.
@@ -76,6 +76,8 @@ const TLH_MAX_CELLS = 300;
 // HellKnight, BaronOfHell and Cacodemon.
 // v47.0: sprint stamina, directional dash, momentum slide, coyote jump and air control.
 // v48.0: class-agnostic Dual Wield controller using a shared state contract.
+// v48.1: +user1/+user2/+user3 are routed through EventHandler network events so
+// tactical actions do not depend on the currently equipped weapon's PSprite flags.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -5547,6 +5549,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // avoiding a netevent round-trip for a local player command.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
+    bool tlhDashRequested;
+    bool tlhProneBindHeld;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5777,15 +5781,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
     override void Tick()
     {
-        // Capture +user1 before the base player tick processes weapon-ready
-        // buttons. Custom weapons such as HunterRifle call A_WeaponReady with
-        // restricted flags, which can make the post-Super button read miss M3.
-        bool tlhUser1HeldBeforeSuper = false;
-        if (player)
-            tlhUser1HeldBeforeSuper = (player.cmd.buttons & BT_USER1) != 0;
-
         Super.Tick();
         if (!player || !player.mo) return;
+
+        // InputProcess forwards +user2 as a one-shot event. Consume it once,
+        // independent of player.oldbuttons or weapon-ready input filtering.
+        bool tlhDashPressedThisTic = tlhDashRequested;
+        tlhDashRequested = false;
 
         CleanupDeferredWeaponRemovals();
 
@@ -5825,6 +5827,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
+            tlhDashRequested = false;
+            tlhProneBindHeld = false;
             tlhIsSprinting = false;
             tlhIsSliding = false;
             tlhSlideTics = 0;
@@ -5892,7 +5896,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Weapon proneWeapon = player.ReadyWeapon;
         bool hunterRifleEquipped = proneWeapon && proneWeapon is "HunterRifle";
         bool proneRequested = (hunterRifleEquipped &&
-            ((bt & BT_USER1) != 0 || tlhUser1HeldBeforeSuper) &&
+            (tlhProneBindHeld || (bt & BT_USER1) != 0) &&
             onGround && !isSlamming);
         if (proneRequested)
         {
@@ -5958,7 +5962,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Directional dash: Q (+user2), available on ground or in the air.
         // It preserves some incoming velocity and defaults to the facing direction.
-        if (gameMode != 1 && (bt & BT_USER2) && !(obt & BT_USER2) &&
+        if (gameMode != 1 && tlhDashPressedThisTic &&
             tlhDashCooldown <= 0 && tlhSprintStamina >= 30.0 &&
             !tlhProneActive && !isSlamming && !tlhIsSliding &&
             player.PendingWeapon == WP_NOCHANGE)
@@ -6087,14 +6091,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         if (!(bt & BT_ZOOM))
             akimboButtonHeld = false;
-
-        // G / BT_USER3 toggles dual wield without relying on a console netevent.
-        // The key-down edge prevents repeat toggles while the key is held.
-        if ((bt & BT_USER3) && !(obt & BT_USER3))
-        {
-            if (!ToggleTLHDualWield())
-                A_Print("DUAL WIELD: BUSY OR UNSUPPORTED WEAPON");
-        }
 
         // ------------------------------------------------------------
         // Jump buffer, coyote jump, one midair jump and slide-hop.
@@ -8172,6 +8168,9 @@ class TacticalHUDHandler : EventHandler
     // INPUT OBSERVER
     // ------------------------------------------------------------------------
     transient ui bool tlhInputM3Down;
+    transient ui bool tlhInputUser1Down;
+    transient ui bool tlhInputUser2Down;
+    transient ui bool tlhInputUser3Down;
     transient ui String tlhInputLast;
     String tlhNoAvoidMeleeMapName;
     bool tlhNoAvoidMeleeScanned;
@@ -8542,11 +8541,59 @@ class TacticalHUDHandler : EventHandler
 
             String historyKeyName = keyName;
             String binding = Bindings.GetBinding(e.KeyScan);
+            bool inputDown = (e.Type == InputEvent.Type_KeyDown);
 
             if (binding ~== "TLH_DualWield" ||
-                binding ~== "netevent tlh_dualwield")
+                binding ~== "netevent tlh_dualwield" ||
+                binding ~== "+user3")
             {
                 tlhHUDDualBindName = keyName;
+            }
+
+            // These gameplay controls normally require WRF_ALLOWUSER# on the
+            // currently equipped weapon to enter its User# state. TLH does not
+            // use those weapon states: route configured bindings as net events
+            // so they work independently of weapon class and PSprite state.
+            bool isUser1Bind = (binding ~== "+user1" || binding ~== "-user1");
+            bool isUser2Bind = (binding ~== "+user2" || binding ~== "-user2");
+            bool isUser3Bind = (binding ~== "+user3" || binding ~== "-user3");
+
+            if (isUser1Bind)
+            {
+                if (inputDown && !tlhInputUser1Down)
+                {
+                    tlhInputUser1Down = true;
+                    EventHandler.SendNetworkEvent("tlh_prone", 1);
+                }
+                else if (!inputDown && tlhInputUser1Down)
+                {
+                    tlhInputUser1Down = false;
+                    EventHandler.SendNetworkEvent("tlh_prone", 0);
+                }
+            }
+            else if (isUser2Bind)
+            {
+                if (inputDown && !tlhInputUser2Down)
+                {
+                    tlhInputUser2Down = true;
+                    EventHandler.SendNetworkEvent("tlh_dash");
+                }
+                else if (!inputDown)
+                {
+                    tlhInputUser2Down = false;
+                }
+            }
+            else if (isUser3Bind)
+            {
+                if (inputDown && !tlhInputUser3Down)
+                {
+                    tlhInputUser3Down = true;
+                    EventHandler.SendNetworkEvent("tlh_dualwield");
+                }
+                else if (!inputDown)
+                {
+                    tlhInputUser3Down = false;
+                }
             }
 
             if (binding != "")
@@ -8584,30 +8631,43 @@ class TacticalHUDHandler : EventHandler
     }
 
 
-    override void NetworkProcess(ConsoleEvent e){
-        if (e.Name ~== "tlh_dualwield")
+    override void NetworkProcess(ConsoleEvent e)
+    {
+        if (e.Name ~== "tlh_dualwield" ||
+            e.Name ~== "tlh_dash" ||
+            e.Name ~== "tlh_prone")
         {
             int playerNum = e.Player;
+            if (playerNum < 0 || playerNum >= MAXPLAYERS)
+                return;
 
-            if (playerNum >= 0 && playerNum < MAXPLAYERS)
+            let p = players[playerNum].mo;
+            if (!p || !p.player || p.Health <= 0)
+                return;
+
+            let tp = TacticalPlayer(p);
+            if (!tp)
+                return;
+
+            if (e.Name ~== "tlh_dualwield")
             {
-                let p = players[playerNum].mo;
-                if (p && p.player)
+                bool toggled = tp.ToggleTLHDualWield();
+                if (playerNum == consoleplayer)
                 {
-                    let tp = TacticalPlayer(p);
-                    if (tp)
-                    {
-                        bool toggled = tp.ToggleTLHDualWield();
-                        if (playerNum == consoleplayer)
-                        {
-                            hudFeedbackText = toggled
-                                ? (tp.tlhDualWieldActive ? "DUAL WIELD ENABLED" : "DUAL WIELD DISABLED")
-                                : "DUAL WIELD UNAVAILABLE";
-                            hudFeedbackTics = 30;
-                            hudFeedbackColor = toggled ? 0x83C99B : 0xD3B35B;
-                        }
-                    }
+                    hudFeedbackText = toggled
+                        ? (tp.tlhDualWieldActive ? "DUAL WIELD ENABLED" : "DUAL WIELD DISABLED")
+                        : "DUAL WIELD UNAVAILABLE";
+                    hudFeedbackTics = 30;
+                    hudFeedbackColor = toggled ? 0x83C99B : 0xD3B35B;
                 }
+            }
+            else if (e.Name ~== "tlh_dash")
+            {
+                tp.tlhDashRequested = true;
+            }
+            else if (e.Name ~== "tlh_prone")
+            {
+                tp.tlhProneBindHeld = (e.Args[0] != 0);
             }
         }
     }
