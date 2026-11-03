@@ -4892,7 +4892,9 @@ class ServiceRevolver : Weapon
 
 
 
-$1
+class SimpleRifle : Weapon
+{
+    bool Aiming;
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
         TacticalPlayer tp = TacticalPlayer(Owner);
