@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v46.0 - per-map Blue Simple Rifle unlock / rail mode / gameplay fixes
+// TLH v46.1 - compact HUD / feedback / Blue Simple Rifle stencil tint / gameplay fixes
 // CUSTOM DUAL-WIELD BIND / PROCEDURAL WEAPON PRESENTATION / HELMET INTERIOR HUD
 //
 // R remains untouched. Weapon-switch safety avoids destroying an active weapon.
@@ -14,7 +14,7 @@ version "4.14"
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
 const TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER = 4;
-const TLH_STOWED_LAYER = 3; // dedicated folded-launcher overlay; keep PSP_FLASH (1) free
+const TLH_STOWED_LAYER = 3; // reserved folded-launcher layer; PSP_WEAPON (1) and PSP_FLASH (1000) remain engine-owned
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
