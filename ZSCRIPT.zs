@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.1 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.2 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -98,6 +98,8 @@ const TLH_MAX_CELLS = 300;
 // v51.0.1: print an explicit ENABLED/DISABLED confirmation when the command arrives.
 // v51.0.2: copy the primary PSprite interpolation marker after mirroring its offsets.
 // v52.1: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
+// v52.2: resolve ambiguous weapon-state self references with explicit invoker.Owner;
+// apply a dedicated electric-blue palette translation to the active Simple Rifle PSprite.
 // Blue mode consumes Cell ammo and uses a cyan MarineRailgun-style A_RailAttack.
 // Add a continuously refreshed tactical minimap and lightweight screen-space pseudo-shader overlays.
 // TacticalM4A1 returns to its stock ZHGG sprite placement without procedural HUD sway/scale/rotation.
@@ -4892,6 +4894,16 @@ class ServiceRevolver : Weapon
 
 
 
+// Invisible defaults-only helper used as a reusable palette translation.
+// It is never spawned into the map or given to the player.
+class TLHBlueSimpleRifleTint : Actor
+{
+    Default
+    {
+        Translation "0:255=%[0.02,0.08,0.42]:[0.18,0.78,1.50]";
+    }
+}
+
 class SimpleRifle : Weapon
 {
     bool Aiming;
@@ -4952,7 +4964,7 @@ Default
     Fire:
         ASLT A 0
         {
-            TacticalPlayer tp = TacticalPlayer(Owner);
+            TacticalPlayer tp = TacticalPlayer(invoker.Owner);
             if (tp && tp.tlhBlueSimpleRifleUnlocked)
                 return ResolveState("BlueFire");
             return ResolveState(null);
@@ -4972,8 +4984,9 @@ Default
         ASLT A 2 A_GunFlash;
         ASLT B 4
         {
-            if (Owner)
-                Owner.TakeInventory("Cell", 1, true, true);
+            Actor rifleOwner = invoker.Owner;
+            if (rifleOwner)
+                rifleOwner.TakeInventory("Cell", 1, true, true);
             A_RailAttack(42, 0, false, 0x36BFFF, 0xD9F7FF,
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0, 0, 8192, 9, 1.0, 1.0);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
@@ -4986,7 +4999,7 @@ Default
     AltFire:
         ASLT A 0
         {
-            TacticalPlayer tp = TacticalPlayer(Owner);
+            TacticalPlayer tp = TacticalPlayer(invoker.Owner);
             if (tp && tp.tlhBlueSimpleRifleUnlocked)
                 return ResolveState("BlueAltFire");
             return ResolveState(null);
@@ -5007,8 +5020,9 @@ Default
         ASLT A 3 A_GunFlash;
         ASLT B 6
         {
-            if (Owner)
-                Owner.TakeInventory("Cell", 2, true, true);
+            Actor rifleOwner = invoker.Owner;
+            if (rifleOwner)
+                rifleOwner.TakeInventory("Cell", 2, true, true);
             A_RailAttack(78, 0, false, 0x238DFF, 0xE4FAFF,
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0.35, 0.15, 8192, 12, 0.75, 1.0);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
@@ -6317,10 +6331,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!isWeaponPSP && !isFlashPSP)
             return;
 
-        if (isWeaponPSP)
+        if (isWeaponPSP || isFlashPSP)
         {
             let weaponDefault = GetDefaultByType(weapon.GetClass());
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
+        }
+
+        // Blue Simple Rifle is the same weapon with a live electric-blue
+        // palette remap. Apply it to both the gun and muzzle-flash PSprites.
+        if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
+        {
+            let blueTint = GetDefaultByType("TLHBlueSimpleRifleTint");
+            if (blueTint)
+                psp.Translation = blueTint.Translation;
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState : tlhAnimLastFlashPSPState;
