@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.12 - resolve weapon-action context through player.mo and invoker
+// TLH v52.13 - prevent SSG reloads from triggering shot-only HUD stretch
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -5304,6 +5304,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhAnimShotScalePeak;
     int tlhAnimShotScaleTics;
     int tlhAnimAttackWindowTics;
+    int tlhAnimReloadWindowTics;
 
     double tlhAnimLandingKick;
     double tlhAnimLandingVel;
@@ -6928,6 +6929,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimShotScalePeak = 0;
             tlhAnimShotScaleTics = 0;
             tlhAnimAttackWindowTics = 0;
+            tlhAnimReloadWindowTics = 0;
 
             // Fresh weapon presentation: start slightly low, then let the
             // spring settle the weapon into the new stance.
@@ -6942,6 +6944,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimAttackWindowTics = 8;
         else if (tlhAnimAttackWindowTics > 0)
             tlhAnimAttackWindowTics--;
+
+        // Reload input gets its own short exclusion window. The SSG changes
+        // weapon presentation/ammo state during its reload sequence; without
+        // this guard a stale attack window can misclassify that change as a shot.
+        if (bt & BT_RELOAD)
+            tlhAnimReloadWindowTics = 10;
+        else if (tlhAnimReloadWindowTics > 0)
+            tlhAnimReloadWindowTics--;
 
         // ------------------------------------------------------------
         // Ammo delta -> procedural firing recoil
@@ -6975,7 +6985,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 // Stretch is a short shot-only pulse, independent from the
                 // longer recoil spring. Requiring an attack input prevents
                 // reserve-ammo changes during reloads from triggering it.
-                if (tlhAnimAttackWindowTics > 0 && !(bt & BT_RELOAD))
+                bool ssgReloading = (cls == "FastRecoilSSG" &&
+                    tlhAnimReloadWindowTics > 0);
+                if (tlhAnimAttackWindowTics > 0 &&
+                    !(bt & BT_RELOAD) && !ssgReloading)
                 {
                     tlhAnimShotScalePeak = clamp(impulse * 0.045, 0.025, 0.095);
                     tlhAnimShotScaleTics = 4;
