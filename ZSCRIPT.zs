@@ -8178,10 +8178,10 @@ class TacticalHUDHandler : EventHandler
             return;
         }
 
-        AActor(pawn).A_Print(tactical.tlhDualWieldActive
+        pawn.A_Print(tactical.tlhDualWieldActive
             ? "DUAL WIELD: ENABLED"
             : "DUAL WIELD: DISABLED");
-        AActor(pawn).A_StartSound("weapons/sshotc", CHAN_BODY);
+        pawn.A_StartSound("weapons/sshotc", CHAN_BODY);
     }
 
     int GetTLHFaceHealthBand(Actor p)
