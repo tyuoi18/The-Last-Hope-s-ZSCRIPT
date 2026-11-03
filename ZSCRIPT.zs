@@ -6525,7 +6525,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 0.98; scaleY = 1.10; offsetY = 0.8; sway = 0.96;
         }
-        else if (cls == "SimpleRifle")
+        else if (cls == "SimpleRifle" || cls == "BlueSimpleRifle")
         {
             scaleX = 1.00; scaleY = 1.12; offsetY = 0.9; sway = 0.98;
         }
@@ -8287,10 +8287,11 @@ class TacticalHUDHandler : EventHandler
 
         // Blue Simple Rifle unlock: 60 kills on the current map. Restricted
         // weapon modes keep their own rules and do not receive this reward.
-        if (tlhBlueSimpleRifleMapName != level.MapName)
+        if (tlhBlueSimpleRifleMapName != level.MapName || level.maptime == 0)
         {
             tlhBlueSimpleRifleMapName = level.MapName;
             tlhBlueSimpleRifleUnlocked = false;
+            tlhBlueSimpleRifleNoticeTics = 0;
         }
 
         let rewardModeCvar = CVar.FindCVar("tlh_gamemode");
@@ -9715,8 +9716,8 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Color active = 0x32AFFF;
 
         Panel(444, 143, 172, 115, frame, 135);
-        Text("INPUT LOGGER", 452, 147, Font.CR_WHITE, 0.34);
-        TextR("LIVE", 608, 147, active, 0.30);
+        Text("INPUT LOGGER", 452, 147, Font.CR_WHITE, 0.43);
+        TextR("LIVE", 608, 147, active, 0.38);
 
         int bt = 0;
         if (consoleplayer >= 0 && consoleplayer < MAXPLAYERS)
@@ -9726,7 +9727,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 bt = p.player.cmd.buttons;
         }
 
-        Text("MOVE", 452, 160, dim, 0.25);
+        Text("MOVE", 452, 160, dim, 0.32);
         Text("W", 495, 160, (bt & BT_FORWARD) ? active : Font.CR_WHITE, 0.38);
         Text("A", 514, 160, (bt & BT_MOVELEFT) ? active : Font.CR_WHITE, 0.38);
         Text("S", 533, 160, (bt & BT_BACK) ? active : Font.CR_WHITE, 0.38);
@@ -9734,7 +9735,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Text("SP", 573, 160, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.32);
         Text("CT", 594, 160, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.32);
 
-        Text("ACT", 452, 173, dim, 0.25);
+        Text("ACT", 452, 173, dim, 0.32);
         Text("J", 482, 173, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.34);
         Text("C", 497, 173, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.34);
         Text("M1", 514, 173, (bt & BT_ATTACK) ? active : Font.CR_WHITE, 0.32);
@@ -9743,7 +9744,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Text("R", 586, 173, (bt & BT_RELOAD) ? active : Font.CR_WHITE, 0.34);
 
         Line(452, 184, 608, 184, frame, 170, 0.65);
-        Text("RECENT KEY EVENTS", 452, 188, Font.CR_WHITE, 0.29);
+        Text("RECENT KEY EVENTS", 452, 188, Font.CR_WHITE, 0.38);
 
         int count = tlhInputHistory.Size();
         int rows = min(6, count);
@@ -9758,7 +9759,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 int historyIndex = count - rows + i;
                 int eventColor = (i == rows - 1) ? Font.CR_YELLOW : Font.CR_WHITE;
                 Text(tlhInputHistory[historyIndex], 452, 199 + i * 9,
-                    eventColor, 0.34);
+                    eventColor, 0.42);
             }
         }
     }
