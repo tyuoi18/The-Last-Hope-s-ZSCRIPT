@@ -91,6 +91,8 @@ const TLH_MAX_CELLS = 300;
 // +user3 is edge-latched until release; the player owns the entrance/exit animation.
 // v50.0.1: keep overlay ownership inside TacticalPlayer and apply the full
 // offscreen-to-right displacement after ordinary procedural sway clamping.
+// v50.0.2: remove the obsolete third motion channel and align mirrored flash,
+// palette, interpolation and pivot flags with the live primary PSprite.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -5110,7 +5112,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // native User3 state through WRF_ALLOWUSER3; this player owns the shared mode.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
-    int tlhDualWieldToggleCooldown;
     bool tlhDualWieldInputLatched;
     double tlhDualWieldBlend;
     bool tlhProneActive;
@@ -5174,14 +5175,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhAnimAppliedFlashRoll;
     double tlhAnimAppliedFlashScaleX;
     double tlhAnimAppliedFlashScaleY;
-
-    // Third bookkeeping channel for the left-hand dual-wield overlay.
-    State tlhAnimLastDualPSPState;
-    double tlhAnimAppliedDualX;
-    double tlhAnimAppliedDualY;
-    double tlhAnimAppliedDualRoll;
-    double tlhAnimAppliedDualScaleX;
-    double tlhAnimAppliedDualScaleY;
 
     // Additional body-acceleration layers for a more physical first-person
     // feel. StopKick handles abrupt deceleration without affecting gameplay.
@@ -5329,14 +5322,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player || player.playerstate != PST_LIVE ||
             player.PendingWeapon != WP_NOCHANGE ||
             weapon == null || weapon != player.ReadyWeapon ||
-            tlhDualWieldToggleCooldown > 0 ||
             !SupportsTLHProceduralDualWield(weapon))
             return false;
 
         tlhDualWieldActive = !(tlhDualWieldActive && tlhDualWieldWeapon == weapon);
         // Retain the weapon reference during the exit animation.
         tlhDualWieldWeapon = weapon;
-        tlhDualWieldToggleCooldown = 8;
         return true;
     }
 
@@ -5409,6 +5400,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         mirror.pivot = primary.pivot;
         mirror.rotation = -primary.rotation;
         mirror.alpha = primary.alpha;
+        mirror.HAlign = primary.HAlign;
+        mirror.VAlign = primary.VAlign;
+        mirror.bPlayerTranslated = primary.bPlayerTranslated;
+        mirror.bPivotPercent = primary.bPivotPercent;
+        mirror.bInterpolate = primary.bInterpolate;
         mirror.bFlip = !primary.bFlip;
         mirror.bMirror = true;
         mirror.bAddBob = false;
@@ -5474,7 +5470,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
-            tlhDualWieldToggleCooldown = 0;
             tlhDualWieldInputLatched = false;
             tlhDualWieldBlend = 0.0;
             tlhIsSprinting = false;
@@ -5734,8 +5729,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // ------------------------------------------------------------
         if (akimboCooldown > 0)
             akimboCooldown--;
-        if (tlhDualWieldToggleCooldown > 0)
-            tlhDualWieldToggleCooldown--;
 
         if (!(bt & BT_ZOOM))
             akimboButtonHeld = false;
@@ -6316,27 +6309,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         bool isWeaponPSP = (psp.ID == PSP_WEAPON);
         bool isFlashPSP = (psp.ID == PSP_FLASH);
-        bool isDualPSP = (psp.ID == TLH_DUAL_MIRROR_LAYER);
-        if (!isWeaponPSP && !isFlashPSP && !isDualPSP)
+        if (!isWeaponPSP && !isFlashPSP)
             return;
 
-        // Apply the weapon's embedded palette to every non-flash PSprite state.
-        // This is the procedural part: the same mapping follows Ready, Fire,
-        // Reload, Select, Deselect and the dual-wield overlay automatically.
-        if (!isFlashPSP && (isWeaponPSP || isDualPSP))
+        if (isWeaponPSP)
         {
             let weaponDefault = GetDefaultByType(weapon.GetClass());
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
-
         }
 
-        State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
-                          (isFlashPSP ? tlhAnimLastFlashPSPState : tlhAnimLastDualPSPState);
+        State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState : tlhAnimLastFlashPSPState;
         bool sameState = (lastState == psp.CurState);
 
-        // Remove only our previous procedural contribution if the authored
-        // state is unchanged. On a state transition GZDoom has already applied
-        // the new state's own transform, so never subtract the old one from it.
+        // Remove only the transform we applied on the previous tic. A state
+        // transition supplies a new authored baseline, so it must not be undone.
         if (sameState)
         {
             if (isWeaponPSP)
@@ -6349,7 +6335,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 if (abs(tlhAnimAppliedWeaponScaleY) > 0.0001)
                     psp.scale.y /= tlhAnimAppliedWeaponScaleY;
             }
-            else if (isFlashPSP)
+            else
             {
                 psp.x -= tlhAnimAppliedFlashX;
                 psp.y -= tlhAnimAppliedFlashY;
@@ -6359,21 +6345,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 if (abs(tlhAnimAppliedFlashScaleY) > 0.0001)
                     psp.scale.y /= tlhAnimAppliedFlashScaleY;
             }
-            else
-            {
-                psp.x -= tlhAnimAppliedDualX;
-                psp.y -= tlhAnimAppliedDualY;
-                psp.rotation -= tlhAnimAppliedDualRoll;
-                if (abs(tlhAnimAppliedDualScaleX) > 0.0001)
-                    psp.scale.x /= tlhAnimAppliedDualScaleX;
-                if (abs(tlhAnimAppliedDualScaleY) > 0.0001)
-                    psp.scale.y /= tlhAnimAppliedDualScaleY;
-            }
         }
         else
         {
-            // New state: clear bookkeeping because the state's own transform
-            // is now the baseline for this PSprite.
             if (isWeaponPSP)
             {
                 tlhAnimAppliedWeaponX = 0;
@@ -6382,7 +6356,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 tlhAnimAppliedWeaponScaleX = 1.0;
                 tlhAnimAppliedWeaponScaleY = 1.0;
             }
-            else if (isFlashPSP)
+            else
             {
                 tlhAnimAppliedFlashX = 0;
                 tlhAnimAppliedFlashY = 0;
@@ -6390,22 +6364,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 tlhAnimAppliedFlashScaleX = 1.0;
                 tlhAnimAppliedFlashScaleY = 1.0;
             }
-            else
-            {
-                tlhAnimAppliedDualX = 0;
-                tlhAnimAppliedDualY = 0;
-                tlhAnimAppliedDualRoll = 0;
-                tlhAnimAppliedDualScaleX = 1.0;
-                tlhAnimAppliedDualScaleY = 1.0;
-            }
         }
 
         if (isWeaponPSP)
             tlhAnimLastWeaponPSPState = psp.CurState;
-        else if (isFlashPSP)
-            tlhAnimLastFlashPSPState = psp.CurState;
         else
-            tlhAnimLastDualPSPState = psp.CurState;
+            tlhAnimLastFlashPSPState = psp.CurState;
 
         double visualScaleX = 1.0;
         double visualScaleY = 1.0;
@@ -6420,16 +6384,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double weight = GetTLHWeaponMotionWeight(weapon);
         double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
         double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
+        double weaponFactor = isWeaponPSP ? 1.0 : 0.42;
 
-        // The weapon PSprite gets the full body/aim simulation. The flash is
-        // deliberately damped so muzzle flashes remain attached to the gun
-        // without becoming a second source of screen shake.
-        double weaponFactor = isWeaponPSP ? 1.0 : (isFlashPSP ? 0.42 : 0.86);
-
-        double handSign = isDualPSP ? -1.0 : 1.0;
-
-        // Strafe body tilt and vertical-flight tilt make the weapon react to
-        // actual player movement rather than only to a timer.
         double worldRightX = sin(angle);
         double worldRightY = -cos(angle);
         double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
@@ -6451,7 +6407,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
              recoilRoll + landingRoll + stopRoll + bodyTilt + airTilt) *
             visualSway * weaponFactor * (0.78 + 0.22 * weight);
 
-        // Heavy weapons resist rotational movement more than pistols.
         String cls = weapon.GetClassName();
         if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
             cls == "RecoilBFG9000" || cls == "AMR99RailRifle")
@@ -6459,13 +6414,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         else if (cls == "RecoilPistol" || cls == "OfficerVulkanPistol")
             totalRoll *= 1.12;
 
-        if (isDualPSP)
-            totalRoll = -totalRoll * 0.90;
-
         totalRoll = clamp(totalRoll, -4.25, 4.25);
 
-        // Additional direct PSprite sway. BobWeapon() supplies the base gait;
-        // this is the higher-frequency weapon-body relationship layered on top.
         double swayX =
             (tlhAnimSwayX * 1.10 + tlhAnimInertiaX * 0.85 +
              tlhAnimLookX * 0.68 + tlhAnimStopKick * 0.40) * visualSway * weaponFactor;
@@ -6474,8 +6424,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             (tlhAnimSwayY * 0.75 + tlhAnimInertiaY * 0.55 -
              tlhAnimLookY * 0.40) * visualSway * weaponFactor;
 
-        // Crouching lowers the weapon slightly. Airborne weapons float upward
-        // by a tiny amount, while recoil dominates the vertical axis during fire.
         double crouchY = -(1.0 - crouchFactor) * (1.4 + 1.2 * weight);
         double airFloatY = airBlend * cos(double(level.time) * 0.09 * TLH_RAD_TO_DEG) * 0.35;
         double recoilY = -tlhAnimWeaponKick * (isWeaponPSP ? 0.92 : 0.30);
@@ -6486,25 +6434,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double drawX = -tlhAnimDrawKick * (isWeaponPSP ? 0.06 : 0.02);
 
         double totalX = visualOffsetX + swayX + recoilX + drawX;
-        if (isDualPSP)
-            totalX *= handSign;
         double totalY = visualOffsetY + swayY + crouchY + airFloatY +
                         recoilY + landingY + damageY + drawY;
 
         totalX = clamp(totalX, -12.0, 12.0);
-        if (isWeaponPSP && tlhDualWieldWeapon == weapon)
+        // Keep the muzzle flash aligned with the shifted primary weapon.
+        if ((isWeaponPSP || isFlashPSP) && tlhDualWieldWeapon == weapon)
             totalX += 22.0 * tlhDualWieldBlend;
         totalY = clamp(totalY, -18.0, 18.0);
 
-        // Procedural squash/stretch during recoil and landing. Because this is
-        // applied to the live PSprite's current scale, every authored frame of
-        // the custom weapon receives the same visual treatment.
         double recoilCompression = clamp(tlhAnimWeaponKick * 0.010, 0.0, 0.11);
         double landingCompression = clamp(tlhAnimLandingKick * 0.004, 0.0, 0.035);
         double scaleX = visualScaleX * (1.0 + recoilCompression * 0.28);
         double scaleY = visualScaleY * (1.0 - recoilCompression - landingCompression);
-
-        // Keep alternate weapon frames from accidentally becoming invisible.
         if (scaleX < 0.60) scaleX = 0.60;
         if (scaleY < 0.60) scaleY = 0.60;
 
@@ -6522,7 +6464,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimAppliedWeaponScaleX = scaleX;
             tlhAnimAppliedWeaponScaleY = scaleY;
         }
-        else if (isFlashPSP)
+        else
         {
             tlhAnimAppliedFlashX = totalX;
             tlhAnimAppliedFlashY = totalY;
@@ -6530,15 +6472,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimAppliedFlashScaleX = scaleX;
             tlhAnimAppliedFlashScaleY = scaleY;
         }
-        else
-        {
-            tlhAnimAppliedDualX = totalX;
-            tlhAnimAppliedDualY = totalY;
-            tlhAnimAppliedDualRoll = totalRoll;
-            tlhAnimAppliedDualScaleX = scaleX;
-            tlhAnimAppliedDualScaleY = scaleY;
-        }
     }
+
+
 
     // Per-weapon presentation profile. This changes only the first-person
     // appearance. Damage, spread, ammo use and all gameplay values remain
