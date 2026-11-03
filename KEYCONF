@@ -1,8 +1,9 @@
 // The Last Hope custom controls.
+// Dual Wield uses BT_USER3, handled directly by TacticalPlayer.Tick().
 addkeysection "The Last Hope" TheLastHope
-addmenukey "Toggle Dual Wield" "netevent tlh_dualwield"
+addmenukey "Toggle Dual Wield" "+user3"
 addmenukey "Tactical Dash" "+user2"
 addmenukey "Go Prone (hold)" "+user1"
-defaultbind "G" "netevent tlh_dualwield"
+defaultbind "G" "+user3"
 defaultbind "Q" "+user2"
 bind "MOUSE3" "+user1"
