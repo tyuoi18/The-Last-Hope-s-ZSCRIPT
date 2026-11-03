@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v51.0 - InputProcess Dual Wield command route and live PSprite mirror
+// TLH v51.0.1 - add explicit confirmation for network-routed Dual Wield toggles
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -95,6 +95,7 @@ const TLH_MAX_CELLS = 300;
 // v51.0: route +user3 through InputProcess -> SendNetworkCommand ->
 // NetworkCommandProcess. Dual Wield no longer depends on weapon-native User3 states
 // or WRF_ALLOWUSER3; only the inert mirror holder and weapon firing routines remain.
+// v51.0.1: print an explicit ENABLED/DISABLED confirmation when the command arrives.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -8172,7 +8173,15 @@ class TacticalHUDHandler : EventHandler
 
         Weapon weapon = players[playerNum].ReadyWeapon;
         if (!tactical.ToggleTLHDualWield(weapon))
+        {
             pawn.A_Print("DUAL WIELD: UNSUPPORTED WEAPON OR BUSY");
+            return;
+        }
+
+        AActor(pawn).A_Print(tactical.tlhDualWieldActive
+            ? "DUAL WIELD: ENABLED"
+            : "DUAL WIELD: DISABLED");
+        AActor(pawn).A_StartSound("weapons/sshotc", CHAN_BODY);
     }
 
     int GetTLHFaceHealthBand(Actor p)
