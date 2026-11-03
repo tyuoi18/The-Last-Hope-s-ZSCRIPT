@@ -5203,7 +5203,23 @@ class SimpleRifleKillPuff : BulletPuff
 {
     Default
     {
+        +PUFFONACTORS
+        +PUFFGETSOWNER
         DamageType "TLH_SimpleRifle";
+    }
+}
+
+// Monster-side marker: only the most recent damage source is retained.
+// WorldThingDied then awards the kill only if that final source was SimpleRifle.
+class TLHSimpleRifleKillCredit : Inventory
+{
+    Actor killer;
+
+    Default
+    {
+        Inventory.MaxAmount 1;
+        +INVENTORY.UNDROPPABLE
+        +INVENTORY.UNTOSSABLE
     }
 }
 
@@ -6217,6 +6233,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
             item = nextItem;
         }
+    }
+
+    // GZDoom invokes this callback for every live weapon/flash/overlay PSprite.
+    // The transform method below is reversible and preserves authored offsets.
+    override void PSpriteTick(PSprite psp)
+    {
+        Super.PSpriteTick(psp);
+        ApplyTLHWeaponPSpriteMotion(psp);
     }
 
     // ========================================================================
@@ -7431,13 +7455,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             {
                 double a = FRandom(0, 360);
                 double d = FRandom(192, 288);
-                Vector3 spawnPos = (Pos.X + cos(a) * d, Pos.Y + sin(a) * d, floorz);
+                Vector3 spawnPos = (Pos.X + cos(a) * d, Pos.Y + sin(a) * d, Pos.Z);
                 Actor candidate = Spawn(cls, spawnPos);
 
-                if (candidate && candidate.TestMobjLocation())
-                    mo = candidate;
-                else if (candidate)
-                    candidate.Destroy();
+                if (candidate)
+                {
+                    candidate.FindFloorCeiling();
+                    candidate.SetOrigin((candidate.Pos.X, candidate.Pos.Y,
+                        candidate.floorz), true);
+
+                    if (candidate.TestMobjLocation())
+                        mo = candidate;
+                    else
+                        candidate.Destroy();
+                }
             }
 
             if (mo && elite)
@@ -8014,20 +8045,48 @@ class TacticalHUDHandler : EventHandler
     }
 
 
+    override void WorldThingDamaged(WorldEvent e)
+    {
+        if (!e.Thing || !e.Thing.bIsMonster)
+            return;
+
+        // Any new hit overwrites the credit. This makes the final damaging
+        // source authoritative rather than counting assists or earlier hits.
+        Inventory previous = e.Thing.FindInventory("TLHSimpleRifleKillCredit");
+        if (previous)
+        {
+            e.Thing.RemoveInventory(previous);
+            previous.Destroy();
+        }
+
+        if (e.DamageType != 'TLH_SimpleRifle' ||
+            !e.DamageSource || !e.DamageSource.player ||
+            !(e.DamageSource is "TacticalPlayer"))
+            return;
+
+        e.Thing.GiveInventory("TLHSimpleRifleKillCredit", 1);
+        let credit = TLHSimpleRifleKillCredit(
+            e.Thing.FindInventory("TLHSimpleRifleKillCredit"));
+        if (credit)
+            credit.killer = e.DamageSource;
+    }
+
     override void WorldThingDied(WorldEvent e)
     {
-        if (!e.Thing || !e.Thing.bIsMonster ||
-            !e.Inflictor || !(e.Inflictor is "SimpleRifleKillPuff"))
+        if (!e.Thing || !e.Thing.bIsMonster)
             return;
 
-        // GZDoom sets the corpse target to the damage source before this event.
-        Actor killer = e.Thing.target;
-        if (!killer || !killer.player || !(killer is "TacticalPlayer"))
+        let credit = TLHSimpleRifleKillCredit(
+            e.Thing.FindInventory("TLHSimpleRifleKillCredit"));
+        if (!credit || !credit.killer || !credit.killer.player)
             return;
 
-        let tacticalKiller = TacticalPlayer(killer);
+        let tacticalKiller = TacticalPlayer(credit.killer);
         if (tacticalKiller)
             tacticalKiller.RegisterSimpleRifleKill();
+
+        e.Thing.RemoveInventory(credit);
+        credit.Destroy();
     }
 
     override void WorldThingSpawned(WorldEvent e){
