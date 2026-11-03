@@ -1,6 +1,7 @@
 // The Last Hope custom controls.
-// +user3 is handled by each compatible weapon's User3 state.
-// Its Ready loops must call A_WeaponReady(... | WRF_ALLOWUSER3).
+// +user3 is a one-press toggle; TacticalPlayer latches it until release.
+// Compatible weapon Ready loops expose User3 through WRF_ALLOWUSER3.
+// The offhand is a live mirrored PSprite, not duplicated weapon animation code.
 addkeysection "The Last Hope" TheLastHope
 addmenukey "Toggle Dual Wield" "+user3"
 addmenukey "Tactical Dash" "+user2"
