@@ -5256,8 +5256,8 @@ class SimpleRifle : Weapon
         return enough;
     }
 
-    override bool DepleteAmmo(bool altFire, bool checkEnough = true,
-        int ammouse = -1, bool forceammouse = false)
+    override bool DepleteAmmo(bool altFire, bool checkEnough,
+        int ammouse, bool forceammouse)
     {
         if (!tlhBlueModeActive)
             return Super.DepleteAmmo(altFire, checkEnough, ammouse, forceammouse);
