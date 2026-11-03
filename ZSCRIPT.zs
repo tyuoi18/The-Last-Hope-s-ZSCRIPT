@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.13 - prevent SSG reloads from triggering shot-only HUD stretch
+// TLH v52.14 - remove procedural HUD sprite scaling from firing and reload
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -5297,15 +5297,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhAnimWeaponKickVel;
     double tlhAnimWeaponKickSide;
 
-    // A separate short envelope drives only the firing squash/stretch.
-    // It is not tied to the longer recoil spring, so reloads and other states
-    // cannot inherit a lingering scale deformation.
-    double tlhAnimShotScaleKick;
-    double tlhAnimShotScalePeak;
-    int tlhAnimShotScaleTics;
-    int tlhAnimAttackWindowTics;
-    int tlhAnimReloadWindowTics;
-
     double tlhAnimLandingKick;
     double tlhAnimLandingVel;
     double tlhAnimDamageKick;
@@ -5317,24 +5308,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     int tlhAnimLastHealth;
     Weapon tlhAnimLastWeapon;
 
-    // Per-PSprite transform bookkeeping. The authored weapon-state transform
-    // is preserved and the procedural layer is added on top, then removed
-    // cleanly on the next tic. This makes the effect apply to Ready/Fire/
-    // AltFire/Reload and every other weapon frame without rewriting sprites.
+    // Per-PSprite positional transform bookkeeping. Authored sprite scale is
+    // never modified by the procedural motion layer.
     State tlhAnimLastWeaponPSPState;
     State tlhAnimLastFlashPSPState;
 
     double tlhAnimAppliedWeaponX;
     double tlhAnimAppliedWeaponY;
     double tlhAnimAppliedWeaponRoll;
-    double tlhAnimAppliedWeaponScaleX;
-    double tlhAnimAppliedWeaponScaleY;
 
     double tlhAnimAppliedFlashX;
     double tlhAnimAppliedFlashY;
     double tlhAnimAppliedFlashRoll;
-    double tlhAnimAppliedFlashScaleX;
-    double tlhAnimAppliedFlashScaleY;
 
     // Additional body-acceleration layers for a more physical first-person
     // feel. StopKick handles abrupt deceleration without affecting gameplay.
@@ -6482,9 +6467,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return (x, y);
     }
 
-    // Apply the procedural transform to the actual weapon PSprite and its
-    // flash PSprite. This is the visible HUD weapon: x/y sway, roll, recoil,
-    // squash/stretch and weapon-specific mass are all applied here.
+    // Apply positional and rotational motion to the actual weapon PSprite
+    // and flash PSprite. Sprite scale remains exactly as authored by the weapon.
     //
     // GZDoom exposes PSprite x/y/scale/rotation and calls the weapon's
     // PSpriteTick while processing weapon overlays. The authored state remains
@@ -6536,20 +6520,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 psp.x -= tlhAnimAppliedWeaponX;
                 psp.y -= tlhAnimAppliedWeaponY;
                 psp.rotation -= tlhAnimAppliedWeaponRoll;
-                if (abs(tlhAnimAppliedWeaponScaleX) > 0.0001)
-                    psp.scale.x /= tlhAnimAppliedWeaponScaleX;
-                if (abs(tlhAnimAppliedWeaponScaleY) > 0.0001)
-                    psp.scale.y /= tlhAnimAppliedWeaponScaleY;
             }
             else
             {
                 psp.x -= tlhAnimAppliedFlashX;
                 psp.y -= tlhAnimAppliedFlashY;
                 psp.rotation -= tlhAnimAppliedFlashRoll;
-                if (abs(tlhAnimAppliedFlashScaleX) > 0.0001)
-                    psp.scale.x /= tlhAnimAppliedFlashScaleX;
-                if (abs(tlhAnimAppliedFlashScaleY) > 0.0001)
-                    psp.scale.y /= tlhAnimAppliedFlashScaleY;
             }
         }
         else
@@ -6559,16 +6535,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 tlhAnimAppliedWeaponX = 0;
                 tlhAnimAppliedWeaponY = 0;
                 tlhAnimAppliedWeaponRoll = 0;
-                tlhAnimAppliedWeaponScaleX = 1.0;
-                tlhAnimAppliedWeaponScaleY = 1.0;
             }
             else
             {
                 tlhAnimAppliedFlashX = 0;
                 tlhAnimAppliedFlashY = 0;
                 tlhAnimAppliedFlashRoll = 0;
-                tlhAnimAppliedFlashScaleX = 1.0;
-                tlhAnimAppliedFlashScaleY = 1.0;
             }
         }
 
@@ -6586,27 +6558,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 tlhAnimAppliedWeaponX = 0;
                 tlhAnimAppliedWeaponY = 0;
                 tlhAnimAppliedWeaponRoll = 0;
-                tlhAnimAppliedWeaponScaleX = 1.0;
-                tlhAnimAppliedWeaponScaleY = 1.0;
             }
             else
             {
                 tlhAnimAppliedFlashX = 0;
                 tlhAnimAppliedFlashY = 0;
                 tlhAnimAppliedFlashRoll = 0;
-                tlhAnimAppliedFlashScaleX = 1.0;
-                tlhAnimAppliedFlashScaleY = 1.0;
             }
             return;
         }
 
-        double visualScaleX = 1.0;
-        double visualScaleY = 1.0;
         double visualOffsetX = 0.0;
         double visualOffsetY = 0.0;
         double visualBaseRoll = 0.0;
         double visualSway = 1.0;
-        GetTLHWeaponVisualProfile(weapon, visualScaleX, visualScaleY,
+        GetTLHWeaponVisualProfile(weapon,
             visualOffsetX, visualOffsetY, visualBaseRoll, visualSway);
 
         double speed01 = clamp(Vel.XY.Length() / 18.0, 0.0, 1.0);
@@ -6671,37 +6637,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // state wrappers so it cannot be overwritten by frame actions.
         totalY = clamp(totalY, -18.0, 18.0);
 
-        // Only a real firing event applies transient squash/stretch. The
-        // landing response remains positional, avoiding scale changes during
-        // reloads, equip animations, idle states or unrelated presentation.
-        double shotCompression = clamp(tlhAnimShotScaleKick * weaponFactor,
-            0.0, 0.095);
-        double scaleX = visualScaleX * (1.0 + shotCompression * 0.28);
-        double scaleY = visualScaleY * (1.0 - shotCompression);
-        if (scaleX < 0.60) scaleX = 0.60;
-        if (scaleY < 0.60) scaleY = 0.60;
-
         psp.x += totalX;
         psp.y += totalY;
         psp.rotation += totalRoll;
-        psp.scale.x *= scaleX;
-        psp.scale.y *= scaleY;
 
         if (isWeaponPSP)
         {
             tlhAnimAppliedWeaponX = totalX;
             tlhAnimAppliedWeaponY = totalY;
             tlhAnimAppliedWeaponRoll = totalRoll;
-            tlhAnimAppliedWeaponScaleX = scaleX;
-            tlhAnimAppliedWeaponScaleY = scaleY;
         }
         else
         {
             tlhAnimAppliedFlashX = totalX;
             tlhAnimAppliedFlashY = totalY;
             tlhAnimAppliedFlashRoll = totalRoll;
-            tlhAnimAppliedFlashScaleX = scaleX;
-            tlhAnimAppliedFlashScaleY = scaleY;
         }
     }
 
@@ -6712,12 +6662,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // untouched. Importantly, the multiplier is applied to the live PSprite,
     // so Fire/AltFire/Reload/Select/Ready frames inherit the same shape.
     void GetTLHWeaponVisualProfile(Weapon weapon,
-        out double scaleX, out double scaleY,
         out double offsetX, out double offsetY,
         out double baseRoll, out double sway)
     {
-        scaleX = 1.0;
-        scaleY = 1.0;
         offsetX = 0.0;
         offsetY = 0.0;
         baseRoll = 0.0;
@@ -6729,75 +6676,75 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         if (cls == "RecoilPistol")
         {
-            scaleX = 0.98; scaleY = 1.04; offsetY = 0.6; sway = 1.10;
+offsetY = 0.6; sway = 1.10;
         }
         else if (cls == "ServiceRevolver")
         {
-            scaleX = 0.94; scaleY = 1.00; offsetY = 0.6; sway = 1.06;
+offsetY = 0.6; sway = 1.06;
         }
         else if (cls == "OfficerVulkanPistol")
         {
-            scaleX = 0.96; scaleY = 1.06; offsetY = 0.4; sway = 1.12;
+offsetY = 0.4; sway = 1.12;
         }
         else if (cls == "RecoilShotgun")
         {
-            scaleX = 0.98; scaleY = 1.10; offsetY = 0.8; sway = 0.96;
+offsetY = 0.8; sway = 0.96;
         }
         else if (cls == "SimpleRifle")
         {
-            scaleX = 1.00; scaleY = 1.12; offsetY = 0.9; sway = 0.98;
+offsetY = 0.9; sway = 0.98;
         }
         else if (cls == "FastRecoilSSG")
         {
-            scaleX = 0.98; scaleY = 1.13; offsetY = 1.0; sway = 0.90;
+offsetY = 1.0; sway = 0.90;
         }
         else if (cls == "SemiAutoShotgun")
         {
-            scaleX = 1.00; scaleY = 1.16; offsetY = 0.8; sway = 0.94;
+offsetY = 0.8; sway = 0.94;
         }
         else if (cls == "TacticalM4A1")
         {
-            scaleX = 1.02; scaleY = 1.08; offsetY = 0.4; sway = 0.86;
+offsetY = 0.4; sway = 0.86;
         }
         else if (cls == "HunterRifle")
         {
-            scaleX = 1.04; scaleY = 1.08; offsetY = 0.5; sway = 0.58;
+offsetY = 0.5; sway = 0.58;
         }
         else if (cls == "M60MachineGun")
         {
-            scaleX = 0.99; scaleY = 1.12; offsetY = 1.4; sway = 0.68;
+offsetY = 1.4; sway = 0.68;
         }
         else if (cls == "RecoilRocketLauncher")
         {
-            scaleX = 1.03; scaleY = 1.10; offsetY = 1.3; sway = 0.66;
+offsetY = 1.3; sway = 0.66;
         }
         else if (cls == "RecoilPlasmaRifle")
         {
-            scaleX = 1.00; scaleY = 1.09; offsetY = 0.6; sway = 0.74;
+offsetY = 0.6; sway = 0.74;
         }
         else if (cls == "RecoilBFG9000")
         {
-            scaleX = 0.98; scaleY = 1.12; offsetY = 1.8; sway = 0.58;
+offsetY = 1.8; sway = 0.58;
         }
         else if (cls == "AMR99RailRifle")
         {
-            scaleX = 0.96; scaleY = 1.14; offsetY = 1.0; sway = 0.62;
+offsetY = 1.0; sway = 0.62;
         }
         else if (cls == "HellfireProjector")
         {
-            scaleX = 0.82; scaleY = 0.86; offsetY = 0.7; sway = 0.68;
+offsetY = 0.7; sway = 0.68;
         }
         else if (cls == "AirstrikeDesignator")
         {
-            scaleX = 1.03; scaleY = 1.08; offsetY = 0.7; sway = 0.78;
+offsetY = 0.7; sway = 0.78;
         }
         else if (cls == "DashFist")
         {
-            scaleX = 1.02; scaleY = 1.05; offsetY = 0.4; sway = 1.14;
+offsetY = 0.4; sway = 1.14;
         }
         else if (cls == "HookChainsaw")
         {
-            scaleX = 1.00; scaleY = 1.08; offsetY = 0.8; sway = 1.00;
+offsetY = 0.8; sway = 1.00;
         }
     }
 
@@ -6925,33 +6872,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimWeaponKick = 0;
             tlhAnimWeaponKickVel = 0;
             tlhAnimWeaponKickSide = 0;
-            tlhAnimShotScaleKick = 0;
-            tlhAnimShotScalePeak = 0;
-            tlhAnimShotScaleTics = 0;
-            tlhAnimAttackWindowTics = 0;
-            tlhAnimReloadWindowTics = 0;
 
             // Fresh weapon presentation: start slightly low, then let the
             // spring settle the weapon into the new stance.
             tlhAnimDrawKick = 5.0;
             tlhAnimDrawVel = 0.0;
         }
-
-        // Remember a recent attack input because some weapons execute their
-        // firing frame a few tics after the initial click has been released.
-        // This still rejects reload-only ammo changes.
-        if (bt & (BT_ATTACK | BT_ALTATTACK))
-            tlhAnimAttackWindowTics = 8;
-        else if (tlhAnimAttackWindowTics > 0)
-            tlhAnimAttackWindowTics--;
-
-        // Reload input gets its own short exclusion window. The SSG changes
-        // weapon presentation/ammo state during its reload sequence; without
-        // this guard a stale attack window can misclassify that change as a shot.
-        if (bt & BT_RELOAD)
-            tlhAnimReloadWindowTics = 10;
-        else if (tlhAnimReloadWindowTics > 0)
-            tlhAnimReloadWindowTics--;
 
         // ------------------------------------------------------------
         // Ammo delta -> procedural firing recoil
@@ -6982,18 +6908,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 else if (cls == "RecoilBFG9000")
                     impulse *= 2.60;
 
-                // Stretch is a short shot-only pulse, independent from the
-                // longer recoil spring. Requiring an attack input prevents
-                // reserve-ammo changes during reloads from triggering it.
-                bool ssgReloading = (cls == "FastRecoilSSG" &&
-                    tlhAnimReloadWindowTics > 0);
-                if (tlhAnimAttackWindowTics > 0 &&
-                    !(bt & BT_RELOAD) && !ssgReloading)
-                {
-                    tlhAnimShotScalePeak = clamp(impulse * 0.045, 0.025, 0.095);
-                    tlhAnimShotScaleTics = 4;
-                }
-
                 // Alternating lateral impulse prevents automatic fire from
                 // drifting permanently in one direction.
                 double sideImpulse = ((level.time & 1) == 0) ? 1.0 : -1.0;
@@ -7003,20 +6917,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
         tlhAnimLastAmmoSignature = ammoSignature;
-
-        // Four rendered tics: full impulse, then a linear return to the
-        // weapon's authored/profile scale. No shot means no extra deformation.
-        if (tlhAnimShotScaleTics > 0)
-        {
-            tlhAnimShotScaleKick =
-                tlhAnimShotScalePeak * (double(tlhAnimShotScaleTics) / 4.0);
-            tlhAnimShotScaleTics--;
-        }
-        else
-        {
-            tlhAnimShotScaleKick = 0.0;
-            tlhAnimShotScalePeak = 0.0;
-        }
 
         // Melee weapons do not consume ammo, so give their first swing a small
         // procedural body kick on the attack edge.
@@ -8106,7 +8006,6 @@ class TacticalHUDHandler : EventHandler
     TextureID hudWeaponTexture;
     bool hudWeaponTextureValid;
     bool hudWeaponFlip;
-    Vector2 hudWeaponStateScale;
     int hudWeaponTranslation;
     String hudWeaponTextureClass;
 
@@ -8882,7 +8781,6 @@ class TacticalHUDHandler : EventHandler
         hudWeaponTextureValid = false;
         hudWeaponTextureClass = "";
         hudWeaponFlip = false;
-        hudWeaponStateScale = (1.0, 1.0);
         hudWeaponTranslation = 0;
 
         int sampledHealth = max(0, p.Health);
@@ -9777,7 +9675,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         // this UI pass. No play-scoped Weapon state function is called here.
         TextureID tex;
         bool flip = false;
-        Vector2 stateScale = (1.0, 1.0);
 
         // Do not query/draw CHGGA0 directly from this UI render path while the
         // weapon is changing. The engine draws the real HeavyChaingun PSprite;
@@ -9787,7 +9684,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         {
             tex = hudWeaponTexture;
             flip = hudWeaponFlip;
-            stateScale = hudWeaponStateScale;
         }
         else
         {
@@ -9801,8 +9697,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         double tw = max(1.0, texSize.X);
         double th = max(1.0, texSize.Y);
 
-        double liveScaleX = 1.0;
-        double liveScaleY = 1.0;
         double liveRoll = 0.0;
         double liveBobX = 0.0;
         double liveBobY = 0.0;
@@ -9810,19 +9704,14 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         let tp = TacticalPlayer(p);
         if (tp)
         {
-            liveScaleX = clamp(tp.tlhAnimAppliedWeaponScaleX, 0.82, 1.24);
-            liveScaleY = clamp(tp.tlhAnimAppliedWeaponScaleY, 0.82, 1.28);
             liveRoll = clamp(tp.tlhAnimWeaponKickSide * 0.35, -4.0, 4.0);
             liveBobX = clamp(tp.tlhAnimSwayX * 0.55 + tp.tlhAnimInertiaX * 0.32, -8.0, 8.0);
             liveBobY = clamp(tp.tlhAnimSwayY * 0.40 + tp.tlhAnimInertiaY * 0.25, -6.0, 6.0);
         }
 
-        double stateScaleX = clamp(abs(stateScale.X), 0.50, 2.00);
-        double stateScaleY = clamp(abs(stateScale.Y), 0.50, 2.00);
-
         double fit = min(38.0 / tw, 23.0 / th);
-        double dw = clamp(tw * fit * profileX * liveScaleX * stateScaleX, 18.0, 48.0);
-        double dh = clamp(th * fit * profileY * liveScaleY * stateScaleY, 12.0, 30.0);
+        double dw = clamp(tw * fit, 18.0, 48.0);
+        double dh = clamp(th * fit, 12.0, 30.0);
 
         double cx = 485.0 + liveBobX;
         double cy = 294.0 + liveBobY;
