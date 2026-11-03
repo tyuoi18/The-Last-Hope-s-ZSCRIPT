@@ -1190,6 +1190,19 @@ class RecoilPistol : Pistol replaces Pistol
         Weapon.AmmoUse2 1;
     }
 
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (dualWield && fireMode == AltFire)
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("Clip") >= 1;
+        }
+
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+
     States
     {
     Ready:
@@ -1566,6 +1579,19 @@ class OfficerVulkanPistol : Weapon
             "176:191=96:111",         // light red -> gray
             "192:203=96:111",         // remaining colored accents -> gray
             "224:239=96:111";         // final warm/cool accent range -> gray
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (dualWield && fireMode == AltFire)
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("Clip") >= 1;
+        }
+
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
@@ -2216,6 +2242,20 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Weapon.AmmoUse2 0;
     }
 
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (akimboState == 1 &&
+            (fireMode == PrimaryFire || fireMode == AltFire))
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("Clip") >= 1;
+        }
+
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
+
     States
     {
     Ready:
@@ -2248,7 +2288,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             A_OverlayScale(PSP_WEAPON, 0.84, 0.92);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 34 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_OverlayOffset(PSP_WEAPON, 42 + sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 46 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
             A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftIdle");
@@ -2322,26 +2362,76 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     FireAkimbo:
         PISG A 0
         {
-            if ((sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) || player.mo.CountInv("Clip") >= 1)
-                return ResolveState("DoFireAkimbo");
+            return ResolveState("FireDualLeft");
+        }
 
+    // M1 fires the left pistol and animates its dedicated overlay.
+    FireDualLeft:
+        PISG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
+                return ResolveState("ReadyAkimbo");
+
+            A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            let mo = player.mo;
+            if (mo)
+            {
+                double shotAngle = angle + FRandom(-3.2, 3.2);
+                double shotPitch = pitch + FRandom(-1.4, 1.4);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 5, "Normal",
+                    "BulletPuff", 0, null, 0, 0, -22.0);
+            }
+            A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftFire");
+            A_StartSound("weapons/pistol", CHAN_WEAPON);
+            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            A_Recoil(1.5);
+            return ResolveState(null);
+        }
+        PISG B 2;
+        PISG A 0
+        {
+            if (player.cmd.buttons & BT_ATTACK)
+                return ResolveState("FireDualLeft");
             return ResolveState("ReadyAkimbo");
         }
 
-    DoFireAkimbo:
-        PISG A 3;
-        PISG B 4
+    // M2 fires the right pistol through the main weapon PSprite.
+    FireDualRight:
+        PISG A 0
         {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
+                return ResolveState("ReadyAkimbo");
+
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            let mo = player.mo;
+            if (mo)
+            {
+                double shotAngle = angle + FRandom(-3.2, 3.2);
+                double shotPitch = pitch + FRandom(-1.4, 1.4);
+                mo.LineAttack(shotAngle, 2048, shotPitch, 5, "Normal",
+                    "BulletPuff", 0, null, 0, 0, 22.0);
+            }
             A_GunFlash("PistolAkimboFlash");
-            A_FireBullets(5.6, 0, 1, 5, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Overlay(TLH_AKIMBO_LAYER, "SSGPistolLeftFire");
-            A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
+            A_Recoil(1.5);
+            return ResolveState(null);
         }
-        PISG C 3 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        PISG A 3 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-        Goto ReadyAkimbo;
+        PISG B 2;
+        PISG A 0
+        {
+            if (player.cmd.buttons & BT_ALTATTACK)
+                return ResolveState("FireDualRight");
+            return ResolveState("ReadyAkimbo");
+        }
+
+    // Retained compatibility state for old save-state references.
+    DoFireAkimbo:
+        PISG A 0 { return ResolveState("FireDualLeft"); }
 
     Fire:
         SHT2 A 0
@@ -2414,7 +2504,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         SHT2 A 0
         {
             if (invoker.akimboState == 1)
-                return ResolveState("ReadyAkimbo");
+                return ResolveState("FireDualRight");
 
             return ResolveState(null);
         }
@@ -2499,6 +2589,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             invoker.akimboState = 0;
             A_ClearOverlays(TLH_AKIMBO_LAYER, TLH_AKIMBO_LAYER);
+            A_Print("SSG: SINGLE SHOTGUN");
             return ResolveState(null);
         }
         SHT2 A 3
@@ -3151,9 +3242,20 @@ class TacticalM4A1 : DoomWeapon
 
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
-        // Three-round burst needs a full three-round reserve. Akimbo fires single shots.
+        // M2 normally launches the M203 and checks RocketAmmo. In dual mode it
+        // fires the right-hand rifle instead, so it must check one Clip round.
+        if (dualWield && fireMode == AltFire)
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("Clip") >= 1;
+        }
+
+        // Three-round burst needs a full three-round reserve.
         if (fireMode == PrimaryFire && !dualWield && burstMode)
             return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
+
         return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
@@ -5327,6 +5429,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     int jumpCount;
     int slideCooldown;
     int tlhCoyoteTics;
+    int tlhJumpBufferTics;
     int tlhSlideTics;
     int tlhDashTics;
     int tlhDashCooldown;
@@ -5353,8 +5456,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhCorpseReactionPlayed;
     int tlhCorpseScanCooldown;
 
-    // Centralized dual-wield state. Activation comes from the custom KEYCONF
-    // netevent, so R keeps its existing gameplay behavior completely untouched.
+    // Centralized dual-wield state. The active KEYCONF binding uses BT_USER3,
+    // avoiding a netevent round-trip for a local player command.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     bool tlhProneActive;
@@ -5606,7 +5709,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Resolve the transition first. If a weapon is missing one of these
         // states, do not leave its dual flag active without the matching PSprite.
         State transition = weapon.FindStateByString(transitionName);
-        if (!transition)
+        if (!transition || !TryModeToggle())
             return false;
 
         SetTLHWeaponDualFlag(weapon, !currentlyEnabled);
@@ -5635,6 +5738,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhMovementInitialized = true;
             tlhSprintStamina = 100.0;
             tlhCoyoteTics = 0;
+            tlhJumpBufferTics = 0;
             tlhSlideTics = 0;
             tlhDashTics = 0;
             tlhDashCooldown = 0;
@@ -5669,6 +5773,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhSlideTics = 0;
             tlhDashTics = 0;
             tlhCoyoteTics = 0;
+            tlhJumpBufferTics = 0;
             tlhSprintStamina = 100.0;
             tlhMovementInitialized = false;
             return;
@@ -5703,7 +5808,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (bt & BT_BACK) forwardInput -= 1.0;
         if (bt & BT_MOVERIGHT) sideInput += 1.0;
         if (bt & BT_MOVELEFT) sideInput -= 1.0;
+        // Normalize diagonal input so sprint and air steering never gain
+        // free speed from holding two directions at once.
+        double inputLength = sqrt(forwardInput * forwardInput + sideInput * sideInput);
+        if (inputLength > 1.0)
+        {
+            forwardInput /= inputLength;
+            sideInput /= inputLength;
+        }
         bool hasMoveInput = (abs(forwardInput) + abs(sideInput)) > 0.0;
+        bool jumpPressed = (bt & BT_JUMP) != 0 && (obt & BT_JUMP) == 0;
 
         if (onGround)
             tlhCoyoteTics = 5;
@@ -5917,22 +6031,66 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!(bt & BT_ZOOM))
             akimboButtonHeld = false;
 
+        // G / BT_USER3 toggles dual wield without relying on a console netevent.
+        // The key-down edge prevents repeat toggles while the key is held.
+        if ((bt & BT_USER3) && !(obt & BT_USER3))
+        {
+            if (!ToggleTLHDualWield())
+                A_Print("DUAL WIELD: BUSY OR UNSUPPORTED WEAPON");
+        }
+
         // ------------------------------------------------------------
-        // Coyote jump + one midair jump.
-        // The grace window catches a jump a few tics after leaving a ledge.
+        // Jump buffer, coyote jump, one midair jump and slide-hop.
+        // A short buffer catches presses just before landing; coyote time
+        // catches presses just after leaving a ledge.
         // ------------------------------------------------------------
-        if ((bt & BT_JUMP) && !(obt & BT_JUMP) &&
+        if (jumpPressed)
+        {
+            if (!onGround && gameMode != 1 && waterlevel == 0 && !isSlamming)
+                tlhJumpBufferTics = 6;
+            else
+                tlhJumpBufferTics = 0;
+        }
+        else if (tlhJumpBufferTics > 0)
+        {
+            tlhJumpBufferTics--;
+        }
+
+        if (jumpPressed && onGround && tlhIsSliding &&
+            gameMode != 1 && !isSlamming)
+        {
+            // Hop out of a slide while retaining most of its horizontal speed.
+            tlhIsSliding = false;
+            tlhSlideTics = 0;
+            slideCooldown = max(slideCooldown, 18);
+            Height = FullHeight * clamp(player.crouchfactor, 0.0, 1.0);
+            Vel.Z = max(Vel.Z, 9.4);
+            Vel.XY *= 1.10;
+            double hopSpeed = Vel.XY.Length();
+            if (hopSpeed > 21.5)
+                Vel.XY *= 21.5 / hopSpeed;
+            if (forwardInput > 0.0)
+                Thrust(0.06, angle);
+            tlhSprintStamina = max(0.0, tlhSprintStamina - 5.0);
+            tlhCoyoteTics = 0;
+            tlhJumpBufferTics = 0;
+            jumpCount = 0;
+            A_StartSound("weapons/sshotc", CHAN_BODY);
+        }
+        else if (tlhJumpBufferTics > 0 &&
             gameMode != 1 && !onGround && waterlevel == 0 && !isSlamming)
         {
             if (tlhCoyoteTics > 0)
             {
                 Vel.Z = max(Vel.Z, 8.8);
                 tlhCoyoteTics = 0;
+                tlhJumpBufferTics = 0;
             }
             else if (jumpCount == 0)
             {
                 Vel.Z = 12.0;
                 jumpCount = 1;
+                tlhJumpBufferTics = 0;
                 A_StartSound("weapons/sshotc", CHAN_BODY);
                 Spawn("SlideSmoke", Pos - (0, 0, 24));
             }
@@ -5967,9 +6125,29 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 A_StartSound("weapons/sshoto", CHAN_BODY);
             }
 
+            // If jump was pressed shortly before touchdown, consume it now.
+            // This creates a responsive landing hop without repeated auto-jumps.
+            if (!wasOnGround && tlhJumpBufferTics > 0 &&
+                gameMode != 1 && waterlevel == 0 && !isSlamming)
+            {
+                Vel.Z = max(Vel.Z, 8.8);
+                jumpCount = 0;
+                tlhCoyoteTics = 0;
+                tlhJumpBufferTics = 0;
+
+                double landingHopSpeed = Vel.XY.Length();
+                if (landingHopSpeed > 5.0)
+                {
+                    Vel.XY *= 1.08;
+                    if (Vel.XY.Length() > 20.5)
+                        Vel.XY *= 20.5 / Vel.XY.Length();
+                }
+                A_StartSound("weapons/sshotc", CHAN_BODY);
+            }
+
             if (!wasOnGround && (bt & BT_JUMP) && Vel.XY.Length() < 45.0)
             {
-                Vel.XY *= 1.35;
+                Vel.XY *= 1.12;
                 A_StartSound("weapons/sshotc", CHAN_BODY);
             }
 
