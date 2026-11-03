@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v45.9 - estabilidad de cambio de arma
+// TLH v46.0 - per-map Blue Simple Rifle unlock / rail mode / gameplay fixes
 // CUSTOM DUAL-WIELD BIND / PROCEDURAL WEAPON PRESENTATION / HELMET INTERIOR HUD
 //
 // R remains untouched. Weapon-switch safety avoids destroying an active weapon.
@@ -74,6 +74,9 @@ const TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK = 60;
 // nerfed full-kit loot, stronger game-mode transitions, menu-ready CVars, and safer runtime enforcement. All custom enemy variants use
 // valid GZDoom 4.14.2 actor bases such as DoomImp, Fatso, Arachnotron, Revenant,
 // HellKnight, BaronOfHell and Cacodemon.
+// v46.0: per-player map-scoped Blue Simple Rifle unlock, SimpleRifle-only kill credit,
+// MarineRailgun-style hitscan rail mode, safe mode weapon removal, validated horde spawns,
+// throttled corpse scans, and corrected Speedrun cooldown handling.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -5195,10 +5198,31 @@ class ServiceRevolver : Weapon
 
 
 
+// Impact puff used only by SimpleRifle. Kill credit is based on this inflictor.
+class SimpleRifleKillPuff : BulletPuff
+{
+    Default
+    {
+        DamageType "TLH_SimpleRifle";
+    }
+}
+
+// Map-scoped unlock token. TacticalPlayer removes it on every map transition.
+class BlueSimpleRifle : Inventory
+{
+    Default
+    {
+        Inventory.MaxAmount 1;
+        Inventory.PickupMessage "ARSENAL UNLOCKED: BLUE SIMPLE RIFLE // THIS MAP ONLY";
+        +INVENTORY.UNDROPPABLE
+        +INVENTORY.UNTOSSABLE
+        Translation "0:255=192:207";
+    }
+}
+
 class SimpleRifle : Weapon
 {
-
-bool Aiming;
+    bool Aiming;
 
     Default
     {
@@ -5210,9 +5234,38 @@ bool Aiming;
         Weapon.AmmoGive1 16;
         Weapon.AmmoUse1 1;
         Weapon.AmmoType2 "Clip";
-		Weapon.AmmoGive2 16;
+        Weapon.AmmoGive2 16;
         Weapon.AmmoUse2 2;
         Inventory.PickupMessage "Picked up a Simple Rifle.";
+    }
+
+    bool HasBlueMode()
+    {
+        return Owner && Owner.FindInventory("BlueSimpleRifle") != null;
+    }
+
+    bool CanFireBlue(int cells)
+    {
+        bool infinite = sv_infiniteammo ||
+            (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+        return infinite || (Owner && Owner.CountInv("Cell") >= cells);
+    }
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        if (!HasBlueMode())
+            return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+
+        if (!requireAmmo)
+            return true;
+
+        bool infinite = sv_infiniteammo ||
+            (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+        if (infinite)
+            return true;
+
+        int needed = (fireMode == AltFire) ? 2 : 1;
+        return Owner && Owner.CountInv("Cell") >= needed;
     }
 
     States
@@ -5225,8 +5278,30 @@ bool Aiming;
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
+            if (invoker.HasBlueMode())
+                return ResolveState("ReadyBlue");
+            return ResolveState("ReadyNormal");
         }
-        ASLT A 1 A_WeaponReady(WRF_ALLOWRELOAD);
+
+    ReadyNormal:
+        ASLT A 1
+        {
+            if (invoker.HasBlueMode())
+                return ResolveState("ReadyBlue");
+            A_WeaponReady(WRF_ALLOWRELOAD);
+            return ResolveState(null);
+        }
+        Loop;
+
+    ReadyBlue:
+        ASLT A 1
+        {
+            if (!invoker.HasBlueMode())
+                return ResolveState("ReadyNormal");
+            A_WeaponReady(WRF_ALLOWZOOM);
+            return ResolveState(null);
+        }
         Loop;
 
     Deselect:
@@ -5237,15 +5312,29 @@ bool Aiming;
         ASLT A 1
         {
             A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
+            A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, true);
             A_Raise();
         }
         Loop;
 
     Fire:
+        ASLT A 0
+        {
+            if (invoker.HasBlueMode())
+            {
+                if (!invoker.CanFireBlue(1))
+                {
+                    A_Print("\\c[Blue]BLUE SIMPLE RIFLE // NO PLASMA CELLS");
+                    return ResolveState("ReadyBlue");
+                }
+                return ResolveState("BlueFire");
+            }
+            return ResolveState(null);
+        }
         ASLT A 5 A_GunFlash;
         ASLT B 5
         {
-            A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
+            A_FireBullets(7.0, 5.5, 8, 4, "SimpleRifleKillPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
             A_Recoil(1.5);
@@ -5253,61 +5342,117 @@ bool Aiming;
         ASLT A 7 A_ReFire;
         Goto Ready;
 
+    BlueFire:
+        ASLT A 4 A_GunFlash;
+        ASLT B 5
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite)
+                A_TakeInventory("Cell", 1, TIF_NOTAKEINFINITE);
+
+            // Red/yellow hitscan rail beam, matching the MarineRailgun attack style.
+            // This is not the AMR-99's travelling Gauss slug.
+            A_RailAttack(18, 0, false, 0xFF2525, 0xFFE45C, 0, 0,
+                "SimpleRifleKillPuff", 0, 0, 8192, 4);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
+            A_Recoil(1.8);
+        }
+        ASLT A 7 A_ReFire;
+        Goto Ready;
+
     AltFire:
+        ASLT A 0
+        {
+            if (invoker.HasBlueMode())
+            {
+                if (!invoker.CanFireBlue(2))
+                {
+                    A_Print("\\c[Blue]BLUE SIMPLE RIFLE // NEED 2 PLASMA CELLS");
+                    return ResolveState("ReadyBlue");
+                }
+                return ResolveState("BlueAltFire");
+            }
+            return ResolveState(null);
+        }
         SHTG B 2
-		{
-            A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
+        {
+            A_FireBullets(4.5, 3.5, 14, 4, "SimpleRifleKillPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Recoil(2.0);
         }
         SHTG C 4;
         ASLT B 5;
-		
         ASLT A 5;
         Goto Ready;
-		
-	Reload:
-		ASLT A 3 A_GunFlash;
-		ASLT A 9
-		{
-			A_Print("3/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT A 9
-		{
-			A_Print("2/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT A 9
-		{
-			A_Print("1/3");
-			A_FireProjectile("FlakGrenade");
-			A_GunFlash;
-		}
-		ASLT B 3 A_Print("0/3");
-		SHTG B 4;
-		ASLT B 5;
-		Goto Ready;
-		
-	Zoom:
-		ASLT A 1
-			{
-				if(!invoker.Aiming)
-				{
-					A_ZoomFactor(3.0);
-					invoker.Aiming = True;
-				}
-				else
-				{
-					A_ZoomFactor(1.0);
-					invoker.Aiming = False;
-				}
-			}
-		ASLT A 5;
-		Goto Ready;
+
+    BlueAltFire:
+        ASLT A 4;
+        ASLT B 6
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite)
+                A_TakeInventory("Cell", 2, TIF_NOTAKEINFINITE);
+
+            A_RailAttack(36, 0, false, 0xFF2525, 0xFFE45C, 0, 0,
+                "SimpleRifleKillPuff", 0, 0, 8192, 6);
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Recoil(3.0);
+        }
+        ASLT A 10;
+        Goto Ready;
+
+    Reload:
+        ASLT A 0
+        {
+            if (invoker.HasBlueMode())
+                return ResolveState("ReadyBlue");
+            return ResolveState(null);
+        }
+        ASLT A 3 A_GunFlash;
+        ASLT A 9
+        {
+            A_Print("3/3");
+            A_FireProjectile("FlakGrenade");
+            A_GunFlash();
+        }
+        ASLT A 9
+        {
+            A_Print("2/3");
+            A_FireProjectile("FlakGrenade");
+            A_GunFlash();
+        }
+        ASLT A 9
+        {
+            A_Print("1/3");
+            A_FireProjectile("FlakGrenade");
+            A_GunFlash();
+        }
+        ASLT B 3 A_Print("0/3");
+        SHTG B 4;
+        ASLT B 5;
+        Goto Ready;
+
+    Zoom:
+        ASLT A 1
+        {
+            if (!invoker.Aiming)
+            {
+                A_ZoomFactor(3.0);
+                invoker.Aiming = true;
+            }
+            else
+            {
+                A_ZoomFactor(1.0);
+                invoker.Aiming = false;
+            }
+        }
+        ASLT A 5;
+        Goto Ready;
 
     Flash:
         ASLF A 3 Bright A_Light1;
@@ -5322,68 +5467,6 @@ bool Aiming;
 
 
 
-
-
-
-
-
-class BlueSimpleRifle : SimpleRifle
-{
-    Default
-    {
-        Weapon.SlotNumber 2;
-        Weapon.SlotPriority 3.35;
-        Weapon.SelectionOrder 335;
-        Weapon.Kickback 125;
-        Weapon.AmmoType1 "Cell";
-        Weapon.AmmoGive1 20;
-        Weapon.AmmoUse1 1;
-        Weapon.AmmoType2 "Cell";
-        Weapon.AmmoGive2 20;
-        Weapon.AmmoUse2 2;
-        Inventory.PickupMessage "Unlocked: Blue Simple Rifle.";
-        Translation "0:255=192:207";
-    }
-
-    States
-    {
-    // Plasma cells replace the original reload/grenade utility on this variant.
-    // It keeps the Simple Rifle's handling and aim toggle, without a manual reload.
-    TLHPickupReadyShim:
-        ASLT A 0
-        {
-            A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
-            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
-        }
-        ASLT A 1 A_WeaponReady(WRF_ALLOWZOOM);
-        Loop;
-
-    Fire:
-        ASLT A 5 A_GunFlash;
-        ASLT B 5
-        {
-            A_FireProjectile("BlueGaussSlug");
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(2.0);
-        }
-        ASLT A 7 A_ReFire;
-        Goto Ready;
-
-    AltFire:
-        ASLT A 3;
-        ASLT B 5
-        {
-            A_FireProjectile("BlueGaussSlug");
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 6.0, SPF_INTERPOLATE);
-            A_Recoil(2.5);
-        }
-        ASLT B 4;
-        Goto Ready;
-    }
-}
-
 class TacticalPlayer : DoomPlayer replaces DoomPlayer
 {
     int jumpCount;
@@ -5395,11 +5478,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool wasOnGround;
     bool akimboButtonHeld;
 
+    // Personal, per-map SimpleRifle kill reward.
+    String tlhSimpleRifleMapName;
+    int tlhSimpleRifleKills;
+    bool tlhBlueSimpleRifleUnlocked;
+    int tlhBlueSimpleRifleNoticeTics;
+    Array<Weapon> tlhDeferredWeaponRemovals;
+
     // Player-corpse smell reaction, owned by the active player pawn.
     Actor tlhCorpseReactionTarget;
     int tlhCorpseReactionStayTics;
     int tlhCorpseReactionSoundTics;
     bool tlhCorpseReactionPlayed;
+    int tlhCorpseScanCooldown;
 
     // Centralized dual-wield state. Activation comes from the custom KEYCONF
     // netevent, so R keeps its existing gameplay behavior completely untouched.
@@ -5495,7 +5586,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.ViewBobSpeed 20;
         Player.StartItem "Clip", 100;
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
-        Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol", "SimpleRifle", "BlueSimpleRifle";
+        Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol", "SimpleRifle";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun";
         // Slot 4 includes the M4A1, bolt-action Hunter Rifle, heavy chaingun, compact SMG and M60.
         Player.WeaponSlot 4, "TacticalM4A1", "HunterRifle", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
@@ -5532,7 +5623,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             GiveInventory("ServiceRevolver", 1, true);
             GiveInventory("OfficerVulkanPistol", 1, true);
 			GiveInventory("SimpleRifle", 1, true);
-            GiveInventory("BlueSimpleRifle", 1, true);
 
             // Slot 3
             GiveInventory("RecoilShotgun", 1, true);
@@ -5664,6 +5754,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         Super.Tick();
         if (!player || !player.mo) return;
+
+        CleanupDeferredWeaponRemovals();
+        UpdateBlueSimpleRifleMapState();
 
         if (player.playerstate == PST_DEAD)
         {
@@ -5930,6 +6023,83 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     }
 
     // ========================================================================
+    // MAP-SCOPED BLUE SIMPLE RIFLE POWER-UP
+    // ========================================================================
+
+    void UpdateBlueSimpleRifleMapState()
+    {
+        if (tlhSimpleRifleMapName != level.MapName || level.maptime == 0)
+        {
+            RemoveOwnedItemLocal("BlueSimpleRifle");
+            tlhSimpleRifleMapName = level.MapName;
+            tlhSimpleRifleKills = 0;
+            tlhBlueSimpleRifleUnlocked = false;
+            tlhBlueSimpleRifleNoticeTics = 0;
+        }
+        else if (tlhBlueSimpleRifleNoticeTics > 0)
+        {
+            tlhBlueSimpleRifleNoticeTics--;
+        }
+    }
+
+    void RegisterSimpleRifleKill()
+    {
+        if (!player || player.playerstate != PST_LIVE || Health <= 0 ||
+            tlhBlueSimpleRifleUnlocked)
+            return;
+
+        let modeCvar = CVar.FindCVar("tlh_gamemode");
+        int mode = modeCvar ? modeCvar.GetInt() : 0;
+        let ssgOnlyCvar = CVar.FindCVar("tlh_ssg_only");
+        if (mode == 19 || mode == 27 || (ssgOnlyCvar && ssgOnlyCvar.GetBool()))
+            return;
+
+        tlhSimpleRifleKills = min(TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK,
+            tlhSimpleRifleKills + 1);
+
+        if (tlhSimpleRifleKills == 30)
+            A_Print("\\c[Blue]BLUE SIMPLE RIFLE // 30/60 SIMPLE RIFLE KILLS");
+        else if (tlhSimpleRifleKills == 50)
+            A_Print("\\c[Blue]BLUE SIMPLE RIFLE // 10 KILLS TO UNLOCK");
+
+        if (tlhSimpleRifleKills >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK)
+        {
+            tlhBlueSimpleRifleUnlocked = true;
+            GiveInventory("BlueSimpleRifle", 1);
+            tlhBlueSimpleRifleNoticeTics = 175;
+            A_Print("\\c[Blue]ARSENAL UNLOCKED // BLUE SIMPLE RIFLE ACTIVE UNTIL NEXT MAP");
+            A_StartSound("weapons/sshotc", CHAN_BODY);
+        }
+    }
+
+    void CleanupDeferredWeaponRemovals()
+    {
+        PSprite weaponPSprite = player ? player.FindPSprite(PSP_WEAPON) : null;
+
+        for (int i = 0; i < tlhDeferredWeaponRemovals.Size();)
+        {
+            Weapon oldWeapon = tlhDeferredWeaponRemovals[i];
+            if (!oldWeapon)
+            {
+                tlhDeferredWeaponRemovals.Delete(i);
+                continue;
+            }
+
+            if (player && (player.ReadyWeapon == oldWeapon ||
+                player.PendingWeapon == oldWeapon ||
+                (weaponPSprite && weaponPSprite.Caller == oldWeapon)))
+            {
+                i++;
+                continue;
+            }
+
+            RemoveInventory(oldWeapon);
+            oldWeapon.Destroy();
+            tlhDeferredWeaponRemovals.Delete(i);
+        }
+    }
+
+    // ========================================================================
     // PLAYER CORPSE SMELL REACTION
     // ========================================================================
     void UpdateTLHCorpseSmellReaction()
@@ -5937,63 +6107,67 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player || player.playerstate != PST_LIVE || Health <= 0)
             return;
 
-        // Wait out a reaction before considering another sound. Tics are used
-        // instead of checking actor-owned sound channels, since this is a 2D
-        // local reaction that is not attached to the corpse.
         if (tlhCorpseReactionSoundTics > 0)
         {
             tlhCorpseReactionSoundTics--;
             return;
         }
 
-        Actor closestCorpse = null;
-        double closestDistSq = 72.0 * 72.0;
-
-        ThinkerIterator corpseIt = ThinkerIterator.Create("Actor");
-        Actor candidate;
-        while ((candidate = Actor(corpseIt.Next())) != null)
+        // Avoid scanning every actor every tic on corpse-heavy maps.
+        if (tlhCorpseScanCooldown > 0)
         {
-            if (candidate == self || !(candidate is "PlayerPawn") || candidate.Health > 0)
-                continue;
+            tlhCorpseScanCooldown--;
+        }
+        else
+        {
+            tlhCorpseScanCooldown = 7;
+            Actor closestCorpse = null;
+            double closestDistSq = 72.0 * 72.0;
 
-            double dz = abs(candidate.Pos.Z - Pos.Z);
-            if (dz > 64.0)
-                continue;
-
-            double dx = candidate.Pos.X - Pos.X;
-            double dy = candidate.Pos.Y - Pos.Y;
-            double distSq = dx * dx + dy * dy;
-
-            if (distSq <= closestDistSq)
+            ThinkerIterator corpseIt = ThinkerIterator.Create("Actor");
+            Actor candidate;
+            while ((candidate = Actor(corpseIt.Next())) != null)
             {
-                closestDistSq = distSq;
-                closestCorpse = candidate;
+                if (candidate == self || !(candidate is "PlayerPawn") || candidate.Health > 0)
+                    continue;
+
+                double dz = abs(candidate.Pos.Z - Pos.Z);
+                if (dz > 64.0)
+                    continue;
+
+                double dx = candidate.Pos.X - Pos.X;
+                double dy = candidate.Pos.Y - Pos.Y;
+                double distSq = dx * dx + dy * dy;
+
+                if (distSq <= closestDistSq)
+                {
+                    closestDistSq = distSq;
+                    closestCorpse = candidate;
+                }
+            }
+
+            if (!closestCorpse)
+            {
+                tlhCorpseReactionTarget = null;
+                tlhCorpseReactionStayTics = 0;
+                tlhCorpseReactionPlayed = false;
+            }
+            else if (closestCorpse != tlhCorpseReactionTarget)
+            {
+                tlhCorpseReactionTarget = closestCorpse;
+                tlhCorpseReactionStayTics = 0;
+                tlhCorpseReactionPlayed = false;
             }
         }
 
-        if (!closestCorpse)
-        {
-            tlhCorpseReactionTarget = null;
-            tlhCorpseReactionStayTics = 0;
-            tlhCorpseReactionPlayed = false;
-            return;
-        }
-
-        if (closestCorpse != tlhCorpseReactionTarget)
-        {
-            tlhCorpseReactionTarget = closestCorpse;
-            tlhCorpseReactionStayTics = 0;
-            tlhCorpseReactionPlayed = false;
-        }
-
-        if (tlhCorpseReactionPlayed)
+        if (!tlhCorpseReactionTarget || tlhCorpseReactionPlayed)
             return;
 
+        // This counter still advances every tic; only the thinker scan is throttled.
         tlhCorpseReactionStayTics++;
-        if (tlhCorpseReactionStayTics < 42) // about 1.2 seconds
+        if (tlhCorpseReactionStayTics < 42)
             return;
 
-        // Keep IDs literal so the sound linker can resolve them at compile/load.
         int pick = random(1, 5);
         double soundLength = 0.0;
         switch (pick)
@@ -6279,6 +6453,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             let weaponDefault = GetDefaultByType(weapon.GetClass());
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
+
+            // Apply the token's simple palette tint directly to the weapon PSprite.
+            if (weapon.GetClassName() == "SimpleRifle")
+            {
+                let bluePowerup = FindInventory("BlueSimpleRifle");
+                if (bluePowerup)
+                    psp.Translation = bluePowerup.Translation;
+            }
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
@@ -6525,7 +6707,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             scaleX = 0.98; scaleY = 1.10; offsetY = 0.8; sway = 0.96;
         }
-        else if (cls == "SimpleRifle" || cls == "BlueSimpleRifle")
+        else if (cls == "SimpleRifle")
         {
             scaleX = 1.00; scaleY = 1.12; offsetY = 0.9; sway = 0.98;
         }
@@ -6903,7 +7085,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (bt & BT_BACK) Thrust(0.45, angle + 180);
             if (bt & BT_MOVELEFT) Thrust(0.65, angle - 90);
             if (bt & BT_MOVERIGHT) Thrust(0.65, angle + 90);
-            if (slideCooldown > 0) slideCooldown--;
         }
         // 10 - Pistol Start is applied by InitializeGameModeLocal().
         else if (mode == 10)
@@ -7167,14 +7348,32 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
     void RemoveAllWeaponsExceptLocal(String keep)
     {
+        // Preserve both the equipped and previously pending weapon until the
+        // PSprite has completed its switch to the destination weapon.
+        Weapon oldPending = player ? player.PendingWeapon : null;
+
+        if (!FindInventory(keep))
+            GiveInventory(keep, 1);
+
+        Weapon keepWeapon = Weapon(FindInventory(keep));
+        if (player && keepWeapon)
+            player.PendingWeapon = keepWeapon;
+
         Inventory item = Inv;
         while (item != null)
         {
             Inventory nextItem = item.Inv;
-            if (item is "Weapon")
+            if (item is "Weapon" && item.GetClassName() != keep)
             {
-                String cls = item.GetClassName();
-                if (cls != keep)
+                Weapon candidate = Weapon(item);
+                bool active = player && candidate &&
+                    (player.ReadyWeapon == candidate ||
+                     oldPending == candidate ||
+                     player.PendingWeapon == candidate);
+
+                if (active)
+                    tlhDeferredWeaponRemovals.Push(candidate);
+                else
                 {
                     RemoveInventory(item);
                     item.Destroy();
@@ -7227,10 +7426,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             else if (r == 23) cls = "TLH_HunterRevenant";
             else cls = "TLH_AssaultBaron";
 
-            double a = FRandom(0, 360);
-            double d = FRandom(192, 288);
-            Vector3 spawnPos = Pos + (cos(a) * d, sin(a) * d, 0);
-            Actor mo = Spawn(cls, spawnPos);
+            Actor mo = null;
+            for (int attempt = 0; attempt < 8 && !mo; attempt++)
+            {
+                double a = FRandom(0, 360);
+                double d = FRandom(192, 288);
+                Vector3 spawnPos = (Pos.X + cos(a) * d, Pos.Y + sin(a) * d, floorz);
+                Actor candidate = Spawn(cls, spawnPos);
+
+                if (candidate && candidate.TestMobjLocation())
+                    mo = candidate;
+                else if (candidate)
+                    candidate.Destroy();
+            }
 
             if (mo && elite)
             {
@@ -7250,7 +7458,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (FindInventory("OfficerVulkanPistol")) count++;
         if (FindInventory("RecoilShotgun")) count++;
         if (FindInventory("SimpleRifle")) count++;
-        if (FindInventory("BlueSimpleRifle")) count++;
         if (FindInventory("FastRecoilSSG")) count++;
         if (FindInventory("TacticalM4A1")) count++;
         if (FindInventory("HunterRifle")) count++;
@@ -7288,11 +7495,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (selected == "" && FindInventory("SimpleRifle"))
         {
             if (pick == 1) selected = "SimpleRifle";
-            else pick--;
-        }
-        if (selected == "" && FindInventory("BlueSimpleRifle"))
-        {
-            if (pick == 1) selected = "BlueSimpleRifle";
             else pick--;
         }
         if (selected == "" && FindInventory("FastRecoilSSG"))
@@ -7742,10 +7944,11 @@ class TacticalHUDHandler : EventHandler
     transient ui Array<String> tlhInputHistory;
     transient ui String tlhHUDDualBindName;
 
-    // Map-scoped 60-kill reward and its on-visor notification.
-    String tlhBlueSimpleRifleMapName;
-    bool tlhBlueSimpleRifleUnlocked;
-    int tlhBlueSimpleRifleNoticeTics;
+    // Per-player, per-map SimpleRifle reward snapshot for UI rendering.
+    int hudBlueSimpleRifleKills;
+    bool hudBlueSimpleRifleUnlocked;
+    int hudBlueSimpleRifleNoticeTics;
+    bool hudBlueSimpleRifleActive;
 
     // ------------------------------------------------------------------------
     // ANALYZER CACHE
@@ -7810,6 +8013,22 @@ class TacticalHUDHandler : EventHandler
         // observes the configured binding.
     }
 
+
+    override void WorldThingDied(WorldEvent e)
+    {
+        if (!e.Thing || !e.Thing.bIsMonster ||
+            !e.Inflictor || !(e.Inflictor is "SimpleRifleKillPuff"))
+            return;
+
+        // GZDoom sets the corpse target to the damage source before this event.
+        Actor killer = e.Thing.target;
+        if (!killer || !killer.player || !(killer is "TacticalPlayer"))
+            return;
+
+        let tacticalKiller = TacticalPlayer(killer);
+        if (tacticalKiller)
+            tacticalKiller.RegisterSimpleRifleKill();
+    }
 
     override void WorldThingSpawned(WorldEvent e){
         if (!e.Thing) return;
@@ -7943,7 +8162,7 @@ class TacticalHUDHandler : EventHandler
             if (inv && !inv.Owner)
             {
                 int roll = random(1, 100);
-                if (roll <= 2 || roll <= 17)
+                if (roll <= 17)
                 {
                     Vector3 spawnPos = e.Thing.Pos;
                     uint spawnFlags = e.Thing.SpawnFlags;
@@ -8285,45 +8504,8 @@ class TacticalHUDHandler : EventHandler
         hudPowerupNames.Clear();
         hudPowerupTics.Clear();
 
-        // Blue Simple Rifle unlock: 60 kills on the current map. Restricted
-        // weapon modes keep their own rules and do not receive this reward.
-        if (tlhBlueSimpleRifleMapName != level.MapName || level.maptime == 0)
-        {
-            tlhBlueSimpleRifleMapName = level.MapName;
-            tlhBlueSimpleRifleUnlocked = false;
-            tlhBlueSimpleRifleNoticeTics = 0;
-        }
-
-        let rewardModeCvar = CVar.FindCVar("tlh_gamemode");
-        int rewardMode = rewardModeCvar ? rewardModeCvar.GetInt() : 0;
-        let rewardSSGOnlyCvar = CVar.FindCVar("tlh_ssg_only");
-        bool rewardAllowed = rewardMode != 19 && rewardMode != 27 &&
-            !(rewardSSGOnlyCvar && rewardSSGOnlyCvar.GetBool());
-
-        if (!tlhBlueSimpleRifleUnlocked &&
-            level.killed_monsters >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK &&
-            rewardAllowed)
-        {
-            tlhBlueSimpleRifleUnlocked = true;
-            bool grantedToSomeone = false;
-
-            for (int rewardPlayerNum = 0; rewardPlayerNum < MAXPLAYERS; rewardPlayerNum++)
-            {
-                Actor rewardPlayer = players[rewardPlayerNum].mo;
-                if (rewardPlayer && rewardPlayer.player &&
-                    !rewardPlayer.FindInventory("BlueSimpleRifle"))
-                {
-                    rewardPlayer.GiveInventory("BlueSimpleRifle", 1);
-                    grantedToSomeone = true;
-                }
-            }
-
-            if (grantedToSomeone)
-                tlhBlueSimpleRifleNoticeTics = 175;
-        }
-
-        if (tlhBlueSimpleRifleNoticeTics > 0)
-            tlhBlueSimpleRifleNoticeTics--;
+        // Blue Simple Rifle reward is tracked per player by WorldThingDied().
+        // Only damage from the dedicated SimpleRifle puff can advance the counter.
 
         // Clear AVOIDMELEE from monsters that were already present when the map
         // loaded. Rescan at map start/restart so existing actors are covered too.
@@ -8365,6 +8547,10 @@ class TacticalHUDHandler : EventHandler
         hudRocket = 0;
         hudCell = 0;
         hudWeaponHeat = 0;
+        hudBlueSimpleRifleKills = 0;
+        hudBlueSimpleRifleUnlocked = false;
+        hudBlueSimpleRifleNoticeTics = 0;
+        hudBlueSimpleRifleActive = false;
         hudFOV = 90.0;
         hudMoveSpeed = 0.0;
         hudVerticalSpeed = 0.0;
@@ -8450,7 +8636,14 @@ class TacticalHUDHandler : EventHandler
         tlhVisorActive = p.FindInventory("PowerInvulnerable") != null;
 
         let tpState = TacticalPlayer(p);
-        if (tpState) tlhHUDDualActive = tpState.tlhDualWieldActive;
+        if (tpState)
+        {
+            tlhHUDDualActive = tpState.tlhDualWieldActive;
+            hudBlueSimpleRifleKills = tpState.tlhSimpleRifleKills;
+            hudBlueSimpleRifleUnlocked = tpState.tlhBlueSimpleRifleUnlocked;
+            hudBlueSimpleRifleNoticeTics = tpState.tlhBlueSimpleRifleNoticeTics;
+        }
+        hudBlueSimpleRifleActive = (p.FindInventory("BlueSimpleRifle") != null);
 
         hudPlayerHealth = max(0, p.Health);
         hudFOV = clamp(double(p.player.FOV), 20.0, 160.0);
@@ -8534,8 +8727,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HunterRifle") hudWeaponName = "HUNTER RIFLE";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
-            else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
-            else if (hudWeaponName == "BlueSimpleRifle") hudWeaponName = "BLUE SIMPLE RIFLE";
+            else if (hudWeaponName == "SimpleRifle") hudWeaponName = hudBlueSimpleRifleActive ? "BLUE SIMPLE RIFLE" : "STREET SWEEPER";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -9220,9 +9412,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             profileY = 1.14;
             accentStrength = 1.10;
         }
-        else if (cls == "BlueSimpleRifle")
+        else if (cls == "SimpleRifle" && hudBlueSimpleRifleActive)
         {
-            // This variant uses one electric-blue palette family only.
+            // Simple tint only; the actual weapon PSprite uses the palette translation.
             primary = 0x32AFFF;
             secondary = 0x32AFFF;
             profileX = 1.0;
@@ -9490,6 +9682,16 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 hudHunterAmmo <= 1 ? warn : Font.CR_WHITE, 0.25);
             Text("RESERVE", 518, 317, dim, 0.21);
             TextR(String.Format("%03d", hudHunterReserve), 609, 317, Font.CR_WHITE, 0.23);
+        }
+        else if (tlhVisorWeaponClass == "SimpleRifle" && hudBlueSimpleRifleActive)
+        {
+            Text("CEL", 518, 306, dim, 0.21);
+            TextR(String.Format("%03d", hudCell), 555, 306,
+                hudCell <= 2 ? warn : Font.CR_WHITE, 0.24);
+            Text("TYPE", 564, 306, dim, 0.21);
+            TextR("RAIL", 609, 306, 0x32AFFF, 0.24);
+            Text("AMMO", 518, 317, dim, 0.21);
+            TextR("PLASMA", 609, 317, 0x32AFFF, 0.23);
         }
         else
         {
@@ -9764,25 +9966,25 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
     }
 
-    // Persistent kill-progress readout; the unlock banner briefly replaces it.
+    // Persistent progress is based only on this player's SimpleRifle kills.
     ui void DrawBlueSimpleRifleProgress()
     {
         Color electricBlue = 0x32AFFF;
 
-        if (tlhBlueSimpleRifleNoticeTics > 0)
+        if (hudBlueSimpleRifleNoticeTics > 0)
         {
             TextC("ARSENAL UNLOCKED // BLUE SIMPLE RIFLE",
                 320, 57, electricBlue, 0.38);
         }
-        else if (tlhBlueSimpleRifleUnlocked)
+        else if (hudBlueSimpleRifleUnlocked)
         {
-            TextC("BLUE SIMPLE RIFLE // UNLOCKED",
+            TextC("BLUE SIMPLE RIFLE // ACTIVE UNTIL NEXT MAP",
                 320, 57, electricBlue, 0.30);
         }
         else
         {
-            int progress = clamp(hudKills, 0, TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK);
-            TextC(String.Format("BLUE SIMPLE RIFLE // %02d/60 KILLS",
+            int progress = clamp(hudBlueSimpleRifleKills, 0, TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK);
+            TextC(String.Format("SIMPLE RIFLE KILLS // %02d/60",
                 progress), 320, 57, electricBlue, 0.30);
             SegBar(253, 66, 134, progress,
                 TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK, 12, electricBlue);
