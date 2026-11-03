@@ -5223,7 +5223,7 @@ class TLHSimpleRifleKillCredit : Inventory
     }
 }
 
-// Map-scoped unlock token. TacticalPlayer removes it on every map transition.
+// Map-scoped unlock token. TacticalHUDHandler removes it on map transitions.
 class BlueSimpleRifle : Inventory
 {
     Default
@@ -6031,6 +6031,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Feed the procedural camera/weapon animation state once per tic.
         UpdateTLHProceduralMotion(onGround, bt, obt);
 
+        // PSpriteTick is dispatched to each overlay's Caller (normally its
+        // weapon). Apply the reversible transform here from the owning player
+        // so the same shared model can animate every TLH weapon consistently.
+        PSprite weaponPSP = player.FindPSprite(PSP_WEAPON);
+        PSprite flashPSP = player.FindPSprite(PSP_FLASH);
+        PSprite dualPSP = player.FindPSprite(TLH_AKIMBO_LAYER);
+
+        if (weaponPSP) ApplyTLHWeaponPSpriteMotion(weaponPSP);
+        if (flashPSP) ApplyTLHWeaponPSpriteMotion(flashPSP);
+        if (dualPSP) ApplyTLHWeaponPSpriteMotion(dualPSP);
+
         wasOnGround = onGround;
     }
 
@@ -6154,13 +6165,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
     }
 
-    // GZDoom invokes this callback for every live weapon/flash/overlay PSprite.
-    // The transform method below is reversible and preserves authored offsets.
-    override void PSpriteTick(PSprite psp)
-    {
-        Super.PSpriteTick(psp);
-        ApplyTLHWeaponPSpriteMotion(psp);
-    }
+    // Apply weapon/flash/dual overlays from the player tick. PSpriteTick is
+    // invoked on the overlay Caller (normally the weapon), not on this pawn.
 
     // ========================================================================
     // ADVANCED FIRST-PERSON MOTION
