@@ -6676,75 +6676,75 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         if (cls == "RecoilPistol")
         {
-offsetY = 0.6; sway = 1.10;
+            offsetY = 0.6; sway = 1.10;
         }
         else if (cls == "ServiceRevolver")
         {
-offsetY = 0.6; sway = 1.06;
+            offsetY = 0.6; sway = 1.06;
         }
         else if (cls == "OfficerVulkanPistol")
         {
-offsetY = 0.4; sway = 1.12;
+            offsetY = 0.4; sway = 1.12;
         }
         else if (cls == "RecoilShotgun")
         {
-offsetY = 0.8; sway = 0.96;
+            offsetY = 0.8; sway = 0.96;
         }
         else if (cls == "SimpleRifle")
         {
-offsetY = 0.9; sway = 0.98;
+            offsetY = 0.9; sway = 0.98;
         }
         else if (cls == "FastRecoilSSG")
         {
-offsetY = 1.0; sway = 0.90;
+            offsetY = 1.0; sway = 0.90;
         }
         else if (cls == "SemiAutoShotgun")
         {
-offsetY = 0.8; sway = 0.94;
+            offsetY = 0.8; sway = 0.94;
         }
         else if (cls == "TacticalM4A1")
         {
-offsetY = 0.4; sway = 0.86;
+            offsetY = 0.4; sway = 0.86;
         }
         else if (cls == "HunterRifle")
         {
-offsetY = 0.5; sway = 0.58;
+            offsetY = 0.5; sway = 0.58;
         }
         else if (cls == "M60MachineGun")
         {
-offsetY = 1.4; sway = 0.68;
+            offsetY = 1.4; sway = 0.68;
         }
         else if (cls == "RecoilRocketLauncher")
         {
-offsetY = 1.3; sway = 0.66;
+            offsetY = 1.3; sway = 0.66;
         }
         else if (cls == "RecoilPlasmaRifle")
         {
-offsetY = 0.6; sway = 0.74;
+            offsetY = 0.6; sway = 0.74;
         }
         else if (cls == "RecoilBFG9000")
         {
-offsetY = 1.8; sway = 0.58;
+            offsetY = 1.8; sway = 0.58;
         }
         else if (cls == "AMR99RailRifle")
         {
-offsetY = 1.0; sway = 0.62;
+            offsetY = 1.0; sway = 0.62;
         }
         else if (cls == "HellfireProjector")
         {
-offsetY = 0.7; sway = 0.68;
+            offsetY = 0.7; sway = 0.68;
         }
         else if (cls == "AirstrikeDesignator")
         {
-offsetY = 0.7; sway = 0.78;
+            offsetY = 0.7; sway = 0.78;
         }
         else if (cls == "DashFist")
         {
-offsetY = 0.4; sway = 1.14;
+            offsetY = 0.4; sway = 1.14;
         }
         else if (cls == "HookChainsaw")
         {
-offsetY = 0.8; sway = 1.00;
+            offsetY = 0.8; sway = 1.00;
         }
     }
 
@@ -9556,12 +9556,10 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
     // ========================================================================
 
     ui void GetHUDWeaponDesign(Weapon weapon, out Color primary, out Color secondary,
-        out double profileX, out double profileY, out double accentStrength)
+        out double accentStrength)
     {
         primary = 0xB8C0C2;
         secondary = 0x596164;
-        profileX = 1.0;
-        profileY = 1.0;
         accentStrength = 1.0;
 
         if (!weapon) return;
@@ -9573,16 +9571,12 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             // Red/orange parts become steel-gray; original gray becomes darker.
             primary = 0x6E7775;
             secondary = 0x303735;
-            profileX = 0.96;
-            profileY = 1.06;
         }
         else if (cls == "SemiAutoShotgun")
         {
             // Muzzle/accent: controlled dark red, never neon.
             primary = 0x7B302D;
             secondary = 0x9B4240;
-            profileX = 1.00;
-            profileY = 1.16;
             accentStrength = 0.78;
         }
         else if (cls == "HeavyChaingun")
@@ -9590,8 +9584,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             // Gunmetal body; red details stay red and are only slightly lifted.
             primary = 0x596260;
             secondary = 0x8D3A3A;
-            profileX = 1.02;
-            profileY = 1.06;
             accentStrength = 1.08;
         }
         else if (cls == "AMR99RailRifle")
@@ -9599,8 +9591,6 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             // Lightened gray body + electric-blue BFG green-range accent.
             primary = 0xA4B0AD;
             secondary = 0x56B9D2;
-            profileX = 0.96;
-            profileY = 1.14;
             accentStrength = 1.10;
         }
         else if (cls == "HellfireProjector")
@@ -9608,17 +9598,13 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             // Red nozzle + light-gray lower body.
             primary = 0xC53A35;
             secondary = 0xA5AFAD;
-            profileX = 0.82;
-            profileY = 0.86;
             accentStrength = 1.06;
         }
         else if (cls == "AirstrikeDesignator")
         {
-            // Flare-red design, slightly larger.
+            // Flare-red design with the same aspect-preserving sprite fit.
             primary = 0xC93E39;
             secondary = 0x7B302D;
-            profileX = 1.08;
-            profileY = 1.12;
             accentStrength = 1.06;
         }
         else if (cls == "RecoilPistol")
@@ -9662,11 +9648,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         String cls = weapon.GetClassName();
         Color primary = 0xB8C0C2;
         Color secondary = 0x596164;
-        double profileX = 1.0;
-        double profileY = 1.0;
         double accentStrength = 1.0;
 
-        GetHUDWeaponDesign(weapon, primary, secondary, profileX, profileY, accentStrength);
+        GetHUDWeaponDesign(weapon, primary, secondary, accentStrength);
 
         // --------------------------------------------------------------------
         // SAFE CURRENT-STATE PREVIEW
