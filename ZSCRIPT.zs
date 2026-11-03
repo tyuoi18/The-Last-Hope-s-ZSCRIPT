@@ -5166,6 +5166,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhAnimShotScaleKick;
     double tlhAnimShotScalePeak;
     int tlhAnimShotScaleTics;
+    int tlhAnimAttackWindowTics;
 
     double tlhAnimLandingKick;
     double tlhAnimLandingVel;
@@ -6790,12 +6791,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimShotScaleKick = 0;
             tlhAnimShotScalePeak = 0;
             tlhAnimShotScaleTics = 0;
+            tlhAnimAttackWindowTics = 0;
 
             // Fresh weapon presentation: start slightly low, then let the
             // spring settle the weapon into the new stance.
             tlhAnimDrawKick = 5.0;
             tlhAnimDrawVel = 0.0;
         }
+
+        // Remember a recent attack input because some weapons execute their
+        // firing frame a few tics after the initial click has been released.
+        // This still rejects reload-only ammo changes.
+        if (bt & (BT_ATTACK | BT_ALTATTACK))
+            tlhAnimAttackWindowTics = 8;
+        else if (tlhAnimAttackWindowTics > 0)
+            tlhAnimAttackWindowTics--;
 
         // ------------------------------------------------------------
         // Ammo delta -> procedural firing recoil
@@ -6829,8 +6839,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 // Stretch is a short shot-only pulse, independent from the
                 // longer recoil spring. Requiring an attack input prevents
                 // reserve-ammo changes during reloads from triggering it.
-                if ((bt & (BT_ATTACK | BT_ALTATTACK)) &&
-                    !(bt & BT_RELOAD))
+                if (tlhAnimAttackWindowTics > 0 && !(bt & BT_RELOAD))
                 {
                     tlhAnimShotScalePeak = clamp(impulse * 0.045, 0.025, 0.095);
                     tlhAnimShotScaleTics = 4;
