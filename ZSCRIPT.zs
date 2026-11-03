@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.6 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.7 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -101,6 +101,7 @@ const TLH_MAX_CELLS = 300;
 // v52.2: resolve ambiguous weapon-state self references with explicit invoker.Owner;
 // v52.3: use a class-typed palette default lookup and keep Blue unlock progress in the HUD handler so it survives respawn.
 // v52.5: scope SimpleRifle PSprite states explicitly as weapon states to disambiguate action self.
+// v52.7: remove the invalid default-class tint lookup and apply the named BlueSimpleRifle TRNSLATE directly to PSprites.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
 // apply a dedicated electric-blue palette translation to the active Simple Rifle PSprite.
@@ -4898,16 +4899,6 @@ class ServiceRevolver : Weapon
 
 
 
-// Invisible defaults-only helper used as a reusable palette translation.
-// It is never spawned into the map or given to the player.
-class TLHBlueSimpleRifleTint : Actor
-{
-    Default
-    {
-        Translation "0:255=%[0.02,0.08,0.42]:[0.18,0.78,1.50]";
-    }
-}
-
 class SimpleRifle : Weapon
 {
     bool Aiming;
@@ -6350,13 +6341,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
         }
 
-        // Blue Simple Rifle is the same weapon with a live electric-blue
-        // palette remap. Apply it to both the gun and muzzle-flash PSprites.
+        // Blue Simple Rifle uses a named TRNSLATE mapping. The mapping is
+        // applied directly to the weapon and flash PSprites, never to the screen.
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
-            let blueTint = GetDefaultByType(TLHBlueSimpleRifleTint);
+            TranslationID blueTint = Translate.GetID('BlueSimpleRifle');
             if (blueTint)
-                psp.Translation = blueTint.Translation;
+                psp.Translation = blueTint;
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState : tlhAnimLastFlashPSPState;
