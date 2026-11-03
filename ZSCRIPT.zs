@@ -5201,11 +5201,6 @@ class TLHBlueSimpleRiflePalette : Actor
     {
         // Indexed palette translation used only while SimpleRifle's blue mode is active.
         Translation "0:255=192:207";
-        +NOINTERACTION
-        +NOBLOCKMAP
-        +NOTIMEFREEZE
-        +NOSECTOR
-        +NOBLOCKMAP
     }
 }
 
@@ -9534,13 +9529,9 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
         else
         {
-            Color rifleAmmoColor = tlhVisorBlueSimpleRifleActive ?
-                0x32AFFF : Font.CR_WHITE;
-
             Text("BUL", 518, 306, dim, 0.21);
-            TextR(String.Format("%03d",
-                tlhVisorBlueSimpleRifleActive ? hudCell : hudClip),
-                555, 306, rifleAmmoColor, 0.24);
+            TextR(String.Format("%03d", hudClip),
+                555, 306, Font.CR_WHITE, 0.24);
             Text("SHE", 564, 306, dim, 0.21);
             TextR(String.Format("%03d", hudShell), 609, 306, Font.CR_WHITE, 0.24);
 
