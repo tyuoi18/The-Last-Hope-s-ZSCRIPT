@@ -5342,13 +5342,12 @@ class BlueSimpleRifle : SimpleRifle
         Weapon.AmmoGive2 20;
         Weapon.AmmoUse2 2;
         Inventory.PickupMessage "Unlocked: Blue Simple Rifle.";
+        // Electric-blue palette translation: no stat or handling changes.
         Translation "0:255=192:207";
     }
 
     States
     {
-    // Plasma cells replace the original reload/grenade utility on this variant.
-    // It keeps the Simple Rifle's handling and aim toggle, without a manual reload.
     TLHPickupReadyShim:
         ASLT A 0
         {
@@ -5358,28 +5357,38 @@ class BlueSimpleRifle : SimpleRifle
         ASLT A 1 A_WeaponReady(WRF_ALLOWZOOM);
         Loop;
 
+    // Primary fire keeps the Simple Rifle's timing, pitch and recoil.
+    // Only the projectile/ammo are replaced by the Railgun slug and plasma cells.
     Fire:
         ASLT A 5 A_GunFlash;
         ASLT B 5
         {
             A_FireProjectile("BlueGaussSlug");
             A_StartSound("weapons/railgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(2.0);
+            A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
+            A_Recoil(1.5);
         }
         ASLT A 7 A_ReFire;
         Goto Ready;
 
+    // Alternate fire keeps the Simple Rifle's original timing/recoil profile,
+    // but fires the same blue Railgun slug and consumes its configured 2 cells.
     AltFire:
-        ASLT A 3;
-        ASLT B 5
+        SHTG B 2
         {
             A_FireProjectile("BlueGaussSlug");
             A_StartSound("weapons/railgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 6.0, SPF_INTERPOLATE);
-            A_Recoil(2.5);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Recoil(2.0);
         }
-        ASLT B 4;
+        SHTG C 4;
+        ASLT B 5;
+        ASLT A 5;
+        Goto Ready;
+
+    // Do not inherit SimpleRifle's three-grenade reload action.
+    Reload:
+        ASLT A 1;
         Goto Ready;
     }
 }
@@ -8305,21 +8314,20 @@ class TacticalHUDHandler : EventHandler
             rewardAllowed)
         {
             tlhBlueSimpleRifleUnlocked = true;
-            bool grantedToSomeone = false;
+            tlhBlueSimpleRifleNoticeTics = 175;
+        }
 
+        // Grant to every active player while unlocked. This also covers players
+        // who join late or respawn after the map-wide threshold was reached.
+        if (tlhBlueSimpleRifleUnlocked)
+        {
             for (int rewardPlayerNum = 0; rewardPlayerNum < MAXPLAYERS; rewardPlayerNum++)
             {
                 Actor rewardPlayer = players[rewardPlayerNum].mo;
                 if (rewardPlayer && rewardPlayer.player &&
                     !rewardPlayer.FindInventory("BlueSimpleRifle"))
-                {
                     rewardPlayer.GiveInventory("BlueSimpleRifle", 1);
-                    grantedToSomeone = true;
-                }
             }
-
-            if (grantedToSomeone)
-                tlhBlueSimpleRifleNoticeTics = 175;
         }
 
         if (tlhBlueSimpleRifleNoticeTics > 0)
@@ -8988,7 +8996,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         Color steel = 0x778185;
         Color warn = 0xB9A875;
 
-        Text("YARBIS", 25, 17, main, 0.43);
+        Text("V.T COMBAT INTERFACE", 25, 17, main, 0.36);
         Text("HELMET // INTERNAL", 25, 29, dim, 0.24);
         Text(hudMapName, 25, 40, steel, 0.25);
 
@@ -9493,15 +9501,21 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
         else
         {
+            Color bulletAmmoColor = tlhVisorWeaponClass == "SimpleRifle" ?
+                0x32AFFF : Font.CR_WHITE;
+            Color plasmaAmmoColor = tlhVisorWeaponClass == "BlueSimpleRifle" ?
+                0x32AFFF : Font.CR_WHITE;
+
             Text("BUL", 518, 306, dim, 0.21);
-            TextR(String.Format("%03d", hudClip), 555, 306, Font.CR_WHITE, 0.24);
+            TextR(String.Format("%03d", hudClip), 555, 306, bulletAmmoColor, 0.24);
             Text("SHE", 564, 306, dim, 0.21);
             TextR(String.Format("%03d", hudShell), 609, 306, Font.CR_WHITE, 0.24);
 
             Text("RCK", 518, 317, dim, 0.21);
             TextR(String.Format("%03d", hudRocket), 555, 317, Font.CR_WHITE, 0.24);
-            Text("CEL", 564, 317, dim, 0.21);
-            TextR(String.Format("%03d", hudCell), 609, 317, Font.CR_WHITE, 0.24);
+            Text(tlhVisorWeaponClass == "BlueSimpleRifle" ? "PLS" : "CEL",
+                564, 317, tlhVisorWeaponClass == "BlueSimpleRifle" ? 0x32AFFF : dim, 0.21);
+            TextR(String.Format("%03d", hudCell), 609, 317, plasmaAmmoColor, 0.24);
         }
 
         Text("HOST", 518, 328, dim, 0.21);
@@ -9708,16 +9722,16 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
     }
 
 
-    // Large, readable key register placed in the free right-side visor area.
+    // Enlarged key register: larger panel, clearer live keys and readable event log.
     ui void DrawInputMonitor()
     {
         Color frame = 0x46545A;
-        Color dim = 0x526067;
+        Color dim = 0x718087;
         Color active = 0x32AFFF;
 
-        Panel(444, 143, 172, 115, frame, 135);
-        Text("INPUT LOGGER", 452, 147, Font.CR_WHITE, 0.43);
-        TextR("LIVE", 608, 147, active, 0.38);
+        Panel(408, 132, 208, 134, frame, 155);
+        Text("INPUT REGISTER", 416, 137, Font.CR_WHITE, 0.56);
+        TextR("LIVE", 608, 137, active, 0.50);
 
         int bt = 0;
         if (consoleplayer >= 0 && consoleplayer < MAXPLAYERS)
@@ -9727,30 +9741,30 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 bt = p.player.cmd.buttons;
         }
 
-        Text("MOVE", 452, 160, dim, 0.32);
-        Text("W", 495, 160, (bt & BT_FORWARD) ? active : Font.CR_WHITE, 0.38);
-        Text("A", 514, 160, (bt & BT_MOVELEFT) ? active : Font.CR_WHITE, 0.38);
-        Text("S", 533, 160, (bt & BT_BACK) ? active : Font.CR_WHITE, 0.38);
-        Text("D", 552, 160, (bt & BT_MOVERIGHT) ? active : Font.CR_WHITE, 0.38);
-        Text("SP", 573, 160, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.32);
-        Text("CT", 594, 160, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.32);
+        Text("MOVE", 416, 155, dim, 0.46);
+        Text("W", 463, 155, (bt & BT_FORWARD) ? active : Font.CR_WHITE, 0.54);
+        Text("A", 487, 155, (bt & BT_MOVELEFT) ? active : Font.CR_WHITE, 0.54);
+        Text("S", 511, 155, (bt & BT_BACK) ? active : Font.CR_WHITE, 0.54);
+        Text("D", 535, 155, (bt & BT_MOVERIGHT) ? active : Font.CR_WHITE, 0.54);
+        Text("SP", 559, 155, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.48);
+        Text("CT", 588, 155, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.48);
 
-        Text("ACT", 452, 173, dim, 0.32);
-        Text("J", 482, 173, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.34);
-        Text("C", 497, 173, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.34);
-        Text("M1", 514, 173, (bt & BT_ATTACK) ? active : Font.CR_WHITE, 0.32);
-        Text("M2", 537, 173, (bt & BT_ALTATTACK) ? active : Font.CR_WHITE, 0.32);
-        Text("M3", 560, 173, tlhInputM3Down ? active : Font.CR_WHITE, 0.32);
-        Text("R", 586, 173, (bt & BT_RELOAD) ? active : Font.CR_WHITE, 0.34);
+        Text("ACT", 416, 174, dim, 0.46);
+        Text("J", 456, 174, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.50);
+        Text("C", 478, 174, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.50);
+        Text("M1", 500, 174, (bt & BT_ATTACK) ? active : Font.CR_WHITE, 0.48);
+        Text("M2", 530, 174, (bt & BT_ALTATTACK) ? active : Font.CR_WHITE, 0.48);
+        Text("M3", 560, 174, tlhInputM3Down ? active : Font.CR_WHITE, 0.48);
+        Text("R", 594, 174, (bt & BT_RELOAD) ? active : Font.CR_WHITE, 0.50);
 
-        Line(452, 184, 608, 184, frame, 170, 0.65);
-        Text("RECENT KEY EVENTS", 452, 188, Font.CR_WHITE, 0.38);
+        Line(416, 188, 608, 188, frame, 190, 0.85);
+        Text("RECENT KEY EVENTS", 416, 192, Font.CR_WHITE, 0.48);
 
         int count = tlhInputHistory.Size();
-        int rows = min(6, count);
+        int rows = min(5, count);
         if (rows <= 0)
         {
-            Text("WAITING FOR INPUT...", 452, 204, dim, 0.32);
+            Text("WAITING FOR INPUT...", 416, 209, dim, 0.44);
         }
         else
         {
@@ -9758,8 +9772,8 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             {
                 int historyIndex = count - rows + i;
                 int eventColor = (i == rows - 1) ? Font.CR_YELLOW : Font.CR_WHITE;
-                Text(tlhInputHistory[historyIndex], 452, 199 + i * 9,
-                    eventColor, 0.42);
+                Text(tlhInputHistory[historyIndex], 416, 207 + i * 11,
+                    eventColor, 0.50);
             }
         }
     }
