@@ -5071,8 +5071,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhCorpseReactionPlayed;
     int tlhCorpseScanCooldown;
 
-    // Centralized dual-wield state. Compatible weapon Ready loops expose the
-    // native User3 state through WRF_ALLOWUSER3; this player owns the shared mode.
+    // Centralized dual-wield state. TacticalHUDHandler resolves the player's
+    // configured +user3 binding and sends a per-player NetworkCommand here.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     double tlhDualWieldBlend;
@@ -5384,8 +5384,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Super.Tick();
         if (!player || !player.mo) return;
 
-        // Dash/prone remain player-level script buttons. Dual Wield uses the
-        // weapon-native User3 state, enabled by WRF_ALLOWUSER3 in Ready states.
+        // Dash/prone remain player-level script buttons. Dual Wield is toggled
+        // by TacticalHUDHandler.InputProcess/NetworkCommandProcess, not weapon states.
         int bt = player.cmd.buttons;
         int obt = player.oldbuttons;
         bool tlhDashPressedThisTic = (bt & BT_USER2) != 0 && (obt & BT_USER2) == 0;
