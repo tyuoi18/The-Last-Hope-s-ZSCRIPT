@@ -1,12 +1,11 @@
 // ============================================================================
-// TLH v50.0.2 - live PSprite mirroring and procedural Dual Wield controller
+// TLH v51.0 - InputProcess Dual Wield command route and live PSprite mirror
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
-// R remains untouched. Dual Wield is driven by a shared player state and a
-// minimal weapon contract, not copied left-hand animation trees.
-// Compatible weapons expose User3, DualMirrorHold, FireDualLeft and FireDualRight.
-// User3 is only an input entry point; TacticalPlayer owns the toggle and animation.
-// The offhand is a render-only PSprite that mirrors the live primary sprite/frame.
+// R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
+// using the user's actual +user3 binding, then routed through NetworkCommandProcess.
+// Weapons do not use User3 states or WRF_ALLOWUSER3. The offhand is a render-only
+// PSprite that mirrors the live primary sprite/frame without executing weapon actions.
 // Hellfire uses the Rocket Launcher sprite family at reduced HUD/drop scale.
 // ============================================================================
 
@@ -93,6 +92,9 @@ const TLH_MAX_CELLS = 300;
 // offscreen-to-right displacement after ordinary procedural sway clamping.
 // v50.0.2: remove the obsolete third motion channel and align mirrored flash,
 // palette, interpolation and pivot flags with the live primary PSprite.
+// v51.0: route +user3 through InputProcess -> SendNetworkCommand ->
+// NetworkCommandProcess. Dual Wield no longer depends on weapon-native User3 states
+// or WRF_ALLOWUSER3; only the inert mirror holder and weapon firing routines remain.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
@@ -1241,7 +1243,7 @@ class RecoilPistol : Pistol replaces Pistol
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
 
@@ -1249,16 +1251,6 @@ class RecoilPistol : Pistol replaces Pistol
     DualMirrorHold:
         TNT1 A -1;
         Stop;
-
-    User3:
-        TNT1 A 0
-        {
-            let tp = TacticalPlayer(player.mo);
-            if (tp)
-                tp.ToggleTLHDualWield(invoker);
-        }
-        Goto Ready;
-
 
     Deselect:
         PISG A 0
@@ -1548,7 +1540,7 @@ class OfficerVulkanPistol : Weapon
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
 
@@ -1565,7 +1557,7 @@ class OfficerVulkanPistol : Weapon
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
 
@@ -1573,16 +1565,6 @@ class OfficerVulkanPistol : Weapon
     DualMirrorHold:
         TNT1 A -1;
         Stop;
-
-    User3:
-        TNT1 A 0
-        {
-            let tp = TacticalPlayer(player.mo);
-            if (tp && invoker.weaponMode == 0)
-                tp.ToggleTLHDualWield(invoker);
-        }
-        Goto Ready;
-
 
     Deselect:
         PISG A 0
@@ -2116,7 +2098,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
-            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
+            A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
 
@@ -2310,16 +2292,6 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     DualMirrorHold:
         TNT1 A -1;
         Stop;
-
-    User3:
-        TNT1 A 0
-        {
-            let tp = TacticalPlayer(player.mo);
-            if (tp)
-                tp.ToggleTLHDualWield(invoker);
-        }
-        Goto Ready;
-
 
     Deselect:
         SHT2 A 0
@@ -4625,7 +4597,7 @@ class ServiceRevolver : Weapon
             if (!(player.cmd.buttons & BT_ALTATTACK))
                 invoker.altTriggerLatched = false;
 
-            int readyFlags = WRF_NoBob | WRF_ALLOWUSER3;
+            int readyFlags = WRF_NoBob;
             if (!invoker.reloadLatched)
                 readyFlags |= WRF_ALLOWRELOAD;
             if (invoker.triggerLatched || invoker.altTriggerLatched)
@@ -4638,23 +4610,13 @@ class ServiceRevolver : Weapon
             double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
             double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
             A_OverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
-            A_WeaponReady(readyFlags | WRF_ALLOWUSER3);
+            A_WeaponReady(readyFlags);
         }
         Loop;
 
     DualMirrorHold:
         TNT1 A -1;
         Stop;
-
-    User3:
-        TNT1 A 0
-        {
-            let tp = TacticalPlayer(player.mo);
-            if (tp)
-                tp.ToggleTLHDualWield(invoker);
-        }
-        Goto Ready;
-
 
     Deselect:
         RVOL Q 0
@@ -5112,7 +5074,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // native User3 state through WRF_ALLOWUSER3; this player owns the shared mode.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
-    bool tlhDualWieldInputLatched;
     double tlhDualWieldBlend;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
@@ -5271,7 +5232,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool SupportsTLHProceduralDualWield(Weapon weapon)
     {
         return weapon &&
-               weapon.FindStateByString("User3") &&
                weapon.FindStateByString("DualMirrorHold") &&
                weapon.FindStateByString("FireDualLeft") &&
                weapon.FindStateByString("FireDualRight");
@@ -5314,19 +5274,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // This latch converts the held command into one toggle per press/release.
     bool ToggleTLHDualWield(Weapon weapon)
     {
-        if (tlhDualWieldInputLatched)
-            return false;
-
-        tlhDualWieldInputLatched = true;
-
         if (!player || player.playerstate != PST_LIVE ||
             player.PendingWeapon != WP_NOCHANGE ||
             weapon == null || weapon != player.ReadyWeapon ||
             !SupportsTLHProceduralDualWield(weapon))
             return false;
 
+        let officer = OfficerVulkanPistol(weapon);
+        if (officer && officer.weaponMode != 0)
+            return false;
+
         tlhDualWieldActive = !(tlhDualWieldActive && tlhDualWieldWeapon == weapon);
-        // Retain the weapon reference during the exit animation.
+        // Keep ownership during the exit blend so the mirrored PSprite can descend.
         tlhDualWieldWeapon = weapon;
         return true;
     }
@@ -5428,8 +5387,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // weapon-native User3 state, enabled by WRF_ALLOWUSER3 in Ready states.
         int bt = player.cmd.buttons;
         int obt = player.oldbuttons;
-        if (!(bt & BT_USER3))
-            tlhDualWieldInputLatched = false;
         bool tlhDashPressedThisTic = (bt & BT_USER2) != 0 && (obt & BT_USER2) == 0;
 
         CleanupDeferredWeaponRemovals();
@@ -5470,7 +5427,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
             tlhDualWieldWeapon = null;
             tlhDualWieldActive = false;
-            tlhDualWieldInputLatched = false;
             tlhDualWieldBlend = 0.0;
             tlhIsSprinting = false;
             tlhIsSliding = false;
@@ -7755,6 +7711,8 @@ class TacticalHUDHandler : EventHandler
     // INPUT OBSERVER
     // ------------------------------------------------------------------------
     transient ui bool tlhInputM3Down;
+    transient ui bool tlhDualBindKey1Down;
+    transient ui bool tlhDualBindKey2Down;
     transient ui String tlhInputLast;
     String tlhNoAvoidMeleeMapName;
     bool tlhNoAvoidMeleeScanned;
@@ -8116,55 +8074,105 @@ class TacticalHUDHandler : EventHandler
 
     override bool InputProcess(InputEvent e)
     {
-        // This handler is now an observer for the optional input HUD only.
-        // Tactical actions are read deterministically from PlayerInfo.cmd.buttons
-        // in TacticalPlayer.Tick(), not dispatched through network events.
-        if (e.Type == InputEvent.Type_KeyDown ||
-            e.Type == InputEvent.Type_KeyUp)
+        if (e.Type != InputEvent.Type_KeyDown &&
+            e.Type != InputEvent.Type_KeyUp)
+            return false;
+
+        String keyName = e.KeyString;
+        if (keyName == "")
+            keyName = String.Format("KEY_%d", int(e.KeyScan));
+
+        String historyKeyName = keyName;
+        String binding = Bindings.GetBinding(e.KeyScan);
+        bool inputDown = (e.Type == InputEvent.Type_KeyDown);
+
+        if (binding ~== "+user3")
+            tlhHUDDualBindName = keyName;
+
+        if (binding != "")
+            keyName = keyName .. " <" .. binding .. ">";
+
+        if (inputDown)
         {
-            String keyName = e.KeyString;
+            tlhInputLast = "DOWN " .. keyName;
+            tlhInputHistory.Push("DN  " .. historyKeyName);
+        }
+        else
+        {
+            tlhInputLast = "UP   " .. keyName;
+            tlhInputHistory.Push("UP  " .. historyKeyName);
+        }
 
-            if (keyName == "")
-                keyName = String.Format("KEY_%d", int(e.KeyScan));
+        if (tlhInputHistory.Size() > 64)
+            tlhInputHistory.Delete(0);
 
-            String historyKeyName = keyName;
-            String binding = Bindings.GetBinding(e.KeyScan);
-            bool inputDown = (e.Type == InputEvent.Type_KeyDown);
+        if (e.KeyScan == InputEvent.KEY_MOUSE3 ||
+            keyName ~== "MOUSE3" ||
+            keyName ~== "MOUSE 3")
+        {
+            tlhInputM3Down = inputDown;
+        }
 
-            if (binding ~== "TLH_DualWield" ||
-                binding ~== "netevent tlh_dualwield" ||
-                binding ~== "+user3")
-            {
-                tlhHUDDualBindName = keyName;
-            }
+        // Read the user's live +user3 bindings, not a hardcoded physical key.
+        // The UI-side latch suppresses OS key-repeat and rearms only on KeyUp.
+        int dualKey1, dualKey2;
+        [dualKey1, dualKey2] = Bindings.GetKeysForCommand("+user3");
 
-            if (binding != "")
-                keyName = keyName .. " <" .. binding .. ">";
-
+        if (e.KeyScan == dualKey1 || e.KeyScan == dualKey2)
+        {
             if (inputDown)
             {
-                tlhInputLast = "DOWN " .. keyName;
-                tlhInputHistory.Push("DN  " .. historyKeyName);
+                bool sendToggle = false;
+
+                if (e.KeyScan == dualKey1 && !tlhDualBindKey1Down)
+                {
+                    tlhDualBindKey1Down = true;
+                    sendToggle = true;
+                }
+                else if (e.KeyScan == dualKey2 && !tlhDualBindKey2Down)
+                {
+                    tlhDualBindKey2Down = true;
+                    sendToggle = true;
+                }
+
+                if (sendToggle)
+                    EventHandler.SendNetworkCommand('TLH_DualWieldToggle');
             }
             else
             {
-                tlhInputLast = "UP   " .. keyName;
-                tlhInputHistory.Push("UP  " .. historyKeyName);
+                if (e.KeyScan == dualKey1)
+                    tlhDualBindKey1Down = false;
+                if (e.KeyScan == dualKey2)
+                    tlhDualBindKey2Down = false;
             }
 
-            if (tlhInputHistory.Size() > 64)
-                tlhInputHistory.Delete(0);
-
-            if (e.KeyScan == InputEvent.KEY_MOUSE3 ||
-                keyName ~== "MOUSE3" ||
-                keyName ~== "MOUSE 3")
-            {
-                tlhInputM3Down = inputDown;
-            }
+            // Consume this key so the old +user3 weapon-state dispatcher cannot run.
+            return true;
         }
 
-        // Observe only. Never consume the user's configured key binding.
         return false;
+    }
+
+    override void NetworkCommandProcess(NetworkCommand cmd)
+    {
+        if (cmd.Command != 'TLH_DualWieldToggle')
+            return;
+
+        int playerNum = cmd.Player;
+        if (playerNum < 0 || playerNum >= MAXPLAYERS)
+            return;
+
+        Actor pawn = players[playerNum].mo;
+        if (!pawn || pawn.Health <= 0)
+            return;
+
+        TacticalPlayer tactical = TacticalPlayer(pawn);
+        if (!tactical)
+            return;
+
+        Weapon weapon = players[playerNum].ReadyWeapon;
+        if (!tactical.ToggleTLHDualWield(weapon))
+            pawn.A_Print("DUAL WIELD: UNSUPPORTED WEAPON OR BUSY");
     }
 
     int GetTLHFaceHealthBand(Actor p)
