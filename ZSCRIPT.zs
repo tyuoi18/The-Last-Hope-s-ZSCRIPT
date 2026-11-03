@@ -4900,6 +4900,8 @@ class SimpleRifle : Weapon
         TacticalPlayer tp = TacticalPlayer(Owner);
         if (tp && tp.tlhBlueSimpleRifleUnlocked)
         {
+            if (sv_infiniteammo || Owner.FindInventory("PowerInfiniteAmmo"))
+                return true;
             Inventory cells = Owner.FindInventory("Cell");
             int cellCost = (fireMode == AltFire) ? 2 : 1;
             return cells && cells.Amount >= cellCost;
@@ -4971,7 +4973,7 @@ Default
         ASLT B 4
         {
             if (Owner)
-                Owner.TakeInventory("Cell", 1);
+                Owner.TakeInventory("Cell", 1, true, true);
             A_RailAttack(42, 0, false, 0x36BFFF, 0xD9F7FF,
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0, 0, 8192, 9, 1.0, 1.0);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
@@ -5006,7 +5008,7 @@ Default
         ASLT B 6
         {
             if (Owner)
-                Owner.TakeInventory("Cell", 2);
+                Owner.TakeInventory("Cell", 2, true, true);
             A_RailAttack(78, 0, false, 0x238DFF, 0xE4FAFF,
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0.35, 0.15, 8192, 12, 0.75, 1.0);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
