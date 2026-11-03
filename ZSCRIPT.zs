@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.4 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.5 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -100,6 +100,7 @@ const TLH_MAX_CELLS = 300;
 // v52.1: add per-map Simple Rifle kill progression and automatic Blue mode at 60 kills;
 // v52.2: resolve ambiguous weapon-state self references with explicit invoker.Owner;
 // v52.3: use a class-typed palette default lookup and keep Blue unlock progress in the HUD handler so it survives respawn.
+// v52.5: scope SimpleRifle PSprite states explicitly as weapon states to disambiguate action self.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
 // apply a dedicated electric-blue palette translation to the active Simple Rifle PSprite.
 // Blue mode consumes Cell ammo and uses a cyan MarineRailgun-style A_RailAttack.
@@ -4937,7 +4938,7 @@ Default
         Inventory.PickupMessage "Picked up a Simple Rifle.";
     }
 
-    States
+    States (weapon)
     {
     Ready:
         PISG A 0;
