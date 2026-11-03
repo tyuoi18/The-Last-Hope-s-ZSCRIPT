@@ -13,6 +13,7 @@ version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_AKIMBO_LAYER = 2;
+const TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER = 3;
 const TLH_STOWED_LAYER = 3; // dedicated folded-launcher overlay; keep PSP_FLASH (1) free
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -5232,7 +5233,6 @@ class BlueSimpleRifle : Inventory
         Inventory.PickupMessage "ARSENAL UNLOCKED: BLUE SIMPLE RIFLE // THIS MAP ONLY";
         +INVENTORY.UNDROPPABLE
         +INVENTORY.UNTOSSABLE
-        Translation "0:255=192:207";
     }
 }
 
@@ -5252,6 +5252,7 @@ class SimpleRifle : Weapon
         Weapon.AmmoType2 "Clip";
         Weapon.AmmoGive2 16;
         Weapon.AmmoUse2 2;
+        StencilColor "32AFFF";
         Inventory.PickupMessage "Picked up a Simple Rifle.";
     }
 
@@ -5314,14 +5315,27 @@ class SimpleRifle : Weapon
         ASLT A 1
         {
             if (!invoker.HasBlueMode())
+            {
+                A_ClearOverlays(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER,
+                    TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER);
                 return ResolveState("ReadyNormal");
+            }
+
+            // A second PSprite draws a subtle electric-blue mask over the
+            // original weapon silhouette. No palette remap or edited sprite.
+            A_Overlay(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER, "BlueTintReady", true);
             A_WeaponReady(WRF_ALLOWZOOM);
             return ResolveState(null);
         }
         Loop;
 
     Deselect:
-        ASLT A 1 A_Lower;
+        ASLT A 1
+        {
+            A_ClearOverlays(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER,
+                TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER);
+            A_Lower();
+        }
         Loop;
 
     Select:
@@ -5359,7 +5373,11 @@ class SimpleRifle : Weapon
         Goto Ready;
 
     BlueFire:
-        ASLT A 4 A_GunFlash;
+        ASLT A 4
+        {
+            A_Overlay(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER, "BlueTintFire");
+            A_GunFlash();
+        }
         ASLT B 5
         {
             bool infinite = sv_infiniteammo ||
@@ -5405,7 +5423,10 @@ class SimpleRifle : Weapon
         Goto Ready;
 
     BlueAltFire:
-        ASLT A 4;
+        ASLT A 4
+        {
+            A_Overlay(TLH_BLUE_SIMPLE_RIFLE_TINT_LAYER, "BlueTintAltFire");
+        }
         ASLT B 6
         {
             bool infinite = sv_infiniteammo ||
@@ -5469,6 +5490,29 @@ class SimpleRifle : Weapon
         }
         ASLT A 5;
         Goto Ready;
+
+    // Secondary layer: same ASLT frames with a translucent electric-blue
+    // stencil. The source art and its base palette remain unchanged.
+    BlueTintReady:
+        ASLT A 1
+        {
+            A_OverlayFlags(OverlayID(), PSPF_RENDERSTYLE | PSPF_FORCEALPHA, true);
+            A_OverlayRenderstyle(OverlayID(), STYLE_TranslucentStencil);
+            A_OverlayAlpha(OverlayID(), 0.24);
+        }
+        Loop;
+
+    BlueTintFire:
+        ASLT A 4;
+        ASLT B 5;
+        ASLT A 7;
+        Goto BlueTintReady;
+
+    BlueTintAltFire:
+        ASLT A 4;
+        ASLT B 6;
+        ASLT A 10;
+        Goto BlueTintReady;
 
     Flash:
         ASLF A 3 Bright A_Light1;
@@ -6432,13 +6476,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             let weaponDefault = GetDefaultByType(weapon.GetClass());
             psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
 
-            // Apply the token's simple palette tint directly to the weapon PSprite.
-            if (weapon.GetClassName() == "SimpleRifle")
-            {
-                let bluePowerup = FindInventory("BlueSimpleRifle");
-                if (bluePowerup)
-                    psp.Translation = bluePowerup.Translation;
-            }
+            // Blue Simple Rifle coloring is a dedicated translucent stencil
+            // PSprite layer. The original weapon palette stays untouched.
         }
 
         State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState :
@@ -7942,6 +7981,22 @@ class TacticalHUDHandler : EventHandler
     int hudBlueSimpleRifleNoticeTics;
     bool hudBlueSimpleRifleActive;
 
+    // Short, event-driven feedback indicators used by the compact HUD.
+    int hudDamageFlashTics;
+    int hudHealFlashTics;
+    int hudHitmarkerTics;
+    int hudKillConfirmTics;
+    int hudHitDamage;
+    String hudFeedbackText;
+    int hudFeedbackTics;
+    int hudFeedbackColor;
+    int hudLastSampleHealth;
+    bool hudHealthSampleReady;
+
+    // Enemy/analyzer cache refresh interval. Rendering data does not need a
+    // full thinker scan on every single game tic.
+    int tlhHUDActorScanCooldown;
+
     // ------------------------------------------------------------------------
     // ANALYZER CACHE
     // ------------------------------------------------------------------------
@@ -8074,15 +8129,37 @@ class TacticalHUDHandler : EventHandler
                 tlhSimpleRifleKillsByPlayer[playerNum] + 1);
 
         Actor currentPawn = players[playerNum].mo;
-        if (tlhSimpleRifleKillsByPlayer[playerNum] == 30 && currentPawn)
-            currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
-        else if (tlhSimpleRifleKillsByPlayer[playerNum] == 50 && currentPawn)
-            currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
+        if (tlhSimpleRifleKillsByPlayer[playerNum] == 30)
+        {
+            if (currentPawn) currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
+            if (playerNum == consoleplayer)
+            {
+                hudFeedbackText = "SIMPLE RIFLE // 30 OF 60";
+                hudFeedbackTics = 35;
+                hudFeedbackColor = 0x32AFFF;
+            }
+        }
+        else if (tlhSimpleRifleKillsByPlayer[playerNum] == 50)
+        {
+            if (currentPawn) currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
+            if (playerNum == consoleplayer)
+            {
+                hudFeedbackText = "SIMPLE RIFLE // 50 OF 60";
+                hudFeedbackTics = 35;
+                hudFeedbackColor = 0x32AFFF;
+            }
+        }
 
         if (tlhSimpleRifleKillsByPlayer[playerNum] >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK)
         {
             tlhBlueSimpleRifleUnlockedByPlayer[playerNum] = true;
             tlhBlueSimpleRifleNoticeByPlayer[playerNum] = 175;
+            if (playerNum == consoleplayer)
+            {
+                hudFeedbackText = "BLUE SIMPLE RIFLE UNLOCKED";
+                hudFeedbackTics = 70;
+                hudFeedbackColor = 0x32AFFF;
+            }
 
             // Give to the current pawn, which may already be a replacement
             // for the pawn that originally dealt the final blow.
@@ -8096,6 +8173,15 @@ class TacticalHUDHandler : EventHandler
 
     override void WorldThingDamaged(WorldEvent e)
     {
+        if (e.Thing && e.Thing.bIsMonster && e.Thing.Health > 0 &&
+            e.DamageSource && e.DamageSource.player &&
+            e.DamageSource.PlayerNumber() == consoleplayer)
+        {
+            hudHitmarkerTics = 8;
+            hudKillConfirmTics = 0;
+            hudHitDamage = max(0, e.Damage);
+        }
+
         if (!e.Thing || !e.Thing.bIsMonster)
             return;
 
@@ -8127,6 +8213,20 @@ class TacticalHUDHandler : EventHandler
 
         let credit = TLHSimpleRifleKillCredit(
             e.Thing.FindInventory("TLHSimpleRifleKillCredit"));
+        Actor killSource = e.DamageSource;
+        if (credit && credit.killer)
+            killSource = credit.killer;
+
+        if (killSource && killSource.player &&
+            killSource.PlayerNumber() == consoleplayer)
+        {
+            hudHitmarkerTics = 0;
+            hudKillConfirmTics = 22;
+            hudFeedbackText = "TARGET ELIMINATED";
+            hudFeedbackTics = 24;
+            hudFeedbackColor = 0xF2D36B;
+        }
+
         if (!credit || !credit.killer || !credit.killer.player)
             return;
 
@@ -8605,6 +8705,18 @@ class TacticalHUDHandler : EventHandler
     }
 
     override void WorldTick(){
+        bool refreshHUDActorCache = (tlhHUDActorScanCooldown <= 0);
+        if (refreshHUDActorCache)
+            tlhHUDActorScanCooldown = 3;
+        else
+            tlhHUDActorScanCooldown--;
+
+        if (hudDamageFlashTics > 0) hudDamageFlashTics--;
+        if (hudHealFlashTics > 0) hudHealFlashTics--;
+        if (hudHitmarkerTics > 0) hudHitmarkerTics--;
+        if (hudKillConfirmTics > 0) hudKillConfirmTics--;
+        if (hudFeedbackTics > 0) hudFeedbackTics--;
+
         // Rebuild the universal countdown cache every tic. It is only drawn
         // while one or more timed power-ups are actually active.
         hudPowerupNames.Clear();
@@ -8642,7 +8754,7 @@ class TacticalHUDHandler : EventHandler
         hudMapTime = level.maptime;
         hudTotalEnemies = level.total_monsters;
         hudKills = level.killed_monsters;
-        hudLiveEnemies = 0;
+        if (refreshHUDActorCache) hudLiveEnemies = 0;
         hudPlayerHealth = 0;
         hudArmor = 0;
         hudArmorMax = 0;
@@ -8671,11 +8783,14 @@ class TacticalHUDHandler : EventHandler
         tlhVisorActive = false;
         tlhVisorTime = level.time;
         tlhVisorWeaponClass = "";
-        tlhVisorEnemies.Clear();
-        tlhVisorWeapons.Clear();
-        tlhVisorProjectiles.Clear();
-        tlhVisorEnemyNames.Clear();
-        tlhVisorWeaponNames.Clear();
+        if (refreshHUDActorCache)
+        {
+            tlhVisorEnemies.Clear();
+            tlhVisorWeapons.Clear();
+            tlhVisorProjectiles.Clear();
+            tlhVisorEnemyNames.Clear();
+            tlhVisorWeaponNames.Clear();
+        }
         tlhSSGVisible = false;
         tlhSSGOffsetX = 0.0;
         tlhSSGOffsetY = 0.0;
@@ -8738,6 +8853,32 @@ class TacticalHUDHandler : EventHandler
         hudWeaponFlip = false;
         hudWeaponStateScale = (1.0, 1.0);
         hudWeaponTranslation = 0;
+
+        int sampledHealth = max(0, p.Health);
+        if (!hudHealthSampleReady || level.maptime == 0 ||
+            (hudLastSampleHealth <= 0 && sampledHealth > 0))
+        {
+            hudLastSampleHealth = sampledHealth;
+            hudHealthSampleReady = true;
+        }
+        else if (sampledHealth < hudLastSampleHealth)
+        {
+            int lostHealth = hudLastSampleHealth - sampledHealth;
+            hudDamageFlashTics = max(hudDamageFlashTics, 10);
+            hudFeedbackText = String.Format("DAMAGE -%d", lostHealth);
+            hudFeedbackTics = 18;
+            hudFeedbackColor = 0xD65B55;
+            hudLastSampleHealth = sampledHealth;
+        }
+        else if (sampledHealth > hudLastSampleHealth)
+        {
+            int gainedHealth = sampledHealth - hudLastSampleHealth;
+            hudHealFlashTics = max(hudHealFlashTics, 8);
+            hudFeedbackText = String.Format("HEALTH +%d", gainedHealth);
+            hudFeedbackTics = 18;
+            hudFeedbackColor = 0x77C98A;
+            hudLastSampleHealth = sampledHealth;
+        }
 
         UpdateTLHDoomguyFace(p);
         tlhVisorPlayerDead = (p.player.playerstate == PST_DEAD);
@@ -8854,6 +8995,8 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "HookChainsaw") hudWeaponName = "HOOK CHAINSAW";
         }
 
+        if (refreshHUDActorCache)
+        {
         ThinkerIterator it = ThinkerIterator.Create("Actor");
         Actor mo;
         while ((mo = Actor(it.Next())) != null)
@@ -8911,6 +9054,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
                 if (projectileDistanceSquared <= 2000.0 * 2000.0 && velocitySquared > 1.0)
                     tlhVisorProjectiles.Push(mo);
             }
+        }
         }
 
     }
@@ -9524,11 +9668,12 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
         else if (cls == "SimpleRifle" && hudBlueSimpleRifleActive)
         {
-            // Simple tint only; the actual weapon PSprite uses the palette translation.
-            primary = 0x32AFFF;
-            secondary = 0x32AFFF;
+            // Keep the optional preview neutral. The actual gun receives the
+            // blue tint through its dedicated translucent PSprite layer.
+            primary = 0xB8C0C2;
+            secondary = 0x596164;
             profileX = 1.0;
-            profileY = 1.02;
+            profileY = 1.0;
             accentStrength = 1.0;
         }
         else if (cls == "HellfireProjector")
@@ -10105,6 +10250,243 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
     // ROOT YARBIS VISOR
     // ========================================================================
 
+
+    // =========================================================================
+    // COMPACT HUD // PRESERVES THE DATA, REDUCES SCREEN OCCUPANCY
+    // The detailed legacy draw methods remain in the class for compatibility;
+    // the active overlay uses this smaller layout.
+    // =========================================================================
+
+    ui void DrawCompactHeader()
+    {
+        Color main = 0xC1C8CA;
+        Color dim = 0x667176;
+        Color accent = 0x8DA6AB;
+
+        Text("TLH", 8, 7, main, 0.30);
+        Text(hudMapName, 29, 8, dim, 0.23);
+        TextC(hudModeName, 320, 8, accent, 0.22);
+        TextR(String.Format("%02d:%02d", (hudMapTime / 35) / 60,
+            (hudMapTime / 35) % 60), 632, 8, main, 0.24);
+        Line(8, 18, 632, 18, dim, 105, 0.55);
+    }
+
+    ui void DrawCompactInput()
+    {
+        int bt = 0;
+        if (consoleplayer >= 0 && consoleplayer < MAXPLAYERS)
+        {
+            let p = players[consoleplayer].mo;
+            if (p && p.player) bt = p.player.cmd.buttons;
+        }
+
+        Color active = 0x32AFFF;
+        int idle = 0x667176;
+        Text("W", 8, 23, (bt & BT_FORWARD) ? active : idle, 0.22);
+        Text("A", 20, 23, (bt & BT_MOVELEFT) ? active : idle, 0.22);
+        Text("S", 32, 23, (bt & BT_BACK) ? active : idle, 0.22);
+        Text("D", 44, 23, (bt & BT_MOVERIGHT) ? active : idle, 0.22);
+        Text("SP", 59, 23, (bt & BT_JUMP) ? active : idle, 0.20);
+        Text("CT", 78, 23, (bt & BT_CROUCH) ? active : idle, 0.20);
+        Text("M1", 98, 23, (bt & BT_ATTACK) ? active : idle, 0.20);
+        Text("M2", 119, 23, (bt & BT_ALTATTACK) ? active : idle, 0.20);
+        Text("M3", 140, 23, tlhInputM3Down ? active : idle, 0.20);
+        Text("R", 162, 23, (bt & BT_RELOAD) ? active : idle, 0.22);
+
+        String recent = "INPUT READY";
+        int count = tlhInputHistory.Size();
+        if (count > 0) recent = tlhInputHistory[count - 1];
+        TextR(recent, 632, 23, idle, 0.20);
+    }
+
+    ui void DrawCompactBlueSimpleRifleProgress()
+    {
+        Color blue = 0x32AFFF;
+        if (hudBlueSimpleRifleNoticeTics > 0)
+        {
+            TextC("BLUE SIMPLE RIFLE UNLOCKED", 320, 38, blue, 0.27);
+        }
+        else if (hudBlueSimpleRifleUnlocked)
+        {
+            TextC("BLUE SIMPLE RIFLE ACTIVE // THIS MAP", 320, 38, blue, 0.23);
+        }
+        else
+        {
+            int progress = clamp(hudBlueSimpleRifleKills, 0,
+                TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK);
+            TextC(String.Format("SIMPLE RIFLE %02d/60", progress),
+                320, 36, 0x667176, 0.21);
+            SegBar(282, 45, 76, progress,
+                TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK, 8, blue);
+        }
+    }
+
+    ui void DrawCompactPowerupTimers()
+    {
+        int count = hudPowerupNames.Size();
+        if (count <= 0) return;
+
+        int label = 0x89969A;
+        int dim = 0x4D585C;
+        Text("POWER", 8, 59, label, 0.21);
+        int rows = min(count, 4);
+        for (int i = 0; i < rows; i++)
+        {
+            int seconds = max(0, (hudPowerupTics[i] + 34) / 35);
+            int timerColor = seconds <= 10 ? Font.CR_RED :
+                seconds <= 30 ? Font.CR_YELLOW : Font.CR_WHITE;
+            double y = 70 + i * 9.0;
+            Text(hudPowerupNames[i], 8, y, dim, 0.19);
+            TextR(String.Format("%02d:%02d", seconds / 60, seconds % 60),
+                154, y, timerColor, 0.19);
+        }
+        if (count > rows)
+            Text(String.Format("+%d MORE", count - rows), 8,
+                70 + rows * 9.0, dim, 0.18);
+    }
+
+    ui void DrawCompactTelemetry()
+    {
+        int dim = 0x667176;
+        int main = 0xB8C0C2;
+        int alert = 0xD3B35B;
+        TextR(String.Format("FOV %03d  VEL %03d", int(hudFOV),
+            int(hudMoveSpeed)), 632, 59, main, 0.21);
+        TextR(String.Format("ALT %04d  VZ %+04d", int(hudAltitude),
+            int(hudVerticalSpeed)), 632, 70, dim, 0.20);
+        TextR(hudOnGround ? "GROUND" : "AIRBORNE", 632, 81,
+            hudOnGround ? dim : alert, 0.20);
+        TextR(tlhVisorActive ? "TACTICAL SCAN ACTIVE" : "VISOR STANDBY",
+            632, 92, tlhVisorActive ? 0x77C98A : dim, 0.19);
+    }
+
+    ui void DrawCompactVitals()
+    {
+        int dim = 0x667176;
+        int main = 0xB8C0C2;
+        int hpColor = hudPlayerHealth < 40 ? 0xD65B55 : main;
+        int armorColor = hudArmor < 50 ? 0xD3B35B : 0x6E9EAD;
+
+        Line(8, 292, 154, 292, dim, 120, 0.6);
+        Text("HP", 8, 299, dim, 0.21);
+        TextR(String.Format("%03d", max(0, hudPlayerHealth)), 43, 299,
+            hudPlayerHealth < 40 ? Font.CR_RED : Font.CR_WHITE, 0.24);
+        SegBar(49, 303, 102, hudPlayerHealth, TLH_MAX_HEALTH, 10, hpColor);
+
+        Text("ARM", 8, 315, dim, 0.21);
+        TextR(String.Format("%03d", max(0, hudArmor)), 43, 315,
+            hudArmor < 50 ? Font.CR_YELLOW : Font.CR_WHITE, 0.23);
+        SegBar(49, 319, 102, hudArmor, max(1, hudArmorMax), 10, armorColor);
+
+        Text(hudOnGround ? "GND" : "AIR", 8, 333,
+            hudOnGround ? main : 0xD3B35B, 0.19);
+        Text(String.Format("VZ %+04d", int(hudVerticalSpeed)),
+            43, 333, dim, 0.19);
+    }
+
+    ui void DrawCompactCombat()
+    {
+        int dim = 0x667176;
+        int main = 0xB8C0C2;
+        int warn = 0xD3B35B;
+        int blue = 0x32AFFF;
+
+        Line(486, 292, 632, 292, dim, 120, 0.6);
+        TextR(hudWeaponName, 632, 298,
+            (tlhVisorWeaponClass == "SimpleRifle" && hudBlueSimpleRifleActive)
+                ? blue : main, 0.22);
+
+        if (tlhVisorWeaponClass == "ServiceRevolver")
+        {
+            TextR(String.Format("CYL %02d/06   RES %03d",
+                hudRevolverAmmo, hudRevolverReserve), 632, 310,
+                hudRevolverAmmo <= 1 ? warn : Font.CR_WHITE, 0.20);
+        }
+        else if (tlhVisorWeaponClass == "HunterRifle")
+        {
+            TextR(String.Format("MAG %02d/05   RES %03d",
+                hudHunterAmmo, hudHunterReserve), 632, 310,
+                hudHunterAmmo <= 1 ? warn : Font.CR_WHITE, 0.20);
+        }
+        else if (tlhVisorWeaponClass == "SimpleRifle" && hudBlueSimpleRifleActive)
+        {
+            TextR(String.Format("PLASMA %03d   //   RAIL",
+                hudCell), 632, 310, hudCell <= 2 ? warn : blue, 0.20);
+        }
+        else
+        {
+            TextR(String.Format("BUL %03d  SHE %03d",
+                hudClip, hudShell), 632, 310, Font.CR_WHITE, 0.20);
+            TextR(String.Format("RCK %03d  CEL %03d",
+                hudRocket, hudCell), 632, 320, Font.CR_WHITE, 0.20);
+        }
+
+        TextR(String.Format("HOST %03d  DOWN %03d/%03d",
+            hudLiveEnemies, hudKills, hudTotalEnemies),
+            632, 331, hudLiveEnemies > 0 ? Font.CR_RED : dim, 0.19);
+
+        if (tlhVisorWeaponClass == "HeavyChaingun")
+        {
+            TextR(String.Format("HEAT %03d%%",
+                int(clamp(double(hudWeaponHeat) / 3.0, 0.0, 100.0))),
+                632, 341,
+                hudWeaponHeat >= 250 ? Font.CR_RED :
+                hudWeaponHeat >= 180 ? Font.CR_YELLOW : main, 0.19);
+            SegBar(586, 348, 42, hudWeaponHeat, 300, 6,
+                hudWeaponHeat >= 250 ? 0xC65B55 :
+                hudWeaponHeat >= 180 ? warn : 0x61C6B1);
+        }
+        else
+        {
+            TextR(tlhHUDDualActive ? "AKIMBO" : "SINGLE",
+                632, 341, tlhHUDDualActive ? Font.CR_GREEN : dim, 0.19);
+        }
+    }
+
+    ui void DrawCompactFeedback()
+    {
+        int red = 0xD65B55;
+        int green = 0x77C98A;
+        int yellow = 0xF2D36B;
+
+        if (hudDamageFlashTics > 0)
+        {
+            int alpha = min(150, hudDamageFlashTics * 13);
+            Line(8, 5, 58, 5, red, alpha, 1.4);
+            Line(582, 5, 632, 5, red, alpha, 1.4);
+            Line(8, 355, 58, 355, red, alpha, 1.4);
+            Line(582, 355, 632, 355, red, alpha, 1.4);
+        }
+        else if (hudHealFlashTics > 0)
+        {
+            int alpha = min(130, hudHealFlashTics * 15);
+            Line(8, 355, 72, 355, green, alpha, 1.2);
+        }
+
+        if (hudPlayerHealth > 0 && hudPlayerHealth < 30)
+        {
+            int pulse = 55 + int(35.0 * (0.5 + 0.5 *
+                sin(double(tlhVisorTime) * 0.18 * TLH_RAD_TO_DEG)));
+            Line(8, 12, 20, 12, red, pulse, 1.2);
+            Line(620, 12, 632, 12, red, pulse, 1.2);
+        }
+
+        if (hudHitmarkerTics > 0 || hudKillConfirmTics > 0)
+        {
+            int marker = hudKillConfirmTics > 0 ? yellow : Font.CR_WHITE;
+            double size = hudKillConfirmTics > 0 ? 6.0 : 4.0;
+            Line(320 - size, 180 - size, 318, 178, marker, 220, 1.0);
+            Line(320 + size, 180 - size, 322, 178, marker, 220, 1.0);
+            Line(320 - size, 180 + size, 318, 182, marker, 220, 1.0);
+            Line(320 + size, 180 + size, 322, 182, marker, 220, 1.0);
+            if (hudKillConfirmTics > 0)
+                TextC("KILL", 320, 194, yellow, 0.22);
+        }
+
+        if (hudFeedbackTics > 0 && hudFeedbackText != "")
+            TextC(hudFeedbackText, 320, 54, hudFeedbackColor, 0.23);
+    }
+
     override void RenderOverlay(RenderEvent e)
     {
         if (consoleplayer < 0 || consoleplayer >= MAXPLAYERS) return;
@@ -10112,20 +10494,18 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         let p = players[consoleplayer].mo;
         if (!p || !p.player) return;
 
-        DrawPerimeter();
-        DrawHeader();
-        DrawBlueSimpleRifleProgress();
-        DrawTelemetry();
-        DrawOpticalNode();
-        DrawVitals();
-        DrawPowerupTimers();
-        DrawCombat();
-        DrawHelmetGlassDetail();
+        DrawCompactHeader();
+        DrawCompactInput();
+        DrawCompactBlueSimpleRifleProgress();
+        DrawCompactPowerupTimers();
+        DrawCompactTelemetry();
+        DrawCompactVitals();
+        DrawCompactCombat();
         DrawFaceNode();
         DrawPeripheralAnalyzer(e);
         DrawSSGChainCompact();
         DrawAimTargetLabel(p, e);
-        DrawInputMonitor();
+        DrawCompactFeedback();
     }
 
 }
