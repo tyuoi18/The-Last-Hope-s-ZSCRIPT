@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.10 - state-authored primary-hand offset; original right, mirrored offhand left
+// TLH v52.11 - inline dual-wield state offsets; fix incompatible action self calls
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -105,6 +105,7 @@ const TLH_MAX_CELLS = 300;
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.10: route the primary-hand shift through each compatible weapon's
 // authored overlay/weapon offset actions so every state preserves the right-hand placement.
+// v52.11: inline the blend calculation in the action wrappers to avoid incompatible Weapon self calls.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -1209,25 +1210,33 @@ class HookChainsaw : Chainsaw replaces Chainsaw
 
 class RecoilPistol : Pistol replaces Pistol
 {
-    // Weapon-state offset wrappers keep the primary hand shifted right even
-    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
-    double GetTLHDualPrimaryStateOffset()
-    {
-        let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
-            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
-        return 0.0;
-    }
-
+    // State-action wrappers calculate the slide directly from the owning
+    // player. Do not call a normal Weapon member helper from an action method:
+    // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        {
+            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+            double slide = t * t * (3.0 - 2.0 * t);
+            wx += 36.0 * slide;
+        }
+        A_WeaponOffset(wx, wy, flags);
     }
 
     action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
-            wx += GetTLHDualPrimaryStateOffset();
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            {
+                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+                double slide = t * t * (3.0 - 2.0 * t);
+                wx += 36.0 * slide;
+            }
+        }
         A_OverlayOffset(layer, wx, wy, flags);
     }
 
@@ -1506,25 +1515,33 @@ class RecoilPistol : Pistol replaces Pistol
 
 class OfficerVulkanPistol : Weapon
 {
-    // Weapon-state offset wrappers keep the primary hand shifted right even
-    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
-    double GetTLHDualPrimaryStateOffset()
-    {
-        let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
-            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
-        return 0.0;
-    }
-
+    // State-action wrappers calculate the slide directly from the owning
+    // player. Do not call a normal Weapon member helper from an action method:
+    // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        {
+            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+            double slide = t * t * (3.0 - 2.0 * t);
+            wx += 36.0 * slide;
+        }
+        A_WeaponOffset(wx, wy, flags);
     }
 
     action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
-            wx += GetTLHDualPrimaryStateOffset();
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            {
+                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+                double slide = t * t * (3.0 - 2.0 * t);
+                wx += 36.0 * slide;
+            }
+        }
         A_OverlayOffset(layer, wx, wy, flags);
     }
 
@@ -2114,25 +2131,33 @@ class RecoilShotgun : Shotgun replaces Shotgun
 
 class FastRecoilSSG : SuperShotgun replaces SuperShotgun
 {
-    // Weapon-state offset wrappers keep the primary hand shifted right even
-    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
-    double GetTLHDualPrimaryStateOffset()
-    {
-        let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
-            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
-        return 0.0;
-    }
-
+    // State-action wrappers calculate the slide directly from the owning
+    // player. Do not call a normal Weapon member helper from an action method:
+    // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        {
+            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+            double slide = t * t * (3.0 - 2.0 * t);
+            wx += 36.0 * slide;
+        }
+        A_WeaponOffset(wx, wy, flags);
     }
 
     action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
-            wx += GetTLHDualPrimaryStateOffset();
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            {
+                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+                double slide = t * t * (3.0 - 2.0 * t);
+                wx += 36.0 * slide;
+            }
+        }
         A_OverlayOffset(layer, wx, wy, flags);
     }
 
@@ -4570,25 +4595,33 @@ class HunterRifle : Weapon
 // RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 class ServiceRevolver : Weapon
 {
-    // Weapon-state offset wrappers keep the primary hand shifted right even
-    // when Ready/Fire/Reload states rewrite their own PSprite coordinates.
-    double GetTLHDualPrimaryStateOffset()
-    {
-        let tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == self)
-            return 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
-        return 0.0;
-    }
-
+    // State-action wrappers calculate the slide directly from the owning
+    // player. Do not call a normal Weapon member helper from an action method:
+    // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        A_WeaponOffset(wx + GetTLHDualPrimaryStateOffset(), wy, flags);
+        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        {
+            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+            double slide = t * t * (3.0 - 2.0 * t);
+            wx += 36.0 * slide;
+        }
+        A_WeaponOffset(wx, wy, flags);
     }
 
     action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
     {
         if (layer == PSP_WEAPON)
-            wx += GetTLHDualPrimaryStateOffset();
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            {
+                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
+                double slide = t * t * (3.0 - 2.0 * t);
+                wx += 36.0 * slide;
+            }
+        }
         A_OverlayOffset(layer, wx, wy, flags);
     }
 
