@@ -25,6 +25,7 @@ const TLH_MAX_BULLETS = 300;
 const TLH_MAX_SHELLS = 100;
 const TLH_MAX_ROCKETS = 50;
 const TLH_MAX_CELLS = 300;
+const TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK = 60;
 
 // The Last Hope gameplay modes. The selector is a server CVar so gameplay
 // rules remain authoritative and synchronized in multiplayer. It is defined
@@ -356,6 +357,15 @@ class GaussSlug : FastProjectile
     Death:
         PLSE ABCDE 3 Bright;
         Stop;
+    }
+}
+
+class BlueGaussSlug : GaussSlug
+{
+    Default
+    {
+        // Preserve the Railgun slug's exact behavior; only recolor its green energy ramp.
+        Translation "112:127=192:207";
     }
 }
 
@@ -5316,6 +5326,64 @@ bool Aiming;
 
 
 
+
+class BlueSimpleRifle : SimpleRifle
+{
+    Default
+    {
+        Weapon.SlotNumber 2;
+        Weapon.SlotPriority 3.35;
+        Weapon.SelectionOrder 335;
+        Weapon.Kickback 125;
+        Weapon.AmmoType1 "Cell";
+        Weapon.AmmoGive1 20;
+        Weapon.AmmoUse1 1;
+        Weapon.AmmoType2 "Cell";
+        Weapon.AmmoGive2 20;
+        Weapon.AmmoUse2 2;
+        Inventory.PickupMessage "Unlocked: Blue Simple Rifle.";
+        Translation "0:255=192:207";
+    }
+
+    States
+    {
+    // Plasma cells replace the original reload/grenade utility on this variant.
+    // It keeps the Simple Rifle's handling and aim toggle, without a manual reload.
+    TLHPickupReadyShim:
+        ASLT A 0
+        {
+            A_OverlayScale(PSP_WEAPON, 0.96, 1.02);
+            A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
+        }
+        ASLT A 1 A_WeaponReady(WRF_ALLOWZOOM);
+        Loop;
+
+    Fire:
+        ASLT A 5 A_GunFlash;
+        ASLT B 5
+        {
+            A_FireProjectile("BlueGaussSlug");
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Recoil(2.0);
+        }
+        ASLT A 7 A_ReFire;
+        Goto Ready;
+
+    AltFire:
+        ASLT A 3;
+        ASLT B 5
+        {
+            A_FireProjectile("BlueGaussSlug");
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 6.0, SPF_INTERPOLATE);
+            A_Recoil(2.5);
+        }
+        ASLT B 4;
+        Goto Ready;
+    }
+}
+
 class TacticalPlayer : DoomPlayer replaces DoomPlayer
 {
     int jumpCount;
@@ -5427,7 +5495,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         Player.ViewBobSpeed 20;
         Player.StartItem "Clip", 100;
         Player.WeaponSlot 1, "DashFist", "HookChainsaw";
-        Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol", "SimpleRifle";
+        Player.WeaponSlot 2, "RecoilPistol", "ServiceRevolver", "OfficerVulkanPistol", "SimpleRifle", "BlueSimpleRifle";
         Player.WeaponSlot 3, "RecoilShotgun", "FastRecoilSSG", "SemiAutoShotgun";
         // Slot 4 includes the M4A1, bolt-action Hunter Rifle, heavy chaingun, compact SMG and M60.
         Player.WeaponSlot 4, "TacticalM4A1", "HunterRifle", "HeavyChaingun", "TLHCompactSMG", "M60MachineGun";
@@ -5464,6 +5532,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             GiveInventory("ServiceRevolver", 1, true);
             GiveInventory("OfficerVulkanPistol", 1, true);
 			GiveInventory("SimpleRifle", 1, true);
+            GiveInventory("BlueSimpleRifle", 1, true);
 
             // Slot 3
             GiveInventory("RecoilShotgun", 1, true);
@@ -7181,6 +7250,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (FindInventory("OfficerVulkanPistol")) count++;
         if (FindInventory("RecoilShotgun")) count++;
         if (FindInventory("SimpleRifle")) count++;
+        if (FindInventory("BlueSimpleRifle")) count++;
         if (FindInventory("FastRecoilSSG")) count++;
         if (FindInventory("TacticalM4A1")) count++;
         if (FindInventory("HunterRifle")) count++;
@@ -7218,6 +7288,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (selected == "" && FindInventory("SimpleRifle"))
         {
             if (pick == 1) selected = "SimpleRifle";
+            else pick--;
+        }
+        if (selected == "" && FindInventory("BlueSimpleRifle"))
+        {
+            if (pick == 1) selected = "BlueSimpleRifle";
             else pick--;
         }
         if (selected == "" && FindInventory("FastRecoilSSG"))
@@ -7667,6 +7742,11 @@ class TacticalHUDHandler : EventHandler
     transient ui Array<String> tlhInputHistory;
     transient ui String tlhHUDDualBindName;
 
+    // Map-scoped 60-kill reward and its on-visor notification.
+    String tlhBlueSimpleRifleMapName;
+    bool tlhBlueSimpleRifleUnlocked;
+    int tlhBlueSimpleRifleNoticeTics;
+
     // ------------------------------------------------------------------------
     // ANALYZER CACHE
     // ------------------------------------------------------------------------
@@ -7986,6 +8066,7 @@ class TacticalHUDHandler : EventHandler
             if (keyName == "")
                 keyName = String.Format("KEY_%d", int(e.KeyScan));
 
+            String historyKeyName = keyName;
             String binding = Bindings.GetBinding(e.KeyScan);
 
             if (binding ~== "TLH_DualWield" ||
@@ -8000,15 +8081,15 @@ class TacticalHUDHandler : EventHandler
             if (e.Type == InputEvent.Type_KeyDown)
             {
                 tlhInputLast = "DOWN " .. keyName;
-                tlhInputHistory.Push(tlhInputLast);
+                tlhInputHistory.Push("DN  " .. historyKeyName);
             }
             else
             {
                 tlhInputLast = "UP   " .. keyName;
-                tlhInputHistory.Push(tlhInputLast);
+                tlhInputHistory.Push("UP  " .. historyKeyName);
             }
 
-            if (tlhInputHistory.Size() > 32)
+            if (tlhInputHistory.Size() > 64)
                 tlhInputHistory.Delete(0);
 
             // M3 is not represented by a BT_* gameplay button, so keep its
@@ -8203,6 +8284,45 @@ class TacticalHUDHandler : EventHandler
         // while one or more timed power-ups are actually active.
         hudPowerupNames.Clear();
         hudPowerupTics.Clear();
+
+        // Blue Simple Rifle unlock: 60 kills on the current map. Restricted
+        // weapon modes keep their own rules and do not receive this reward.
+        if (tlhBlueSimpleRifleMapName != level.MapName)
+        {
+            tlhBlueSimpleRifleMapName = level.MapName;
+            tlhBlueSimpleRifleUnlocked = false;
+        }
+
+        let rewardModeCvar = CVar.FindCVar("tlh_gamemode");
+        int rewardMode = rewardModeCvar ? rewardModeCvar.GetInt() : 0;
+        let rewardSSGOnlyCvar = CVar.FindCVar("tlh_ssg_only");
+        bool rewardAllowed = rewardMode != 19 && rewardMode != 27 &&
+            !(rewardSSGOnlyCvar && rewardSSGOnlyCvar.GetBool());
+
+        if (!tlhBlueSimpleRifleUnlocked &&
+            level.killed_monsters >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK &&
+            rewardAllowed)
+        {
+            tlhBlueSimpleRifleUnlocked = true;
+            bool grantedToSomeone = false;
+
+            for (int rewardPlayerNum = 0; rewardPlayerNum < MAXPLAYERS; rewardPlayerNum++)
+            {
+                Actor rewardPlayer = players[rewardPlayerNum].mo;
+                if (rewardPlayer && rewardPlayer.player &&
+                    !rewardPlayer.FindInventory("BlueSimpleRifle"))
+                {
+                    rewardPlayer.GiveInventory("BlueSimpleRifle", 1);
+                    grantedToSomeone = true;
+                }
+            }
+
+            if (grantedToSomeone)
+                tlhBlueSimpleRifleNoticeTics = 175;
+        }
+
+        if (tlhBlueSimpleRifleNoticeTics > 0)
+            tlhBlueSimpleRifleNoticeTics--;
 
         // Clear AVOIDMELEE from monsters that were already present when the map
         // loaded. Rescan at map start/restart so existing actors are covered too.
@@ -8414,6 +8534,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             else if (hudWeaponName == "OfficerVulkanPistol") hudWeaponName = "OFFICER VULKAN";
             else if (hudWeaponName == "RecoilShotgun") hudWeaponName = "COMBAT SHOTGUN";
             else if (hudWeaponName == "SimpleRifle") hudWeaponName = "STREET SWEEPER";
+            else if (hudWeaponName == "BlueSimpleRifle") hudWeaponName = "BLUE SIMPLE RIFLE";
             else if (hudWeaponName == "FastRecoilSSG") hudWeaponName = "TACTICAL SSG";
             else if (hudWeaponName == "SemiAutoShotgun") hudWeaponName = "SEMI-AUTO SHOTGUN";
             else if (hudWeaponName == "TacticalM4A1") hudWeaponName = "TACTICAL M4A1";
@@ -9098,6 +9219,15 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
             profileY = 1.14;
             accentStrength = 1.10;
         }
+        else if (cls == "BlueSimpleRifle")
+        {
+            // This variant uses one electric-blue palette family only.
+            primary = 0x32AFFF;
+            secondary = 0x32AFFF;
+            profileX = 1.0;
+            profileY = 1.02;
+            accentStrength = 1.0;
+        }
         else if (cls == "HellfireProjector")
         {
             // Red nozzle + light-gray lower body.
@@ -9576,6 +9706,88 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         }
     }
 
+
+    // Large, readable key register placed in the free right-side visor area.
+    ui void DrawInputMonitor()
+    {
+        Color frame = 0x46545A;
+        Color dim = 0x526067;
+        Color active = 0x32AFFF;
+
+        Panel(444, 143, 172, 115, frame, 135);
+        Text("INPUT LOGGER", 452, 147, Font.CR_WHITE, 0.34);
+        TextR("LIVE", 608, 147, active, 0.30);
+
+        int bt = 0;
+        if (consoleplayer >= 0 && consoleplayer < MAXPLAYERS)
+        {
+            let p = players[consoleplayer].mo;
+            if (p && p.player)
+                bt = p.player.cmd.buttons;
+        }
+
+        Text("MOVE", 452, 160, dim, 0.25);
+        Text("W", 495, 160, (bt & BT_FORWARD) ? active : Font.CR_WHITE, 0.38);
+        Text("A", 514, 160, (bt & BT_MOVELEFT) ? active : Font.CR_WHITE, 0.38);
+        Text("S", 533, 160, (bt & BT_BACK) ? active : Font.CR_WHITE, 0.38);
+        Text("D", 552, 160, (bt & BT_MOVERIGHT) ? active : Font.CR_WHITE, 0.38);
+        Text("SP", 573, 160, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.32);
+        Text("CT", 594, 160, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.32);
+
+        Text("ACT", 452, 173, dim, 0.25);
+        Text("J", 482, 173, (bt & BT_JUMP) ? active : Font.CR_WHITE, 0.34);
+        Text("C", 497, 173, (bt & BT_CROUCH) ? active : Font.CR_WHITE, 0.34);
+        Text("M1", 514, 173, (bt & BT_ATTACK) ? active : Font.CR_WHITE, 0.32);
+        Text("M2", 537, 173, (bt & BT_ALTATTACK) ? active : Font.CR_WHITE, 0.32);
+        Text("M3", 560, 173, tlhInputM3Down ? active : Font.CR_WHITE, 0.32);
+        Text("R", 586, 173, (bt & BT_RELOAD) ? active : Font.CR_WHITE, 0.34);
+
+        Line(452, 184, 608, 184, frame, 170, 0.65);
+        Text("RECENT KEY EVENTS", 452, 188, Font.CR_WHITE, 0.29);
+
+        int count = tlhInputHistory.Size();
+        int rows = min(6, count);
+        if (rows <= 0)
+        {
+            Text("WAITING FOR INPUT...", 452, 204, dim, 0.32);
+        }
+        else
+        {
+            for (int i = 0; i < rows; i++)
+            {
+                int historyIndex = count - rows + i;
+                int eventColor = (i == rows - 1) ? Font.CR_YELLOW : Font.CR_WHITE;
+                Text(tlhInputHistory[historyIndex], 452, 199 + i * 9,
+                    eventColor, 0.34);
+            }
+        }
+    }
+
+    // Persistent kill-progress readout; the unlock banner briefly replaces it.
+    ui void DrawBlueSimpleRifleProgress()
+    {
+        Color electricBlue = 0x32AFFF;
+
+        if (tlhBlueSimpleRifleNoticeTics > 0)
+        {
+            TextC("ARSENAL UNLOCKED // BLUE SIMPLE RIFLE",
+                320, 57, electricBlue, 0.38);
+        }
+        else if (tlhBlueSimpleRifleUnlocked)
+        {
+            TextC("BLUE SIMPLE RIFLE // UNLOCKED",
+                320, 57, electricBlue, 0.30);
+        }
+        else
+        {
+            int progress = clamp(hudKills, 0, TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK);
+            TextC(String.Format("BLUE SIMPLE RIFLE // %02d/60 KILLS",
+                progress), 320, 57, electricBlue, 0.30);
+            SegBar(253, 66, 134, progress,
+                TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK, 12, electricBlue);
+        }
+    }
+
     // ========================================================================
     // ROOT YARBIS VISOR
     // ========================================================================
@@ -9589,6 +9801,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
 
         DrawPerimeter();
         DrawHeader();
+        DrawBlueSimpleRifleProgress();
         DrawTelemetry();
         DrawOpticalNode();
         DrawVitals();
@@ -9599,6 +9812,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         DrawPeripheralAnalyzer(e);
         DrawSSGChainCompact();
         DrawAimTargetLabel(p, e);
+        DrawInputMonitor();
     }
 
 }
