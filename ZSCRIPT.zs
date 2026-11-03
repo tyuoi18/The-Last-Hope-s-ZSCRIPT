@@ -103,8 +103,8 @@ const TLH_MAX_CELLS = 300;
 // v52.5: scope SimpleRifle PSprite states explicitly as weapon states to disambiguate action self.
 // v52.7: remove the invalid default-class tint lookup and apply the named BlueSimpleRifle TRNSLATE directly to PSprites.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
-// v52.9: tried routing compatible weapon transforms through Weapon.PSpriteTick.
-// v52.10: move the primary-hand shift into each compatible weapon's A_OverlayOffset/A_WeaponOffset wrappers, preventing state actions from overwriting it.
+// v52.10: route the primary-hand shift through each compatible weapon's
+// authored overlay/weapon offset actions so every state preserves the right-hand placement.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
