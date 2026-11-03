@@ -1,9 +1,10 @@
 // The Last Hope custom controls.
-// Dual Wield uses BT_USER3, handled directly by TacticalPlayer.Tick().
+// TacticalHUDHandler.InputProcess routes +user1/+user2/+user3 as player events.
+// This keeps TLH movement and Dual Wield independent from weapon PSprite flags.
 addkeysection "The Last Hope" TheLastHope
 addmenukey "Toggle Dual Wield" "+user3"
 addmenukey "Tactical Dash" "+user2"
 addmenukey "Go Prone (hold)" "+user1"
 defaultbind "G" "+user3"
 defaultbind "Q" "+user2"
-bind "MOUSE3" "+user1"
+defaultbind "MOUSE3" "+user1"
