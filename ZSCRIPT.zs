@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.11 - inline dual-wield state offsets; fix incompatible action self calls
+// TLH v52.12 - resolve weapon-action context through player.mo and invoker
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -105,7 +105,8 @@ const TLH_MAX_CELLS = 300;
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.10: route the primary-hand shift through each compatible weapon's
 // authored overlay/weapon offset actions so every state preserves the right-hand placement.
-// v52.11: inline the blend calculation in the action wrappers to avoid incompatible Weapon self calls.
+// v52.11: inline the blend calculation in the action wrappers.
+// v52.12: use player.mo/self-owner and invoker-weapon explicitly inside weapon actions, avoiding ambiguous Owner lookups.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -1215,11 +1216,12 @@ class RecoilPistol : Pistol replaces Pistol
     // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        // In a weapon action, self is the player pawn and invoker is this weapon.
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
-            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-            double slide = t * t * (3.0 - 2.0 * t);
+            double slide = tlhPlayer.GetTLHDualPrimarySlide();
             wx += 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
@@ -1229,11 +1231,11 @@ class RecoilPistol : Pistol replaces Pistol
     {
         if (layer == PSP_WEAPON)
         {
-            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
-                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-                double slide = t * t * (3.0 - 2.0 * t);
+                double slide = tlhPlayer.GetTLHDualPrimarySlide();
                 wx += 36.0 * slide;
             }
         }
@@ -1520,11 +1522,12 @@ class OfficerVulkanPistol : Weapon
     // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        // In a weapon action, self is the player pawn and invoker is this weapon.
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
-            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-            double slide = t * t * (3.0 - 2.0 * t);
+            double slide = tlhPlayer.GetTLHDualPrimarySlide();
             wx += 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
@@ -1534,11 +1537,11 @@ class OfficerVulkanPistol : Weapon
     {
         if (layer == PSP_WEAPON)
         {
-            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
-                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-                double slide = t * t * (3.0 - 2.0 * t);
+                double slide = tlhPlayer.GetTLHDualPrimarySlide();
                 wx += 36.0 * slide;
             }
         }
@@ -2136,11 +2139,12 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        // In a weapon action, self is the player pawn and invoker is this weapon.
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
-            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-            double slide = t * t * (3.0 - 2.0 * t);
+            double slide = tlhPlayer.GetTLHDualPrimarySlide();
             wx += 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
@@ -2150,11 +2154,11 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
     {
         if (layer == PSP_WEAPON)
         {
-            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
-                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-                double slide = t * t * (3.0 - 2.0 * t);
+                double slide = tlhPlayer.GetTLHDualPrimarySlide();
                 wx += 36.0 * slide;
             }
         }
@@ -4600,11 +4604,12 @@ class ServiceRevolver : Weapon
     // GZDoom gives those calls different self contexts during state execution.
     action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
     {
-        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+        // In a weapon action, self is the player pawn and invoker is this weapon.
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
-            double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-            double slide = t * t * (3.0 - 2.0 * t);
+            double slide = tlhPlayer.GetTLHDualPrimarySlide();
             wx += 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
@@ -4614,11 +4619,11 @@ class ServiceRevolver : Weapon
     {
         if (layer == PSP_WEAPON)
         {
-            TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon != null)
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
-                double t = clamp(tlhPlayer.tlhDualWieldBlend / 0.40, 0.0, 1.0);
-                double slide = t * t * (3.0 - 2.0 * t);
+                double slide = tlhPlayer.GetTLHDualPrimarySlide();
                 wx += 36.0 * slide;
             }
         }
