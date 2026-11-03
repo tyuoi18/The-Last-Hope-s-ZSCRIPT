@@ -5494,11 +5494,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool wasOnGround;
     bool akimboButtonHeld;
 
-    // Personal, per-map SimpleRifle kill reward.
-    String tlhSimpleRifleMapName;
-    int tlhSimpleRifleKills;
-    bool tlhBlueSimpleRifleUnlocked;
-    int tlhBlueSimpleRifleNoticeTics;
+    // Weapons removed by a game-mode transition are destroyed after the
+    // player PSprite has stopped using their states.
     Array<Weapon> tlhDeferredWeaponRemovals;
 
     // Player-corpse smell reaction, owned by the active player pawn.
@@ -5772,7 +5769,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player || !player.mo) return;
 
         CleanupDeferredWeaponRemovals();
-        UpdateBlueSimpleRifleMapState();
 
         if (player.playerstate == PST_DEAD)
         {
@@ -6036,83 +6032,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         UpdateTLHProceduralMotion(onGround, bt, obt);
 
         wasOnGround = onGround;
-    }
-
-    // ========================================================================
-    // MAP-SCOPED BLUE SIMPLE RIFLE POWER-UP
-    // ========================================================================
-
-    void UpdateBlueSimpleRifleMapState()
-    {
-        if (tlhSimpleRifleMapName != level.MapName || level.maptime == 0)
-        {
-            RemoveOwnedItemLocal("BlueSimpleRifle");
-            tlhSimpleRifleMapName = level.MapName;
-            tlhSimpleRifleKills = 0;
-            tlhBlueSimpleRifleUnlocked = false;
-            tlhBlueSimpleRifleNoticeTics = 0;
-        }
-        else if (tlhBlueSimpleRifleNoticeTics > 0)
-        {
-            tlhBlueSimpleRifleNoticeTics--;
-        }
-    }
-
-    void RegisterSimpleRifleKill()
-    {
-        if (!player || player.playerstate != PST_LIVE || Health <= 0 ||
-            tlhBlueSimpleRifleUnlocked)
-            return;
-
-        let modeCvar = CVar.FindCVar("tlh_gamemode");
-        int mode = modeCvar ? modeCvar.GetInt() : 0;
-        let ssgOnlyCvar = CVar.FindCVar("tlh_ssg_only");
-        if (mode == 19 || mode == 27 || (ssgOnlyCvar && ssgOnlyCvar.GetBool()))
-            return;
-
-        tlhSimpleRifleKills = min(TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK,
-            tlhSimpleRifleKills + 1);
-
-        if (tlhSimpleRifleKills == 30)
-            A_Print("\\c[Blue]BLUE SIMPLE RIFLE // 30/60 SIMPLE RIFLE KILLS");
-        else if (tlhSimpleRifleKills == 50)
-            A_Print("\\c[Blue]BLUE SIMPLE RIFLE // 10 KILLS TO UNLOCK");
-
-        if (tlhSimpleRifleKills >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK)
-        {
-            tlhBlueSimpleRifleUnlocked = true;
-            GiveInventory("BlueSimpleRifle", 1);
-            tlhBlueSimpleRifleNoticeTics = 175;
-            A_Print("\\c[Blue]ARSENAL UNLOCKED // BLUE SIMPLE RIFLE ACTIVE UNTIL NEXT MAP");
-            A_StartSound("weapons/sshotc", CHAN_BODY);
-        }
-    }
-
-    void CleanupDeferredWeaponRemovals()
-    {
-        PSprite weaponPSprite = player ? player.FindPSprite(PSP_WEAPON) : null;
-
-        for (int i = 0; i < tlhDeferredWeaponRemovals.Size();)
-        {
-            Weapon oldWeapon = tlhDeferredWeaponRemovals[i];
-            if (!oldWeapon)
-            {
-                tlhDeferredWeaponRemovals.Delete(i);
-                continue;
-            }
-
-            if (player && (player.ReadyWeapon == oldWeapon ||
-                player.PendingWeapon == oldWeapon ||
-                (weaponPSprite && weaponPSprite.Caller == oldWeapon)))
-            {
-                i++;
-                continue;
-            }
-
-            RemoveInventory(oldWeapon);
-            oldWeapon.Destroy();
-            tlhDeferredWeaponRemovals.Delete(i);
-        }
     }
 
     // ========================================================================
@@ -7975,7 +7894,14 @@ class TacticalHUDHandler : EventHandler
     transient ui Array<String> tlhInputHistory;
     transient ui String tlhHUDDualBindName;
 
-    // Per-player, per-map SimpleRifle reward snapshot for UI rendering.
+    // Per-player, per-map reward state. Kept on this map handler rather than
+    // TacticalPlayer so progress survives death and pawn replacement.
+    Array<String> tlhBlueRewardMapNames;
+    Array<int> tlhSimpleRifleKillsByPlayer;
+    Array<bool> tlhBlueSimpleRifleUnlockedByPlayer;
+    Array<int> tlhBlueSimpleRifleNoticeByPlayer;
+
+    // UI snapshot for the local player.
     int hudBlueSimpleRifleKills;
     bool hudBlueSimpleRifleUnlocked;
     int hudBlueSimpleRifleNoticeTics;
@@ -8045,6 +7971,94 @@ class TacticalHUDHandler : EventHandler
     }
 
 
+    // Keep the map-scoped unlock on the event handler, not the pawn:
+    // Doom replaces the player's actor on respawn, but this handler persists.
+    void EnsureBlueSimpleRiflePlayerState()
+    {
+        while (tlhBlueRewardMapNames.Size() < MAXPLAYERS)
+        {
+            tlhBlueRewardMapNames.Push("");
+            tlhSimpleRifleKillsByPlayer.Push(0);
+            tlhBlueSimpleRifleUnlockedByPlayer.Push(false);
+            tlhBlueSimpleRifleNoticeByPlayer.Push(0);
+        }
+
+        for (int i = 0; i < MAXPLAYERS; i++)
+        {
+            Actor pawn = players[i].mo;
+            if (tlhBlueRewardMapNames[i] != level.MapName || level.maptime == 0)
+            {
+                tlhBlueRewardMapNames[i] = level.MapName;
+                tlhSimpleRifleKillsByPlayer[i] = 0;
+                tlhBlueSimpleRifleUnlockedByPlayer[i] = false;
+                tlhBlueSimpleRifleNoticeByPlayer[i] = 0;
+
+                if (pawn)
+                {
+                    Inventory token = pawn.FindInventory("BlueSimpleRifle");
+                    if (token)
+                    {
+                        pawn.RemoveInventory(token);
+                        token.Destroy();
+                    }
+                }
+            }
+            else if (tlhBlueSimpleRifleNoticeByPlayer[i] > 0)
+            {
+                tlhBlueSimpleRifleNoticeByPlayer[i]--;
+            }
+
+            // Reapply after death/respawn if the player already earned the unlock.
+            if (pawn && tlhBlueSimpleRifleUnlockedByPlayer[i] &&
+                !pawn.FindInventory("BlueSimpleRifle"))
+            {
+                pawn.GiveInventory("BlueSimpleRifle", 1);
+            }
+        }
+    }
+
+    void RegisterBlueSimpleRifleKill(Actor killer)
+    {
+        if (!killer || !killer.player)
+            return;
+
+        EnsureBlueSimpleRiflePlayerState();
+        int playerNum = killer.PlayerNumber();
+        if (playerNum < 0 || playerNum >= MAXPLAYERS ||
+            tlhBlueSimpleRifleUnlockedByPlayer[playerNum])
+            return;
+
+        let modeCvar = CVar.FindCVar("tlh_gamemode");
+        int mode = modeCvar ? modeCvar.GetInt() : 0;
+        let ssgOnlyCvar = CVar.FindCVar("tlh_ssg_only");
+        if (mode == 19 || mode == 27 || (ssgOnlyCvar && ssgOnlyCvar.GetBool()))
+            return;
+
+        tlhSimpleRifleKillsByPlayer[playerNum] =
+            min(TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK,
+                tlhSimpleRifleKillsByPlayer[playerNum] + 1);
+
+        Actor currentPawn = players[playerNum].mo;
+        if (tlhSimpleRifleKillsByPlayer[playerNum] == 30 && currentPawn)
+            currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
+        else if (tlhSimpleRifleKillsByPlayer[playerNum] == 50 && currentPawn)
+            currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
+
+        if (tlhSimpleRifleKillsByPlayer[playerNum] >= TLH_BLUE_SIMPLE_RIFLE_KILL_UNLOCK)
+        {
+            tlhBlueSimpleRifleUnlockedByPlayer[playerNum] = true;
+            tlhBlueSimpleRifleNoticeByPlayer[playerNum] = 175;
+
+            // Give to the current pawn, which may already be a replacement
+            // for the pawn that originally dealt the final blow.
+            if (currentPawn)
+                currentPawn.GiveInventory("BlueSimpleRifle", 1);
+
+            if (currentPawn)
+                currentPawn.A_StartSound("weapons/sshotc", CHAN_BODY);
+        }
+    }
+
     override void WorldThingDamaged(WorldEvent e)
     {
         if (!e.Thing || !e.Thing.bIsMonster)
@@ -8081,9 +8095,7 @@ class TacticalHUDHandler : EventHandler
         if (!credit || !credit.killer || !credit.killer.player)
             return;
 
-        let tacticalKiller = TacticalPlayer(credit.killer);
-        if (tacticalKiller)
-            tacticalKiller.RegisterSimpleRifleKill();
+        RegisterBlueSimpleRifleKill(credit.killer);
 
         e.Thing.RemoveInventory(credit);
         credit.Destroy();
@@ -8563,6 +8575,8 @@ class TacticalHUDHandler : EventHandler
         hudPowerupNames.Clear();
         hudPowerupTics.Clear();
 
+        EnsureBlueSimpleRiflePlayerState();
+
         // Blue Simple Rifle reward is tracked per player by WorldThingDied().
         // Only damage from the dedicated SimpleRifle puff can advance the counter.
 
@@ -8696,11 +8710,13 @@ class TacticalHUDHandler : EventHandler
 
         let tpState = TacticalPlayer(p);
         if (tpState)
-        {
             tlhHUDDualActive = tpState.tlhDualWieldActive;
-            hudBlueSimpleRifleKills = tpState.tlhSimpleRifleKills;
-            hudBlueSimpleRifleUnlocked = tpState.tlhBlueSimpleRifleUnlocked;
-            hudBlueSimpleRifleNoticeTics = tpState.tlhBlueSimpleRifleNoticeTics;
+
+        if (consoleplayer >= 0 && consoleplayer < MAXPLAYERS)
+        {
+            hudBlueSimpleRifleKills = tlhSimpleRifleKillsByPlayer[consoleplayer];
+            hudBlueSimpleRifleUnlocked = tlhBlueSimpleRifleUnlockedByPlayer[consoleplayer];
+            hudBlueSimpleRifleNoticeTics = tlhBlueSimpleRifleNoticeByPlayer[consoleplayer];
         }
         hudBlueSimpleRifleActive = (p.FindInventory("BlueSimpleRifle") != null);
 
