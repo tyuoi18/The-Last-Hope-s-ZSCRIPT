@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.7 - Blue Simple Rifle progression, tactical minimap, reactive pseudo-shaders; restore stock M4A1 HUD
+// TLH v52.8 - shot-only recoil scaling and staged, mirrored Dual Wield presentation
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -102,6 +102,7 @@ const TLH_MAX_CELLS = 300;
 // v52.3: use a class-typed palette default lookup and keep Blue unlock progress in the HUD handler so it survives respawn.
 // v52.5: scope SimpleRifle PSprite states explicitly as weapon states to disambiguate action self.
 // v52.7: remove the invalid default-class tint lookup and apply the named BlueSimpleRifle TRNSLATE directly to PSprites.
+// v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
 // apply a dedicated electric-blue palette translation to the active Simple Rifle PSprite.
@@ -5159,6 +5160,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhAnimWeaponKickVel;
     double tlhAnimWeaponKickSide;
 
+    // A separate short envelope drives only the firing squash/stretch.
+    // It is not tied to the longer recoil spring, so reloads and other states
+    // cannot inherit a lingering scale deformation.
+    double tlhAnimShotScaleKick;
+    double tlhAnimShotScalePeak;
+    int tlhAnimShotScaleTics;
+
     double tlhAnimLandingKick;
     double tlhAnimLandingVel;
     double tlhAnimDamageKick;
@@ -5346,16 +5354,34 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     {
         if (tlhDualWieldActive)
         {
-            tlhDualWieldBlend += (1.0 - tlhDualWieldBlend) * 0.28;
-            if (tlhDualWieldBlend >= 0.985)
+            tlhDualWieldBlend += (1.0 - tlhDualWieldBlend) * 0.25;
+            if (tlhDualWieldBlend >= 0.995)
                 tlhDualWieldBlend = 1.0;
         }
         else
         {
-            tlhDualWieldBlend *= 0.70;
-            if (tlhDualWieldBlend <= 0.015)
+            // The mirrored hand descends first. The primary weapon only begins
+            // returning after the offhand has mostly cleared the screen.
+            tlhDualWieldBlend *= 0.76;
+            if (tlhDualWieldBlend <= 0.01)
                 tlhDualWieldBlend = 0.0;
         }
+    }
+
+    // Separate eased tracks create a deliberate two-step entrance:
+    // 1) slide the original weapon to the right;
+    // 2) bring the mirrored weapon up from below on the opposite side.
+    // The same tracks naturally reverse in the correct order when disabled.
+    double GetTLHDualPrimarySlide()
+    {
+        double t = clamp(tlhDualWieldBlend / 0.40, 0.0, 1.0);
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    double GetTLHDualOffhandRise()
+    {
+        double t = clamp((tlhDualWieldBlend - 0.40) / 0.60, 0.0, 1.0);
+        return t * t * (3.0 - 2.0 * t);
     }
 
     // The second PSprite is pinned to an inert state. Every tic it receives
@@ -5423,11 +5449,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         mirror.bCVarFast = primary.bCVarFast;
         mirror.bPowDouble = primary.bPowDouble;
 
-        double blend = tlhDualWieldBlend;
-        // bMirror reverses the X origin during rendering, hence the inverse
-        // stored coordinate below. At full blend the hands sit on opposite sides.
-        mirror.x = 44.0 * blend - primary.x;
-        mirror.y = primary.y + (1.0 - blend) * 54.0;
+        double primarySlide = GetTLHDualPrimarySlide();
+        double offhandRise = GetTLHDualOffhandRise();
+        double primaryShift = 36.0 * primarySlide;
+
+        // bMirror reverses the X origin during rendering. Reflect the primary
+        // weapon's live horizontal position around the center, preserving its
+        // sway/recoil while keeping a clear 72-pixel separation at full extension.
+        mirror.x = 2.0 * primaryShift - primary.x;
+
+        // The offhand starts well below the HUD and rises only after the main
+        // weapon has reached its right-hand position. Fade follows the same path.
+        mirror.y = primary.y + (1.0 - offhandRise) * 70.0;
+        mirror.alpha = primary.alpha * offhandRise;
+
         // Match the engine's one-tic interpolation marker after copying offsets.
         mirror.InterpolateTic = primary.InterpolateTic;
     }
@@ -6495,13 +6530,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         totalX = clamp(totalX, -12.0, 12.0);
         // Keep the muzzle flash aligned with the shifted primary weapon.
         if ((isWeaponPSP || isFlashPSP) && tlhDualWieldWeapon == weapon)
-            totalX += 22.0 * tlhDualWieldBlend;
+            totalX += 36.0 * GetTLHDualPrimarySlide();
         totalY = clamp(totalY, -18.0, 18.0);
 
-        double recoilCompression = clamp(tlhAnimWeaponKick * 0.010, 0.0, 0.11);
-        double landingCompression = clamp(tlhAnimLandingKick * 0.004, 0.0, 0.035);
-        double scaleX = visualScaleX * (1.0 + recoilCompression * 0.28);
-        double scaleY = visualScaleY * (1.0 - recoilCompression - landingCompression);
+        // Only a real firing event applies transient squash/stretch. The
+        // landing response remains positional, avoiding scale changes during
+        // reloads, equip animations, idle states or unrelated presentation.
+        double shotCompression = clamp(tlhAnimShotScaleKick * weaponFactor,
+            0.0, 0.095);
+        double scaleX = visualScaleX * (1.0 + shotCompression * 0.28);
+        double scaleY = visualScaleY * (1.0 - shotCompression);
         if (scaleX < 0.60) scaleX = 0.60;
         if (scaleY < 0.60) scaleY = 0.60;
 
@@ -6673,8 +6711,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         let hunter = HunterRifle(FindInventory("HunterRifle"));
         if (hunter) hunterRounds = hunter.magazineAmmo;
 
+        // The revolver keeps its loaded cartridges in a script-side cylinder,
+        // not in the reserve Clip inventory. Include it so firing either hand
+        // still registers as a shot for procedural recoil.
+        int revolverRounds = 0;
+        let revolver = ServiceRevolver(FindInventory("ServiceRevolver"));
+        if (revolver) revolverRounds = revolver.cylinderAmmo;
+
         return CountInv("Clip") + CountInv("Shell") +
-               CountInv("RocketAmmo") + CountInv("Cell") + hunterRounds;
+               CountInv("RocketAmmo") + CountInv("Cell") +
+               hunterRounds + revolverRounds;
     }
 
     void UpdateTLHProceduralMotion(bool onGroundNow, int bt, int oldbt)
@@ -6741,6 +6787,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimWeaponKick = 0;
             tlhAnimWeaponKickVel = 0;
             tlhAnimWeaponKickSide = 0;
+            tlhAnimShotScaleKick = 0;
+            tlhAnimShotScalePeak = 0;
+            tlhAnimShotScaleTics = 0;
 
             // Fresh weapon presentation: start slightly low, then let the
             // spring settle the weapon into the new stance.
@@ -6777,6 +6826,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 else if (cls == "RecoilBFG9000")
                     impulse *= 2.60;
 
+                // Stretch is a short shot-only pulse, independent from the
+                // longer recoil spring. Requiring an attack input prevents
+                // reserve-ammo changes during reloads from triggering it.
+                if ((bt & (BT_ATTACK | BT_ALTATTACK)) &&
+                    !(bt & BT_RELOAD))
+                {
+                    tlhAnimShotScalePeak = clamp(impulse * 0.045, 0.025, 0.095);
+                    tlhAnimShotScaleTics = 4;
+                }
+
                 // Alternating lateral impulse prevents automatic fire from
                 // drifting permanently in one direction.
                 double sideImpulse = ((level.time & 1) == 0) ? 1.0 : -1.0;
@@ -6786,6 +6845,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
         tlhAnimLastAmmoSignature = ammoSignature;
+
+        // Four rendered tics: full impulse, then a linear return to the
+        // weapon's authored/profile scale. No shot means no extra deformation.
+        if (tlhAnimShotScaleTics > 0)
+        {
+            tlhAnimShotScaleKick =
+                tlhAnimShotScalePeak * (double(tlhAnimShotScaleTics) / 4.0);
+            tlhAnimShotScaleTics--;
+        }
+        else
+        {
+            tlhAnimShotScaleKick = 0.0;
+            tlhAnimShotScalePeak = 0.0;
+        }
 
         // Melee weapons do not consume ammo, so give their first swing a small
         // procedural body kick on the attack edge.
