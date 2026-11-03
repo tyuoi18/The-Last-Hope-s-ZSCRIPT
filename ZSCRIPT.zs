@@ -6345,7 +6345,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // applied directly to the weapon and flash PSprites, never to the screen.
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
-            TranslationID blueTint = Translate.GetID('BlueSimpleRifle');
+            TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
             if (blueTint)
                 psp.Translation = blueTint;
         }
