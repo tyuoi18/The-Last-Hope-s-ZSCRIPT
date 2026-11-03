@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.8 - shot-only recoil scaling and staged, mirrored Dual Wield presentation
+// TLH v52.9 - apply dual-hand transforms in weapon PSpriteTick; original right, mirror left
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -102,6 +102,8 @@ const TLH_MAX_CELLS = 300;
 // v52.3: use a class-typed palette default lookup and keep Blue unlock progress in the HUD handler so it survives respawn.
 // v52.5: scope SimpleRifle PSprite states explicitly as weapon states to disambiguate action self.
 // v52.7: remove the invalid default-class tint lookup and apply the named BlueSimpleRifle TRNSLATE directly to PSprites.
+// v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
+// v52.9: route compatible weapon PSprite transforms through Weapon.PSpriteTick so weapon state actions cannot overwrite the primary-hand shift.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -1206,6 +1208,15 @@ class HookChainsaw : Chainsaw replaces Chainsaw
 
 class RecoilPistol : Pistol replaces Pistol
 {
+    override void PSpriteTick(PSprite psp)
+    {
+        Super.PSpriteTick(psp);
+        let tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer)
+            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+    }
+
+
     bool fullAuto;
     int reloadDecisionTicks;
     bool reloadButtonHeld;
@@ -1479,6 +1490,15 @@ class RecoilPistol : Pistol replaces Pistol
 
 class OfficerVulkanPistol : Weapon
 {
+    override void PSpriteTick(PSprite psp)
+    {
+        Super.PSpriteTick(psp);
+        let tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer)
+            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+    }
+
+
     int weaponMode;
     bool fullAuto;
     int reloadDecisionTicks;
@@ -2063,6 +2083,15 @@ class RecoilShotgun : Shotgun replaces Shotgun
 
 class FastRecoilSSG : SuperShotgun replaces SuperShotgun
 {
+    override void PSpriteTick(PSprite psp)
+    {
+        Super.PSpriteTick(psp);
+        let tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer)
+            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+    }
+
+
     bool dragonBreath;
 
     Default
@@ -4495,6 +4524,15 @@ class HunterRifle : Weapon
 // RVOLQ0 (idle), RVOLA0/RVOLB0/RVOLC0 (fire frames), RVOLG0 (world pickup).
 class ServiceRevolver : Weapon
 {
+    override void PSpriteTick(PSprite psp)
+    {
+        Super.PSpriteTick(psp);
+        let tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer)
+            tlhPlayer.ProcessTLHWeaponPSpriteTick(psp);
+    }
+
+
     // Six-shot cylinder. Clip ammo is held in reserve and transferred on reload.
     int cylinderAmmo;
     bool cylinderInitialized;
@@ -5468,6 +5506,24 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         mirror.InterpolateTic = primary.InterpolateTic;
     }
 
+    // Compatible weapons call this from their native PSpriteTick callback.
+    // That callback runs after the current frame's authored overlay actions,
+    // so the original hand's rightward shift is no longer overwritten by
+    // A_OverlayOffset/A_WeaponReady during the same PSprite update.
+    void ProcessTLHWeaponPSpriteTick(PSprite psp)
+    {
+        if (!psp || !player || !player.ReadyWeapon ||
+            psp.Caller != player.ReadyWeapon)
+            return;
+
+        ApplyTLHWeaponPSpriteMotion(psp);
+
+        // Sync the visual-only left hand after the original weapon has received
+        // its final transform for this tic.
+        if (psp.ID == PSP_WEAPON)
+            UpdateTLHDualWieldPresentation(psp);
+    }
+
     override void Tick()
     {
         Super.Tick();
@@ -5979,11 +6035,19 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         PSprite weaponPSP = player.FindPSprite(PSP_WEAPON);
         PSprite flashPSP = player.FindPSprite(PSP_FLASH);
 
-        if (weaponPSP) ApplyTLHWeaponPSpriteMotion(weaponPSP);
-        if (flashPSP) ApplyTLHWeaponPSpriteMotion(flashPSP);
+        // Dual-compatible weapons run their transforms from Weapon.PSpriteTick,
+        // after authored state actions. All other weapons retain the player-tick
+        // path so their existing procedural motion remains unchanged.
+        bool usesWeaponPSpriteTick = SupportsTLHProceduralDualWield(player.ReadyWeapon);
+        if (weaponPSP && !usesWeaponPSpriteTick)
+            ApplyTLHWeaponPSpriteMotion(weaponPSP);
+        if (flashPSP && !usesWeaponPSpriteTick)
+            ApplyTLHWeaponPSpriteMotion(flashPSP);
 
-        // Duplicate the final visible primary frame on the mirrored layer.
-        UpdateTLHDualWieldPresentation(weaponPSP);
+        // Keep fallback presentation for any future compatible weapon without
+        // the native callback. Current dual-wield weapons sync from PSpriteTick.
+        if (!usesWeaponPSpriteTick)
+            UpdateTLHDualWieldPresentation(weaponPSP);
 
         wasOnGround = onGround;
     }
