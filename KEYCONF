@@ -1,6 +1,6 @@
 // The Last Hope custom controls.
-// TacticalHUDHandler.InputProcess routes +user1/+user2/+user3 as player events.
-// This keeps TLH movement and Dual Wield independent from weapon PSprite flags.
+// TacticalPlayer.Tick reads BT_USER1/2/3 directly from player.cmd.buttons.
+// These script buttons are independent of the equipped weapon's PSprite flags.
 addkeysection "The Last Hope" TheLastHope
 addmenukey "Toggle Dual Wield" "+user3"
 addmenukey "Tactical Dash" "+user2"
