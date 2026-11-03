@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v48.1 - event-routed tactical binds / procedural Dual Wield / movement overhaul
+// TLH v48.2 - direct BT_USER input / reliable procedural Dual Wield / movement overhaul
 // WEAPON-AGNOSTIC DUAL-WIELD / WEAPON-INDEPENDENT INPUT ROUTING / HELMET HUD
 //
 // R remains untouched. Dual Wield is driven by a shared player state and a
@@ -76,8 +76,10 @@ const TLH_MAX_CELLS = 300;
 // HellKnight, BaronOfHell and Cacodemon.
 // v47.0: sprint stamina, directional dash, momentum slide, coyote jump and air control.
 // v48.0: class-agnostic Dual Wield controller using a shared state contract.
-// v48.1: +user1/+user2/+user3 are routed through EventHandler network events so
-// tactical actions do not depend on the currently equipped weapon's PSprite flags.
+// v48.1: +user1/+user2/+user3 were incorrectly routed through no-activator
+// network events and received by NetworkProcess, so the actions never ran.
+// v48.2: read BT_USER1/2/3 directly from player.cmd.buttons in TacticalPlayer.Tick;
+// edge detection uses player.oldbuttons and Dual Wield has an independent cooldown.
 // Esta versión conserva la estructura y la intención del script original,
 // pero corrige consumo de munición, estados muertos, overlays, trazas del HUD,
 // cadenas 3D por tick, comportamiento de la baliza orbital y varios detalles
