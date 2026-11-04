@@ -5020,13 +5020,13 @@ class ServiceRevolver : Weapon
             if (!(player.cmd.buttons & BT_ALTATTACK))
                 invoker.altTriggerLatched = false;
 
-            int readyFlags = WRF_NoBob;
+            int readyFlags = 0;
             if (!invoker.reloadLatched)
                 readyFlags |= WRF_ALLOWRELOAD;
             if (invoker.triggerLatched || invoker.altTriggerLatched)
                 readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
 
-            // Fixed ready pose. WRF_NoBob prevents native weapon bob.
+            // Keep GZDoom's native weapon bob enabled.
             A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
             A_WeaponReady(readyFlags);
         }
@@ -6675,66 +6675,26 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
     // Apply positional and rotational motion only to the primary weapon layer.
     // Sprite scale remains exactly as authored by the weapon.
+    // Keep only palette handling here. Weapon position and bob are left to
+    // GZDoom's native DoomPlayer/PSprite pipeline.
     void ApplyTLHWeaponPSpriteMotion(PSprite psp)
     {
         if (!psp || !player || !player.mo || !player.ReadyWeapon ||
             psp.ID != PSP_WEAPON)
             return;
+
         Weapon weapon = player.ReadyWeapon;
         if (psp.Caller != weapon)
             return;
 
+        // Explicitly preserve native weapon bob on the primary weapon layer.
+        psp.bAddBob = true;
         psp.Translation = 0;
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
             TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
             if (blueTint) psp.Translation = blueTint;
         }
-
-        bool sameState = (tlhAnimLastWeaponPSPState == psp.CurState);
-        if (sameState)
-        {
-            psp.x -= tlhAnimAppliedWeaponX;
-            psp.y -= tlhAnimAppliedWeaponY;
-            psp.rotation -= tlhAnimAppliedWeaponRoll;
-        }
-        else
-        {
-            tlhAnimAppliedWeaponX = 0;
-            tlhAnimAppliedWeaponY = 0;
-            tlhAnimAppliedWeaponRoll = 0;
-        }
-        tlhAnimLastWeaponPSPState = psp.CurState;
-
-        if (weapon is "TacticalM4A1")
-        {
-            tlhAnimAppliedWeaponX = 0;
-            tlhAnimAppliedWeaponY = 0;
-            tlhAnimAppliedWeaponRoll = 0;
-            return;
-        }
-
-        double visualOffsetX = 0.0;
-        double visualOffsetY = 0.0;
-        double visualBaseRoll = 0.0;
-        double unusedSway = 0.0;
-        GetTLHWeaponVisualProfile(weapon,
-            visualOffsetX, visualOffsetY, visualBaseRoll, unusedSway);
-
-        // Only the weapon draw/equip spring remains. It never reacts to firing or movement.
-        double drawRoll = -tlhAnimDrawKick * 0.10;
-        double drawY = tlhAnimDrawKick * 0.72;
-        double drawX = -tlhAnimDrawKick * 0.06;
-        double totalX = visualOffsetX + drawX;
-        double totalY = visualOffsetY + drawY;
-        double totalRoll = visualBaseRoll + drawRoll;
-
-        psp.x += totalX;
-        psp.y += totalY;
-        psp.rotation += totalRoll;
-        tlhAnimAppliedWeaponX = totalX;
-        tlhAnimAppliedWeaponY = totalY;
-        tlhAnimAppliedWeaponRoll = totalRoll;
     }
 
 
