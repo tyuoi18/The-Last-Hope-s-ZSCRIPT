@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.20.5 - visible weapon sway timing and two-clone Dual Wield presentation
+// TLH v52.25 - persistent Dual Wield auto-release on queued weapon switch; configurable gore controls
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -115,7 +115,8 @@ const TLH_MAX_CELLS = 300;
 // v52.21: restore expressive universal first-person weapon motion, including
 // movement inertia, gait, firing/landing/damage springs and wider motion bounds.
 // v52.24: make Dual Wield a persistent boolean toggle; remove all blend/duration timers.
-// Toggle remains enabled until +user3 is pressed again, weapon changes, or player dies.
+// v52.25: automatically release Dual Wield when a different weapon is queued for selection.
+// Gore controls: local enable, intensity up/down and palette cycle; extra blood particles only.
 // v52.20.1: restore missing semicolons on frame-only state lines after removing overlay actions.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
@@ -224,7 +225,7 @@ class TLHGoreParticle : Actor
     States
     {
     Spawn:
-        BLUD Z 10;
+        BLUD ABC 3;
         TNT1 A 2;
         Stop;
     }
@@ -5786,8 +5787,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
 
         Weapon selected = player.ReadyWeapon;
-        if (tlhDualWieldWeapon != selected ||
-            (selected && !SupportsTLHProceduralDualWield(selected)))
+        bool weaponSwitchQueued = (player.PendingWeapon != WP_NOCHANGE);
+        bool ownerChanged = (tlhDualWieldWeapon != selected);
+        bool selectedWeaponUnsupported =
+            selected && !SupportsTLHProceduralDualWield(selected);
+
+        // Release both clones before GZDoom completes its normal PendingWeapon
+        // switch. PendingWeapon itself is never rewritten here.
+        if (weaponSwitchQueued || ownerChanged || selectedWeaponUnsupported)
         {
             tlhDualWieldActive = false;
             ClearTLHDualOverlay();
@@ -8616,7 +8623,11 @@ class TacticalHUDHandler : EventHandler
         Weapon weapon = players[playerNum].ReadyWeapon;
         if (!tactical.ToggleTLHDualWield(weapon))
         {
-            pawn.A_Print("DUAL WIELD: UNSUPPORTED WEAPON OR BUSY");
+            if (!tactical.tlhDualWieldActive &&
+                players[playerNum].PendingWeapon != WP_NOCHANGE)
+                pawn.A_Print("DUAL WIELD: AUTO-DISABLED FOR WEAPON SWITCH");
+            else
+                pawn.A_Print("DUAL WIELD: CURRENT WEAPON UNSUPPORTED");
             return;
         }
 
