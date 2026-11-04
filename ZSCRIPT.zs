@@ -5577,8 +5577,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     double tlhDualWieldBlend;
-    double tlhDualOriginalPrimaryAlpha;
-    bool tlhDualPrimaryAlphaCaptured;
     SpriteID tlhDualOriginalSprite;
     int tlhDualOriginalFrame;
     bool tlhDualOriginalSpriteCaptured;
@@ -5749,8 +5747,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 primary.Sprite = tlhDualOriginalSprite;
                 primary.Frame = tlhDualOriginalFrame;
             }
-            if (tlhDualPrimaryAlphaCaptured)
-                primary.alpha = tlhDualOriginalPrimaryAlpha;
             if (tlhDualCloneBaseCaptured)
             {
                 primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
@@ -5758,8 +5754,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
 
-        tlhDualOriginalPrimaryAlpha = 1.0;
-        tlhDualPrimaryAlphaCaptured = false;
         tlhDualOriginalSprite = GetSpriteIndex("TNT1");
         tlhDualOriginalFrame = 0;
         tlhDualOriginalSpriteCaptured = false;
@@ -5851,7 +5845,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // Both hands are render-only PSprites. The engine-owned weapon remains
     // active for input, firing and ammo, but is lowered out of view first.
     void CopyTLHDualClone(PSprite clone, State cloneState, PSprite primary,
-        bool mirrored, double cloneX, double cloneY, double cloneAlpha)
+        bool mirrored, double cloneX, double cloneY)
     {
         if (!clone || !cloneState || !primary)
             return;
@@ -5869,7 +5863,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         clone.baseScale = primary.baseScale;
         clone.pivot = primary.pivot;
         clone.rotation = mirrored ? -primary.rotation : primary.rotation;
-        clone.alpha = cloneAlpha;
+        clone.alpha = primary.alpha;
         clone.HAlign = primary.HAlign;
         clone.VAlign = primary.VAlign;
         clone.bPlayerTranslated = primary.bPlayerTranslated;
@@ -5909,13 +5903,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!cloneState)
             return;
 
-        // Keep the weapon's real sprite. Dual Wield uses a procedural
-        // deselect/lower motion on the active PSprite instead of a flash sprite.
-        if (!tlhDualPrimaryAlphaCaptured)
-        {
-            tlhDualOriginalPrimaryAlpha = primary.alpha;
-            tlhDualPrimaryAlphaCaptured = true;
-        }
+        // Keep the weapon's real sprite and use only procedural Deselect motion.
         if (!tlhDualOriginalSpriteCaptured)
         {
             tlhDualOriginalSprite = primary.Sprite;
@@ -5960,18 +5948,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // bMirror reverses the right clone's -36 offset to +36.
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
         double cloneX = tlhDualCloneBaseX - 36.0 * rise;
-        double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
-
         CopyTLHDualClone(leftClone, cloneState, primary,
-            false, cloneX, cloneY, cloneAlpha);
+            false, cloneX, cloneY);
         CopyTLHDualClone(rightClone, cloneState, primary,
-            true, cloneX, cloneY, cloneAlpha);
+            true, cloneX, cloneY);
 
-        // Match A_Lower's direction, but drive it from the shared blend so
-        // the original disappears as the mirrored pair rises. Reverse on exit.
+        // Match A_Lower's direction using position only. Reverse on exit.
         primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
         primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY + rise * 88.0;
-        primary.alpha = tlhDualOriginalPrimaryAlpha;
     }
 
     override void Tick()
