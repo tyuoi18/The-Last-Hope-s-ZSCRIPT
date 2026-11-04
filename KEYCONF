@@ -6,6 +6,8 @@ addkeysection "The Last Hope" TheLastHope
 addmenukey "Toggle Dual Wield" "+user3"
 addmenukey "Tactical Dash" "+user2"
 addmenukey "Go Prone (hold)" "+user1"
+addmenukey "Ground Slam" "+user4"
 defaultbind "G" "+user3"
 defaultbind "Q" "+user2"
 defaultbind "MOUSE3" "+user1"
+defaultbind "V" "+user4"
