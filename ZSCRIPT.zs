@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.18 - place the original and mirrored Dual Wield sprites on opposite sides
+// TLH v52.19 - add procedural Dual Wield firing routes to heavy weapons and AMR-99
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -107,6 +107,8 @@ const TLH_MAX_CELLS = 300;
 // authored overlay/weapon offset actions so every state preserves the left-hand primary placement.
 // v52.11: inline the blend calculation in the action wrappers.
 // v52.12: use player.mo/self-owner and invoker-weapon explicitly inside weapon actions, avoiding ambiguous Owner lookups.
+// v52.19: add independent left/right firing routes to Heavy Chaingun, Rocket Launcher and AMR-99;
+// repair the SSG's legacy pistol-like Dual Wield route to fire proper shotgun shells.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -2176,7 +2178,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             bool infinite = sv_infiniteammo ||
                 (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
             if (!requireAmmo || infinite) return true;
-            return Owner && Owner.CountInv("Clip") >= 1;
+            return Owner && Owner.CountInv("Shell") >= 2;
         }
 
         return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
@@ -2240,65 +2242,74 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         SHT2 A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
+
     FireDualLeft:
-        PISG A 0
+        SHT2 A 0
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
+            if (!infinite && (!player.mo || player.mo.CountInv("Shell") < 2))
                 return ResolveState("Ready");
-
-            A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
-            let mo = player.mo;
-            if (mo)
+            A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
+            if (invoker.dragonBreath)
             {
-                double shotAngle = angle + FRandom(-3.2, 3.2);
-                double shotPitch = pitch + FRandom(-1.4, 1.4);
-                mo.LineAttack(shotAngle, 2048, shotPitch, 5, "Normal",
-                    "BulletPuff", 0, null, 0, 0, -22.0);
+                for (int i = 0; i < 13; i++)
+                    A_FireProjectile("DragonBreathFire", random(-10, 10),
+                        false, 0, 0, 0, random(-5, 5));
+                A_StartSound("vile/firestrt", CHAN_BODY);
             }
-            A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
-            A_Recoil(1.5);
+            else if (player.mo)
+            {
+                for (int pellet = 0; pellet < 20; pellet++)
+                    player.mo.LineAttack(angle + FRandom(-11.2, 11.2), 2048,
+                        pitch + FRandom(-7.1, 7.1), 5, "Normal", "BulletPuff",
+                        0, null, 0, 0, -22.0);
+            }
+            A_GunFlash();
+            A_StartSound("weapons/sshotf", CHAN_WEAPON);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Quake(3, 5, 0, 100);
             return ResolveState(null);
         }
-        PISG B 2;
-        PISG A 0
+        SHT2 B 3;
+        SHT2 A 0
         {
-            if (player.cmd.buttons & BT_ATTACK)
-                return ResolveState("FireDualLeft");
+            if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
             return ResolveState("Ready");
         }
 
-    // M2 fires the right pistol through the main weapon PSprite.
     FireDualRight:
-        PISG A 0
+        SHT2 A 0
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
+            if (!infinite && (!player.mo || player.mo.CountInv("Shell") < 2))
                 return ResolveState("Ready");
-
-            A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
-            let mo = player.mo;
-            if (mo)
+            A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
+            if (invoker.dragonBreath)
             {
-                double shotAngle = angle + FRandom(-3.2, 3.2);
-                double shotPitch = pitch + FRandom(-1.4, 1.4);
-                mo.LineAttack(shotAngle, 2048, shotPitch, 5, "Normal",
-                    "BulletPuff", 0, null, 0, 0, 22.0);
+                for (int i = 0; i < 13; i++)
+                    A_FireProjectile("DragonBreathFire", random(-10, 10),
+                        false, 0, 0, 0, random(-5, 5));
+                A_StartSound("vile/firestrt", CHAN_BODY);
+            }
+            else if (player.mo)
+            {
+                for (int pellet = 0; pellet < 20; pellet++)
+                    player.mo.LineAttack(angle + FRandom(-11.2, 11.2), 2048,
+                        pitch + FRandom(-7.1, 7.1), 5, "Normal", "BulletPuff",
+                        0, null, 0, 0, 22.0);
             }
             A_GunFlash();
-            A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_SetPitch(pitch - 0.65, SPF_INTERPOLATE);
-            A_Recoil(1.5);
+            A_StartSound("weapons/sshotf", CHAN_WEAPON);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Quake(3, 5, 0, 100);
             return ResolveState(null);
         }
-        PISG B 2;
-        PISG A 0
+        SHT2 B 3;
+        SHT2 A 0
         {
-            if (player.cmd.buttons & BT_ALTATTACK)
-                return ResolveState("FireDualRight");
+            if (player.cmd.buttons & BT_ALTATTACK) return ResolveState("FireDualRight");
             return ResolveState("Ready");
         }
 
@@ -2601,6 +2612,29 @@ class SemiAutoShotgun : Weapon
  */
 class HeavyChaingun : DoomWeapon
 {
+
+    // Procedural left-hand slide; the render-only mirror flips this live offset.
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+            wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        A_WeaponOffset(wx, wy, flags);
+    }
+
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        }
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
     bool burstMode;
     bool gatlingMode;
     bool gatlingSpunUp;
@@ -2613,6 +2647,22 @@ class HeavyChaingun : DoomWeapon
     const RecoverHeat = 45;
     const WarmHeat = 180;
     const CriticalHeat = 250;
+
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        TacticalPlayer tlhPlayer = TacticalPlayer(Owner);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldActive &&
+            tlhPlayer.tlhDualWieldWeapon == self &&
+            (fireMode == PrimaryFire || fireMode == AltFire))
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("Clip") >= 1;
+        }
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
+    }
 
     override void Tick()
     {
@@ -2656,6 +2706,7 @@ Default
     Ready:
         CHGG A 0
         {
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
             if (invoker.gatlingSpunUp &&
                 (!player || !(player.cmd.buttons & BT_ATTACK)))
                 return ResolveState("GatlingSpinDown");
@@ -2697,7 +2748,7 @@ Default
         }
 
     SetBurst:
-        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 2 A_TLHDualWeaponOffset(0, 37, WOF_INTERPOLATE);
         CHGG A 4
         {
             invoker.burstMode = true;
@@ -2706,11 +2757,11 @@ Default
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: 3-ROUND BURST");
         }
-        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetAuto:
-        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 2 A_TLHDualWeaponOffset(0, 37, WOF_INTERPOLATE);
         CHGG A 4
         {
             if (invoker.gatlingMode && invoker.gatlingSpunUp)
@@ -2721,11 +2772,11 @@ Default
             A_StartSound("weapons/sshotl", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: FULL AUTO");
         }
-        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     SetGatling:
-        CHGG A 2 A_WeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 2 A_TLHDualWeaponOffset(0, 37, WOF_INTERPOLATE);
         CHGG A 4
         {
             invoker.burstMode = false;
@@ -2734,7 +2785,7 @@ Default
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: GATLING (SPIN-UP)");
         }
-        CHGG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     ManualVent:
@@ -2752,6 +2803,10 @@ Default
     Fire:
         CHGG A 0
         {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("FireDualLeft");
             if (invoker.overheated)
                 return ResolveState("Overheated");
 
@@ -2929,7 +2984,7 @@ Default
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.75, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0.0, 41.0, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0.0, 41.0, WOF_INTERPOLATE);
             A_OverlayRotate(PSP_WEAPON, -0.85);
             invoker.heat += 3;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
@@ -2952,7 +3007,7 @@ Default
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, FRandom(-0.7, 0.7), 42.0 + FRandom(-1.0, 1.0), 0);
+            A_TLHDualOverlayOffset(PSP_WEAPON, FRandom(-0.7, 0.7), 42.0 + FRandom(-1.0, 1.0), 0);
             A_OverlayRotate(PSP_WEAPON, FRandom(-1.15, -0.45));
             invoker.heat += 4;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
@@ -2982,7 +3037,93 @@ Default
         }
         Loop;
 
+
+    // Each hand fires independently while sharing the weapon's heat pool.
+    FireDualLeft:
+        CHGG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (invoker.overheated || invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                return ResolveState("Overheated");
+            }
+            if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
+                return ResolveState("Ready");
+            A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            if (player.mo)
+                player.mo.LineAttack(angle + FRandom(-3.0, 3.0), 2048,
+                    pitch + FRandom(-2.0, 2.0), 15, "Normal", "BulletPuff",
+                    0, null, 0, 0, -22.0);
+            A_GunFlash();
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - (invoker.gatlingMode ? 0.70 : 0.55), SPF_INTERPOLATE);
+            invoker.heat += invoker.gatlingMode ? 5 : (invoker.heat >= WarmHeat ? 3 : 2);
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+            return ResolveState(null);
+        }
+        CHGG B 1;
+        CHGG A 0
+        {
+            if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
+            return ResolveState("Ready");
+        }
+
+    FireDualRight:
+        CHGG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (invoker.overheated || invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                return ResolveState("Overheated");
+            }
+            if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
+                return ResolveState("Ready");
+            A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            if (player.mo)
+                player.mo.LineAttack(angle + FRandom(-3.0, 3.0), 2048,
+                    pitch + FRandom(-2.0, 2.0), 15, "Normal", "BulletPuff",
+                    0, null, 0, 0, 22.0);
+            A_GunFlash();
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
+            A_SetPitch(pitch - (invoker.gatlingMode ? 0.70 : 0.55), SPF_INTERPOLATE);
+            invoker.heat += invoker.gatlingMode ? 5 : (invoker.heat >= WarmHeat ? 3 : 2);
+            if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
+            if (invoker.heat >= MaxHeat)
+            {
+                invoker.overheated = true;
+                A_StartSound("weapons/sshotl", CHAN_WEAPON);
+                A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
+                return ResolveState("Overheated");
+            }
+            return ResolveState(null);
+        }
+        CHGG B 1;
+        CHGG A 0
+        {
+            if (player.cmd.buttons & BT_ALTATTACK) return ResolveState("FireDualRight");
+            return ResolveState("Ready");
+        }
+
     AltFire:
+        CHGG B 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("FireDualRight");
+            return ResolveState(null);
+        }
         CHGG B 3
         {
             A_FireProjectile("M203Grenade");
@@ -2993,6 +3134,10 @@ Default
         }
         CHGG A 8;
         Goto Ready;
+
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
 
     Flash:
         CHGF A 2 Bright A_Light1;
@@ -3531,6 +3676,29 @@ class M60MachineGun : DoomWeapon
 
 class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
 {
+
+    // Procedural left-hand slide; the render-only mirror flips this live offset.
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+            wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        A_WeaponOffset(wx, wy, flags);
+    }
+
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        }
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
     bool nukeMode;
 
     Default
@@ -3545,9 +3713,20 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         Weapon.AmmoUse2 1;
     }
 
+
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
     {
-        // Require all three rockets before starting a micro-missile volley.
+        TacticalPlayer dualPlayer = TacticalPlayer(Owner);
+        if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+            dualPlayer.tlhDualWieldWeapon == self &&
+            (fireMode == PrimaryFire || fireMode == AltFire))
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            int needed = nukeMode ? 10 : 1;
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("RocketAmmo") >= needed;
+        }
         if (fireMode == AltFire)
             return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, 3);
         return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
@@ -3567,7 +3746,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         RISG A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -3580,8 +3759,8 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         Loop;
 
     Reload:
-        RISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        RISG A 2 A_WeaponOffset(0, 42, WOF_INTERPOLATE);
+        RISG A 2 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
+        RISG A 2 A_TLHDualWeaponOffset(0, 42, WOF_INTERPOLATE);
         RISG A 0
         {
             if (invoker.nukeMode) return ResolveState("SetNormal");
@@ -3604,13 +3783,17 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         Goto FinishReload;
     FinishReload:
-        RISG A 2 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
-        RISG A 2 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        RISG A 2 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
+        RISG A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
 
     Fire:
         RISG A 0
         {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("FireDualLeft");
             if (invoker.nukeMode) return ResolveState("FireNuke");
             return ResolveState(null);
         }
@@ -3643,7 +3826,80 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         RISG B 20;
         Goto Ready;
 
+
+    FireDualLeft:
+        RISG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            int cost = invoker.nukeMode ? 10 : 1;
+            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < cost))
+                return ResolveState("Ready");
+            A_TakeInventory("RocketAmmo", cost, TIF_NOTAKEINFINITE);
+            if (invoker.nukeMode)
+            {
+                A_FireProjectile("NukeMissile", useammo: false);
+                A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
+                A_Recoil(8);
+                A_Quake(3, 8, 0, 200);
+            }
+            else
+            {
+                A_FireProjectile("Rocket", useammo: false);
+                A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
+            }
+            A_GunFlash();
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            return ResolveState(null);
+        }
+        RISG B 12;
+        RISG A 0
+        {
+            if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
+            return ResolveState("Ready");
+        }
+
+    FireDualRight:
+        RISG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            int cost = invoker.nukeMode ? 10 : 1;
+            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < cost))
+                return ResolveState("Ready");
+            A_TakeInventory("RocketAmmo", cost, TIF_NOTAKEINFINITE);
+            if (invoker.nukeMode)
+            {
+                A_FireProjectile("NukeMissile", useammo: false);
+                A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
+                A_Recoil(8);
+                A_Quake(3, 8, 0, 200);
+            }
+            else
+            {
+                A_FireProjectile("Rocket", useammo: false);
+                A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
+            }
+            A_GunFlash();
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            return ResolveState(null);
+        }
+        RISG B 12;
+        RISG A 0
+        {
+            if (player.cmd.buttons & BT_ALTATTACK) return ResolveState("FireDualRight");
+            return ResolveState("Ready");
+        }
+
     AltFire:
+        RISG B 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("FireDualRight");
+            return ResolveState(null);
+        }
         RISG B 2
         {
             A_FireProjectile("MicroMissile");
@@ -3664,14 +3920,18 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
 
     // Emergency melee: strike with the launcher body. It does not magically fire pistol ammo.
     Zoom:
-        RISG A 3 A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+        RISG A 3 A_TLHDualWeaponOffset(0, 36, WOF_INTERPOLATE);
         RISG B 4
         {
             A_CustomPunch(20, TRUE, 0, "BulletPuff", 48, 0, 0, "ArmorBonus", "weapons/melee");
             A_SetPitch(pitch - 1.2, SPF_INTERPOLATE);
         }
-        RISG A 7 A_WeaponOffset(0, 32, WOF_INTERPOLATE);
+        RISG A 7 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
         Goto Ready;
+
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
 
     Flash:
         RISF A 3 Bright A_Light1;
@@ -3967,6 +4227,29 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
 
 class AMR99RailRifle : Weapon
 {
+
+    // Procedural left-hand slide; the render-only mirror flips this live offset.
+    action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
+    {
+        TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+        Weapon dualWeapon = Weapon(invoker);
+        if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+            wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        A_WeaponOffset(wx, wy, flags);
+    }
+
+    action void A_TLHDualOverlayOffset(int layer, double wx, double wy, int flags = 0)
+    {
+        if (layer == PSP_WEAPON)
+        {
+            TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
+            Weapon dualWeapon = Weapon(invoker);
+            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
+        }
+        A_OverlayOffset(layer, wx, wy, flags);
+    }
+
     bool isZoomed;
 
     Default
@@ -3979,6 +4262,22 @@ class AMR99RailRifle : Weapon
         Weapon.AmmoUse1 10;
         Inventory.PickupMessage "I found an AMR-99 Gauss Rifle!";
 
+    }
+
+
+    override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
+    {
+        TacticalPlayer dualPlayer = TacticalPlayer(Owner);
+        if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+            dualPlayer.tlhDualWieldWeapon == self &&
+            (fireMode == PrimaryFire || fireMode == AltFire))
+        {
+            bool infinite = sv_infiniteammo ||
+                (Owner && Owner.FindInventory("PowerInfiniteAmmo", true));
+            if (!requireAmmo || infinite) return true;
+            return Owner && Owner.CountInv("Cell") >= 10;
+        }
+        return Super.CheckAmmo(fireMode, autoSwitch, requireAmmo, ammocount);
     }
 
     States
@@ -3995,8 +4294,8 @@ class AMR99RailRifle : Weapon
         }
         ZLSG A 1
         {
-            A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
+            A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
+            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
             A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -4014,11 +4313,19 @@ class AMR99RailRifle : Weapon
         Loop;
 
     Fire:
+        ZLSG A 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("FireDualLeft");
+            return ResolveState(null);
+        }
         ZLSG A 4;
         ZLSG B 6
         {
             A_GunFlash();
-            A_WeaponOffset(0, 46, WOF_INTERPOLATE);
+            A_TLHDualWeaponOffset(0, 46, WOF_INTERPOLATE);
             A_FireProjectile("GaussSlug");
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
@@ -4028,6 +4335,55 @@ class AMR99RailRifle : Weapon
         ZLSG B 28;
         ZLSG A 8;
         Goto Ready;
+
+
+    FireDualLeft:
+        ZLSG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 10))
+                return ResolveState("Ready");
+            A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            A_FireProjectile("GaussSlug", useammo: false);
+            A_GunFlash();
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
+            A_Quake(7, 14, 0, 350);
+            A_Recoil(5);
+            return ResolveState(null);
+        }
+        ZLSG B 28;
+        ZLSG A 8;
+        ZLSG A 0
+        {
+            if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
+            return ResolveState("Ready");
+        }
+
+    FireDualRight:
+        ZLSG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 10))
+                return ResolveState("Ready");
+            A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            A_FireProjectile("GaussSlug", useammo: false);
+            A_GunFlash();
+            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
+            A_Quake(7, 14, 0, 350);
+            A_Recoil(5);
+            return ResolveState(null);
+        }
+        ZLSG B 28;
+        ZLSG A 8;
+        ZLSG A 0
+        {
+            if (player.cmd.buttons & BT_ALTATTACK) return ResolveState("FireDualRight");
+            return ResolveState("Ready");
+        }
 
     Reload:
         ZLSG A 0
@@ -4045,6 +4401,10 @@ class AMR99RailRifle : Weapon
     Zoom:
         ZLSG A 0
         {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("FireDualRight");
             if (invoker.isZoomed) return ResolveState("ZoomOut");
             return ResolveState("ZoomIn");
         }
@@ -4064,6 +4424,10 @@ class AMR99RailRifle : Weapon
             A_ZoomFactor(1.0, ZOOM_INSTANT);
         }
         Goto Ready;
+
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
 
     Flash:
         ZLSF A 3 Bright A_Light1;
