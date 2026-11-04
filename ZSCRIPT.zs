@@ -5563,6 +5563,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhDualAppliedPrimaryDrop;
     double tlhDualOriginalPrimaryAlpha;
     bool tlhDualPrimaryAlphaCaptured;
+    double tlhDualCloneBaseX;
+    double tlhDualCloneBaseY;
+    bool tlhDualCloneBaseCaptured;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5730,6 +5733,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         tlhDualAppliedPrimaryDrop = 0.0;
         tlhDualOriginalPrimaryAlpha = 1.0;
         tlhDualPrimaryAlphaCaptured = false;
+        tlhDualCloneBaseX = 0.0;
+        tlhDualCloneBaseY = 32.0;
+        tlhDualCloneBaseCaptured = false;
 
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         if (leftClone) leftClone.Destroy();
@@ -5910,22 +5916,32 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         primary.y -= tlhDualAppliedPrimaryDrop;
         tlhDualAppliedPrimaryDrop = 0.0;
 
+        // Capture the weapon's authored resting coordinates exactly once.
+        // Strip our procedural motion delta so the clones inherit only the
+        // weapon's static HUD placement, not its live bob/sway/engine jitter.
+        if (!tlhDualCloneBaseCaptured)
+        {
+            tlhDualCloneBaseX = primary.x - tlhAnimAppliedWeaponX;
+            tlhDualCloneBaseY = primary.y - tlhAnimAppliedWeaponY;
+            tlhDualCloneBaseCaptured = true;
+        }
+
         double stow = GetTLHDualStowProgress();
         double rise = GetTLHDualCloneRise();
 
         // Lower the engine-owned weapon completely off-screen before the pair rises.
-        // 108 units passes WEAPONBOTTOM from the usual resting Y=32.
+        // The original remains gameplay-active but is no longer a visual anchor.
         double primaryDrop = stow * 108.0;
         primary.y += primaryDrop;
         tlhDualAppliedPrimaryDrop = primaryDrop;
         primary.alpha = (stow >= 1.0) ? 0.0 : tlhDualOriginalPrimaryAlpha;
 
-        // The two render-only hands use fixed, screen-centered anchors.
-        // Both PSprites use X=-36; bMirror reverses the right clone's offset to +36.
-        // Neither clone inherits the engine weapon's X/Y, so primary bob/limits
-        // cannot drag the pair around or make the original act as their pivot.
-        double cloneY = 32.0 + (1.0 - rise) * 88.0;
-        double cloneX = -36.0;
+        // Each clone starts below the captured resting point and rises to it.
+        // Their base is frozen for the whole activation, so movement of the
+        // hidden engine PSprite cannot pull either hand vertically or sideways.
+        // bMirror reverses the right clone's -36 offset to +36.
+        double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
+        double cloneX = tlhDualCloneBaseX - 36.0 * rise;
         double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
 
         CopyTLHDualClone(leftClone, cloneState, primary,
