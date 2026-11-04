@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.27 - procedural Dual Wield deployment; Plasma/Hellfire/Airstrike support
+// TLH v52.28 - staged entrance, paired clone animation/flash and X-only weapon sway
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -15,6 +15,8 @@ version "4.14"
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_DUAL_MIRROR_LAYER = 2; // left-hand animated mirror
 const TLH_DUAL_SECOND_LAYER = 3; // independent M2 weapon PSprite; PSP_WEAPON (1) remains the M1 controller
+const TLH_DUAL_LEFT_FLASH_LAYER = 4; // mirrored muzzle flash for the left hand
+const TLH_DUAL_RIGHT_FLASH_LAYER = 5; // muzzle flash for the right hand
 const TLH_DUAL_HAND_SPREAD = 56.0; // Visible spacing from the screen center for each hand.
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
@@ -4079,7 +4081,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             A_SetPitch(pitch - 1.5, SPF_INTERPOLATE);
             A_Quake(1, 3, 0, 100);
         }
-        PLSG B 20 A_ReFire;
+        PLSG B 2 A_ReFire;
         Goto Ready;
 
     AltFire:
@@ -4160,7 +4162,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             {
                 bool infinite = sv_infiniteammo ||
                     (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-                if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+                if (infinite || (player.mo && player.mo.CountInv("Cell") >= 1))
                     return ResolveState("FireDualLeft");
             }
             return ResolveState("DualMirrorHold");
@@ -4196,7 +4198,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             {
                 bool infinite = sv_infiniteammo ||
                     (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-                if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+                if (infinite || (player.mo && player.mo.CountInv("Cell") >= 1))
                     return ResolveState("FireDualRight");
             }
             return ResolveState("DualMirrorHold");
@@ -5824,6 +5826,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhDualCloneBaseX;
     double tlhDualCloneBaseY;
     bool tlhDualCloneBaseCaptured;
+    int tlhDualLastAmmoSignature;
+    PSprite tlhAnimSwayPSP;
+    Actor tlhAnimSwayCaller;
+    double tlhAnimSwayBaseX;
+    double tlhAnimSwayAppliedX;
+    bool tlhAnimSwayBaseCaptured;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -6000,6 +6008,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         PSprite rightClone = player.FindPSprite(TLH_DUAL_SECOND_LAYER);
         if (rightClone) rightClone.Destroy();
+
+        PSprite leftFlash = player.FindPSprite(TLH_DUAL_LEFT_FLASH_LAYER);
+        if (leftFlash) leftFlash.Destroy();
+
+        PSprite rightFlash = player.FindPSprite(TLH_DUAL_RIGHT_FLASH_LAYER);
+        if (rightFlash) rightFlash.Destroy();
+
+        tlhDualLastAmmoSignature = -1;
     }
 
     void ResetTLHDualForWeaponSwitch()
@@ -6052,6 +6068,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         tlhDualWieldWeapon = weapon;
         tlhDualWieldBlend = 0.0;
+        tlhDualLastAmmoSignature = GetTLHAmmoSignature();
         tlhDualWieldActive = true;
         return true;
     }
@@ -6111,6 +6128,73 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         clone.InterpolateTic = primary.InterpolateTic;
     }
 
+    void TriggerTLHDualFlash(Weapon weapon, int layer)
+    {
+        if (!player || !weapon)
+            return;
+
+        State flashState = weapon.FindStateByString("Flash");
+        if (!flashState)
+            return;
+
+        player.SetPsprite(layer, flashState);
+    }
+
+    void ConfigureTLHDualFlashClone(PSprite flashClone, PSprite handClone,
+        PSprite primary, bool mirrored)
+    {
+        if (!flashClone || !handClone || !primary)
+            return;
+
+        flashClone.Translation = primary.Translation;
+        flashClone.scale = primary.scale;
+        flashClone.baseScale = primary.baseScale;
+        flashClone.pivot = primary.pivot;
+        flashClone.alpha = primary.alpha;
+        flashClone.HAlign = primary.HAlign;
+        flashClone.VAlign = primary.VAlign;
+        flashClone.bPlayerTranslated = primary.bPlayerTranslated;
+        flashClone.bPivotPercent = primary.bPivotPercent;
+        flashClone.bInterpolate = true;
+        flashClone.bFlip = mirrored ? !primary.bFlip : primary.bFlip;
+        flashClone.bMirror = false;
+        flashClone.bAddBob = false;
+        flashClone.bAddWeapon = false;
+        flashClone.bCVarFast = primary.bCVarFast;
+        flashClone.bPowDouble = primary.bPowDouble;
+        flashClone.x = handClone.x;
+        flashClone.y = handClone.y;
+        flashClone.InterpolateTic = true;
+    }
+
+    void ApplyTLHHorizontalWeaponSway(PSprite weaponPSP)
+    {
+        if (!weaponPSP)
+            return;
+
+        Actor currentCaller = weaponPSP.Caller;
+        double swayX = clamp(tlhAnimSwayX, -2.0, 2.0);
+        double expectedX = tlhAnimSwayBaseX + tlhAnimSwayAppliedX;
+
+        // Detect authored A_WeaponOffset/A_OverlayOffset changes without
+        // treating our previous sway displacement as a new base position.
+        if (!tlhAnimSwayBaseCaptured ||
+            tlhAnimSwayPSP != weaponPSP ||
+            tlhAnimSwayCaller != currentCaller ||
+            abs(weaponPSP.x - expectedX) > 0.001)
+        {
+            tlhAnimSwayPSP = weaponPSP;
+            tlhAnimSwayCaller = currentCaller;
+            tlhAnimSwayBaseX = weaponPSP.x;
+            tlhAnimSwayBaseCaptured = true;
+        }
+
+        // Horizontal-only sway. Y, scale and rotation are never touched.
+        weaponPSP.x = tlhAnimSwayBaseX + swayX;
+        weaponPSP.InterpolateTic = true;
+        tlhAnimSwayAppliedX = swayX;
+    }
+
     void UpdateTLHDualWieldPresentation(PSprite primary)
     {
         if (!player || !player.ReadyWeapon || !primary)
@@ -6168,6 +6252,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!tlhDualCloneBaseCaptured)
         {
             tlhDualCloneBaseX = primary.x;
+            if (tlhAnimSwayBaseCaptured && tlhAnimSwayPSP == primary)
+                tlhDualCloneBaseX -= tlhAnimSwayAppliedX;
             tlhDualCloneBaseY = primary.y;
             tlhDualCloneBaseCaptured = true;
         }
@@ -6186,14 +6272,36 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             State leftFireState = weapon.FindStateByString("FireDualLeft");
             if (leftFireState)
+            {
                 leftClone.SetState(leftFireState);
+                TriggerTLHDualFlash(weapon, TLH_DUAL_LEFT_FLASH_LAYER);
+            }
         }
         if (altPressed && rightClone.CurState == cloneState)
         {
             State rightFireState = weapon.FindStateByString("FireDualRight");
             if (rightFireState)
+            {
                 rightClone.SetState(rightFireState);
+                TriggerTLHDualFlash(weapon, TLH_DUAL_RIGHT_FLASH_LAYER);
+            }
         }
+
+        // Re-trigger cloned muzzle flashes on every real ammo-consuming shot.
+        // This also covers automatic fire loops after the initial button edge.
+        int currentDualAmmoSignature = GetTLHAmmoSignature();
+        if (tlhDualLastAmmoSignature >= 0 &&
+            currentDualAmmoSignature < tlhDualLastAmmoSignature)
+        {
+            if (!primaryPressed && (dualButtons & BT_ATTACK) &&
+                leftClone.CurState != cloneState)
+                TriggerTLHDualFlash(weapon, TLH_DUAL_LEFT_FLASH_LAYER);
+
+            if (!altPressed && (dualButtons & BT_ALTATTACK) &&
+                rightClone.CurState != cloneState)
+                TriggerTLHDualFlash(weapon, TLH_DUAL_RIGHT_FLASH_LAYER);
+        }
+        tlhDualLastAmmoSignature = currentDualAmmoSignature;
 
         // A revolver uses a one-press latch on M2. Release it independently
         // of the primary-hand trigger so the next right-click can fire.
@@ -6206,17 +6314,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 dualRevolver.altTriggerLatched = false;
         }
 
-        // The mode itself is persistent. Only the initial presentation animates:
-        // the right weapon slides outward while the mirrored left weapon rises
-        // from below. Smoothstep keeps the motion procedural without a timer
-        // that can deactivate Dual Wield.
-        tlhDualWieldBlend = min(1.0, tlhDualWieldBlend + 0.12);
+        // Staged entry, in the intended order:
+        // 1) the original right-hand weapon slides to the right;
+        // 2) only after that finishes, the mirrored left weapon rises from below.
+        // Positive PSprite Y is down, so the left clone starts at baseY + 26.
+        tlhDualWieldBlend = min(1.0, tlhDualWieldBlend + 0.10);
         double deployProgress = clamp(tlhDualWieldBlend, 0.0, 1.0);
-        double deployEase = deployProgress * deployProgress * (3.0 - 2.0 * deployProgress);
-        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * deployEase;
-        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD * deployEase;
+        double rightProgress = clamp(deployProgress * 2.0, 0.0, 1.0);
+        double leftProgress = clamp((deployProgress - 0.5) * 2.0, 0.0, 1.0);
+        double rightEase = rightProgress * rightProgress * (3.0 - 2.0 * rightProgress);
+        double leftEase = leftProgress * leftProgress * (3.0 - 2.0 * leftProgress);
+        double swayX = clamp(tlhAnimSwayX, -2.0, 2.0);
+        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * rightEase + swayX;
+        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD + swayX;
         double rightCloneY = tlhDualCloneBaseY;
-        double leftCloneY = tlhDualCloneBaseY + (1.0 - deployEase) * 22.0;
+        double leftCloneY = tlhDualCloneBaseY + (1.0 - leftEase) * 26.0;
         double cloneAlpha = tlhDualOriginalPrimaryAlpha;
 
         // Mirror the live primary animation on the left clone. When the hidden
@@ -6234,6 +6346,34 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         CopyTLHDualClone(rightClone, cloneState, primary,
             false, rightCloneX, rightCloneY, cloneAlpha,
             tlhDualOriginalSprite, tlhDualOriginalFrame, true);
+
+        // When only one hand is running a weapon state, mirror its current frame
+        // onto the resting hand. This keeps raise/fire/reload frames synchronized
+        // while preserving the active hand's own state machine.
+        bool leftAnimating = leftClone.CurState != cloneState;
+        bool rightAnimating = rightClone.CurState != cloneState;
+        if (leftAnimating && !rightAnimating)
+        {
+            rightClone.Sprite = leftClone.Sprite;
+            rightClone.Frame = leftClone.Frame;
+        }
+        else if (rightAnimating && !leftAnimating)
+        {
+            leftClone.Sprite = rightClone.Sprite;
+            leftClone.Frame = rightClone.Frame;
+        }
+        else if (!leftAnimating && !rightAnimating)
+        {
+            rightClone.Sprite = leftClone.Sprite;
+            rightClone.Frame = leftClone.Frame;
+        }
+
+        // Each hand owns a separate copy of the weapon's authored Flash state.
+        // The original centered PSP_FLASH is suppressed below.
+        PSprite leftFlash = player.FindPSprite(TLH_DUAL_LEFT_FLASH_LAYER);
+        PSprite rightFlash = player.FindPSprite(TLH_DUAL_RIGHT_FLASH_LAYER);
+        ConfigureTLHDualFlashClone(leftFlash, leftClone, primary, true);
+        ConfigureTLHDualFlashClone(rightFlash, rightClone, primary, false);
 
         // Keep the primary state machine alive for M1, but hide its weapon body.
         primary.Sprite = GetSpriteIndex("ZISF");
@@ -6768,6 +6908,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Duplicate the final visible primary frame on the mirrored layer.
         UpdateTLHDualWieldPresentation(weaponPSP);
+
+        // Ordinary weapons get subtle horizontal-only sway. In Dual Wield the
+        // same X displacement is applied independently to both hand clones.
+        if (!tlhDualWieldActive)
+            ApplyTLHHorizontalWeaponSway(weaponPSP);
 
         wasOnGround = onGround;
     }
