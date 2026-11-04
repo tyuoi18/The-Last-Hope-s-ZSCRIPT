@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.20.1 - restore state-frame terminators removed during sway cleanup
+// TLH v52.20.3 - restore movement/look weapon sway without firing recoil
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -6687,14 +6687,97 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (psp.Caller != weapon)
             return;
 
-        // Explicitly preserve native weapon bob on the primary weapon layer.
-        psp.bAddBob = true;
         psp.Translation = 0;
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
             TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
             if (blueTint) psp.Translation = blueTint;
         }
+
+        bool sameState = (tlhAnimLastWeaponPSPState == psp.CurState);
+        if (sameState)
+        {
+            psp.x -= tlhAnimAppliedWeaponX;
+            psp.y -= tlhAnimAppliedWeaponY;
+            psp.rotation -= tlhAnimAppliedWeaponRoll;
+        }
+        else
+        {
+            tlhAnimAppliedWeaponX = 0;
+            tlhAnimAppliedWeaponY = 0;
+            tlhAnimAppliedWeaponRoll = 0;
+        }
+        tlhAnimLastWeaponPSPState = psp.CurState;
+
+        // The M4A1 keeps its authored HUD animation and opts out of global sway.
+        if (weapon is "TacticalM4A1")
+        {
+            tlhAnimAppliedWeaponX = 0;
+            tlhAnimAppliedWeaponY = 0;
+            tlhAnimAppliedWeaponRoll = 0;
+            return;
+        }
+
+        double visualOffsetX = 0.0;
+        double visualOffsetY = 0.0;
+        double visualBaseRoll = 0.0;
+        double visualSway = 1.0;
+        GetTLHWeaponVisualProfile(weapon,
+            visualOffsetX, visualOffsetY, visualBaseRoll, visualSway);
+
+        double speed01 = clamp(Vel.XY.Length() / 18.0, 0.0, 1.0);
+        double weight = GetTLHWeaponMotionWeight(weapon);
+        double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
+        double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
+
+        double worldRightX = sin(angle);
+        double worldRightY = -cos(angle);
+        double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
+        double bodyTilt = clamp(-sideVelocity * 0.055, -3.2, 3.2);
+        double airTilt = clamp(-Vel.Z * 0.050, -3.0, 3.0) * airBlend;
+
+        // Restore the original movement/look sway, but deliberately exclude
+        // firing recoil, landing kick and damage kick from weapon presentation.
+        double stepRoll = sin(tlhAnimStepPhase) * (0.65 + 1.10 * speed01);
+        double swayRoll = -tlhAnimSwayX * 0.62;
+        double inertiaRoll = -tlhAnimInertiaX * 0.40;
+        double lookRoll = -tlhAnimLookX * 0.52;
+        double stopRoll = tlhAnimStopKick * 0.24;
+
+        double totalRoll = visualBaseRoll +
+            (stepRoll + swayRoll + inertiaRoll + lookRoll +
+             stopRoll + bodyTilt + airTilt) *
+            visualSway * (0.78 + 0.22 * weight);
+
+        String cls = weapon.GetClassName();
+        if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
+            cls == "RecoilBFG9000" || cls == "AMR99RailRifle")
+            totalRoll *= 0.60;
+        else if (cls == "RecoilPistol" || cls == "OfficerVulkanPistol")
+            totalRoll *= 1.12;
+        totalRoll = clamp(totalRoll, -4.25, 4.25);
+
+        double swayX = (tlhAnimSwayX * 1.10 +
+            tlhAnimInertiaX * 0.85 + tlhAnimLookX * 0.68 +
+            tlhAnimStopKick * 0.40) * visualSway;
+        double swayY = (tlhAnimSwayY * 0.75 +
+            tlhAnimInertiaY * 0.55 - tlhAnimLookY * 0.40) * visualSway;
+
+        double crouchY = -(1.0 - crouchFactor) * (1.4 + 1.2 * weight);
+        double airFloatY = airBlend *
+            cos(double(level.time) * 0.09 * TLH_RAD_TO_DEG) * 0.35;
+
+        double totalX = visualOffsetX + swayX;
+        double totalY = visualOffsetY + swayY + crouchY + airFloatY;
+        totalX = clamp(totalX, -12.0, 12.0);
+        totalY = clamp(totalY, -18.0, 18.0);
+
+        psp.x += totalX;
+        psp.y += totalY;
+        psp.rotation += totalRoll;
+        tlhAnimAppliedWeaponX = totalX;
+        tlhAnimAppliedWeaponY = totalY;
+        tlhAnimAppliedWeaponRoll = totalRoll;
     }
 
 
