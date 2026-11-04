@@ -6129,6 +6129,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
         bool hasMoveInput = (abs(forwardInput) + abs(sideInput)) > 0.0;
         bool jumpPressed = (bt & BT_JUMP) != 0 && (obt & BT_JUMP) == 0;
+        // Ground Slam has its own configurable +user4 bind. Crouch never
+        // starts a slam while airborne, so Ctrl remains dedicated to duck/slide.
+        bool groundSlamPressed = (bt & BT_USER4) != 0 &&
+                                 (obt & BT_USER4) == 0;
 
         if (onGround)
             tlhCoyoteTics = 5;
@@ -6464,13 +6468,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // ------------------------------------------------------------
         // Momentum slide / ground pound.
-        // Tap crouch at speed to enter a low, steerable slide.
-        // Air crouch preserves some horizontal momentum when starting the slam.
+        // Ctrl (+crouch) is for the ground slide only. Ground Slam is
+        // triggered exclusively by the configurable +user4 action.
         // ------------------------------------------------------------
-        if (gameMode != 1 && (bt & BT_CROUCH) && !(obt & BT_CROUCH))
+        if (gameMode != 1 && onGround &&
+            (bt & BT_CROUCH) && !(obt & BT_CROUCH))
         {
             double entrySpeed = Vel.XY.Length();
-            if (onGround && entrySpeed >= 6.0 && slideCooldown <= 0 &&
+            if (entrySpeed >= 6.0 && slideCooldown <= 0 &&
                 !tlhProneActive && tlhDashTics == 0)
             {
                 tlhSlideTics = 26;
@@ -6487,14 +6492,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 A_StartSound("weapons/sshoto", CHAN_BODY);
                 Spawn("SlideSmoke", Pos - (0, 0, 18));
             }
-            else if (!onGround && !isSlamming && !tlhProneActive)
-            {
-                Vel.XY *= 0.82;
-                Vel.Z = -42.0;
-                isSlamming = true;
-                tlhDashTics = 0;
-                A_StartSound("weapons/rocklf", CHAN_BODY);
-            }
+        }
+
+        if (gameMode != 1 && groundSlamPressed && !onGround &&
+            !isSlamming && !tlhProneActive)
+        {
+            Vel.XY *= 0.82;
+            Vel.Z = -42.0;
+            isSlamming = true;
+            tlhDashTics = 0;
+            A_StartSound("weapons/rocklf", CHAN_BODY);
         }
 
         if (tlhIsSliding)
