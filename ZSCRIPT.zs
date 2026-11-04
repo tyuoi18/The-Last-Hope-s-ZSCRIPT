@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.17 - let muzzle flashes inherit weapon offsets and match weapon rotation
+// TLH v52.18 - place the original and mirrored Dual Wield sprites on opposite sides
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -1222,7 +1222,7 @@ class RecoilPistol : Pistol replaces Pistol
         if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
             double slide = tlhPlayer.GetTLHDualPrimarySlide();
-            wx += 36.0 * slide;
+            wx -= 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
     }
@@ -1236,7 +1236,7 @@ class RecoilPistol : Pistol replaces Pistol
             if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
                 double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx += 36.0 * slide;
+                wx -= 36.0 * slide;
             }
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -1528,7 +1528,7 @@ class OfficerVulkanPistol : Weapon
         if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
             double slide = tlhPlayer.GetTLHDualPrimarySlide();
-            wx += 36.0 * slide;
+            wx -= 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
     }
@@ -1542,7 +1542,7 @@ class OfficerVulkanPistol : Weapon
             if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
                 double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx += 36.0 * slide;
+                wx -= 36.0 * slide;
             }
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -2130,7 +2130,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
             double slide = tlhPlayer.GetTLHDualPrimarySlide();
-            wx += 36.0 * slide;
+            wx -= 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
     }
@@ -2144,7 +2144,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
                 double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx += 36.0 * slide;
+                wx -= 36.0 * slide;
             }
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -4554,7 +4554,7 @@ class ServiceRevolver : Weapon
         if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
         {
             double slide = tlhPlayer.GetTLHDualPrimarySlide();
-            wx += 36.0 * slide;
+            wx -= 36.0 * slide;
         }
         A_WeaponOffset(wx, wy, flags);
     }
@@ -4568,7 +4568,7 @@ class ServiceRevolver : Weapon
             if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
             {
                 double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx += 36.0 * slide;
+                wx -= 36.0 * slide;
             }
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -5432,8 +5432,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     }
 
     // Separate eased tracks create a deliberate two-step entrance:
-    // 1) slide the original weapon to the right;
-    // 2) bring the mirrored weapon up from below on the opposite side.
+    // 1) slide the original weapon left of screen center;
+    // 2) bring the mirrored weapon up from below on the right.
+    // The original and clone remain horizontally mirrored around screen center.
     // The same tracks naturally reverse in the correct order when disabled.
     double GetTLHDualPrimarySlide()
     {
@@ -5514,15 +5515,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double primarySlide = GetTLHDualPrimarySlide();
         double offhandRise = GetTLHDualOffhandRise();
-        double primaryShift = 36.0 * primarySlide;
+        // The primary PSprite has already moved to the negative X side.
+        // bMirror reverses the clone's horizontal offset and sprite origin, so
+        // copying the live X value places it on the positive side with its
+        // horizontal sway mirrored as well. This avoids a centered pistol.
+        mirror.x = primary.x;
 
-        // bMirror reverses the X origin during rendering. Reflect the primary
-        // weapon's live horizontal position around the center, preserving its
-        // sway/recoil while keeping a clear 72-pixel separation at full extension.
-        mirror.x = 2.0 * primaryShift - primary.x;
-
-        // The offhand starts well below the HUD and rises only after the main
-        // weapon has reached its right-hand position. Fade follows the same path.
+        // The offhand starts below the HUD and rises after the original has
+        // reached its left-hand position. Fade follows the same path.
         mirror.y = primary.y + (1.0 - offhandRise) * 70.0;
         mirror.alpha = primary.alpha * offhandRise;
 
