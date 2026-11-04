@@ -5577,9 +5577,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     double tlhDualWieldBlend;
-    SpriteID tlhDualOriginalSprite;
-    int tlhDualOriginalFrame;
-    bool tlhDualOriginalSpriteCaptured;
     double tlhDualCloneBaseX;
     double tlhDualCloneBaseY;
     bool tlhDualCloneBaseCaptured;
@@ -5742,11 +5739,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         PSprite primary = player.FindPSprite(PSP_WEAPON);
         if (primary && tlhDualWieldWeapon && primary.Caller == tlhDualWieldWeapon)
         {
-            if (tlhDualOriginalSpriteCaptured)
-            {
-                primary.Sprite = tlhDualOriginalSprite;
-                primary.Frame = tlhDualOriginalFrame;
-            }
             if (tlhDualCloneBaseCaptured)
             {
                 primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
@@ -5754,9 +5746,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
 
-        tlhDualOriginalSprite = GetSpriteIndex("TNT1");
-        tlhDualOriginalFrame = 0;
-        tlhDualOriginalSpriteCaptured = false;
         tlhDualCloneBaseX = 0.0;
         tlhDualCloneBaseY = 32.0;
         tlhDualCloneBaseCaptured = false;
@@ -5815,15 +5804,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     {
         if (tlhDualWieldActive)
         {
-            // One smooth timeline drives both clones; the original is hidden instantly.
-            tlhDualWieldBlend += 0.05;
+            // One smooth timeline drives the more pronounced entrance and exit.
+            tlhDualWieldBlend += 0.075;
             if (tlhDualWieldBlend >= 1.0)
                 tlhDualWieldBlend = 1.0;
         }
         else
         {
             // Reverse the same timeline: clones descend, then the original reappears.
-            tlhDualWieldBlend -= 0.05;
+            tlhDualWieldBlend -= 0.075;
             if (tlhDualWieldBlend <= 0.0)
                 tlhDualWieldBlend = 0.0;
         }
@@ -5835,15 +5824,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return 0.0;
     }
 
-    // The original disappears instantly; both clones animate in one phase.
+    // Both hands use one smooth phase with a deliberately visible travel distance.
     double GetTLHDualCloneRise()
     {
         double t = clamp(tlhDualWieldBlend, 0.0, 1.0);
         return t * t * (3.0 - 2.0 * t);
     }
 
-    // Both hands are render-only PSprites. The engine-owned weapon remains
-    // active for input, firing and ammo, but is lowered out of view first.
+    // Both hands are render-only PSprites using ZISFA0. The engine-owned
+    // weapon remains active for input, firing and ammo.
     void CopyTLHDualClone(PSprite clone, State cloneState, PSprite primary,
         bool mirrored, double cloneX, double cloneY)
     {
@@ -5853,10 +5842,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (clone.CurState != cloneState)
             clone.SetState(cloneState);
 
-        clone.Sprite = tlhDualOriginalSpriteCaptured
-            ? tlhDualOriginalSprite : primary.Sprite;
-        clone.Frame = tlhDualOriginalSpriteCaptured
-            ? tlhDualOriginalFrame : primary.Frame;
+        // ZISFA0 is the dedicated visual used by both Dual Wield hands.
+        clone.Sprite = GetSpriteIndex("ZISF");
+        clone.Frame = 0;
         clone.Tics = -1;
         clone.Translation = primary.Translation;
         clone.scale = primary.scale;
@@ -5904,12 +5892,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
 
         // Keep the weapon's real sprite and use only procedural Deselect motion.
-        if (!tlhDualOriginalSpriteCaptured)
-        {
-            tlhDualOriginalSprite = primary.Sprite;
-            tlhDualOriginalFrame = primary.Frame;
-            tlhDualOriginalSpriteCaptured = true;
-        }
 
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         if (!leftClone || leftClone.Caller != weapon)
@@ -5946,8 +5928,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Both clones rise from below to the captured HUD resting coordinates.
         // bMirror reverses the right clone's -36 offset to +36.
-        double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
-        double cloneX = tlhDualCloneBaseX - 36.0 * rise;
+        // Larger travel and wider hand spacing make the entrance readable.
+        double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 144.0;
+        double cloneX = tlhDualCloneBaseX - 48.0 * rise;
         CopyTLHDualClone(leftClone, cloneState, primary,
             false, cloneX, cloneY);
         CopyTLHDualClone(rightClone, cloneState, primary,
@@ -5955,7 +5938,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Match A_Lower's direction using position only. Reverse on exit.
         primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
-        primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY + rise * 88.0;
+        primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY + rise * 144.0;
     }
 
     override void Tick()
