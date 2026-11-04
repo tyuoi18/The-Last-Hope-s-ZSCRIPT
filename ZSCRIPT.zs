@@ -104,7 +104,7 @@ const TLH_MAX_CELLS = 300;
 // v52.7: remove the invalid default-class tint lookup and apply the named BlueSimpleRifle TRNSLATE directly to PSprites.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.10: route the primary-hand shift through each compatible weapon's
-// authored overlay/weapon offset actions so every state preserves the right-hand placement.
+// authored overlay/weapon offset actions so every state preserves the left-hand primary placement.
 // v52.11: inline the blend calculation in the action wrappers.
 // v52.12: use player.mo/self-owner and invoker-weapon explicitly inside weapon actions, avoiding ambiguous Owner lookups.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
@@ -5513,7 +5513,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         mirror.bCVarFast = primary.bCVarFast;
         mirror.bPowDouble = primary.bPowDouble;
 
-        double primarySlide = GetTLHDualPrimarySlide();
         double offhandRise = GetTLHDualOffhandRise();
         // The primary PSprite has already moved to the negative X side.
         // bMirror reverses the clone's horizontal offset and sprite origin, so
