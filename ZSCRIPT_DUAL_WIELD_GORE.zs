@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.26 - Dual Wield pickup fix; camera-only recoil; routed gore controls
+// TLH v52.27 - procedural Dual Wield deployment; Plasma/Hellfire/Airstrike support
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -4053,6 +4053,10 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     Fire:
         PLSG A 0
         {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("Ready");
             if (invoker.empMode)
                 return ResolveState("FireEMP");
 
@@ -4079,6 +4083,14 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         Goto Ready;
 
     AltFire:
+        PLSG A 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("Ready");
+            return ResolveState(null);
+        }
         PLSG A 5;
         PLSG B 5
         {
@@ -4091,6 +4103,10 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
     Zoom:
         PLSG A 0
         {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("Ready");
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 7))
@@ -4113,6 +4129,73 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         }
         PLSG B 15;
         Goto Ready;
+
+    FireDualLeft:
+        PLSG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 1))
+                return ResolveState("DualMirrorHold");
+
+            A_TakeInventory("Cell", 1, TIF_NOTAKEINFINITE);
+            if (invoker.empMode)
+            {
+                A_FireProjectile("EMPPlasma", useammo: false);
+                A_SetPitch(pitch - 1.5, SPF_INTERPOLATE);
+                A_Quake(1, 3, 0, 100);
+            }
+            else
+            {
+                A_FireProjectile("PlasmaBall", useammo: false);
+                A_SetPitch(pitch - 0.3, SPF_INTERPOLATE);
+            }
+            return ResolveState(null);
+        }
+        PLSG A 2;
+        PLSG B 1;
+        PLSG A 0
+        {
+            if (player.cmd.buttons & BT_ATTACK)
+                return ResolveState("FireDualLeft");
+            return ResolveState("DualMirrorHold");
+        }
+
+    FireDualRight:
+        PLSG A 0
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 1))
+                return ResolveState("DualMirrorHold");
+
+            A_TakeInventory("Cell", 1, TIF_NOTAKEINFINITE);
+            if (invoker.empMode)
+            {
+                A_FireProjectile("EMPPlasma", useammo: false);
+                A_SetPitch(pitch - 1.5, SPF_INTERPOLATE);
+                A_Quake(1, 3, 0, 100);
+            }
+            else
+            {
+                A_FireProjectile("PlasmaBall", useammo: false);
+                A_SetPitch(pitch - 0.3, SPF_INTERPOLATE);
+            }
+            return ResolveState(null);
+        }
+        PLSG A 2;
+        PLSG B 1;
+        PLSG A 0
+        {
+            if (player.cmd.buttons & BT_ALTATTACK)
+                return ResolveState("FireDualRight");
+            return ResolveState("DualMirrorHold");
+        }
+
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
+
 
     Flash:
         PLSF A 2 Bright A_Light1;
@@ -4512,6 +4595,14 @@ class HellfireProjector : Weapon
         Loop;
 
     Fire:
+        MISG A 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("Ready");
+            return ResolveState(null);
+        }
         MISG A 3;
         MISG B 5
         {
@@ -4527,6 +4618,14 @@ class HellfireProjector : Weapon
         Goto Ready;
 
     AltFire:
+        MISG A 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("Ready");
+            return ResolveState(null);
+        }
         MISG A 3;
         MISG B 5
         {
@@ -4537,6 +4636,55 @@ class HellfireProjector : Weapon
         }
         MISG B 5;
         Goto Ready;
+
+    FireDualLeft:
+        MISG A 3;
+        MISG B 5
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 1))
+                return ResolveState("DualMirrorHold");
+            A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
+            A_FireProjectile("NapalmGlob", useammo: false);
+            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
+            A_Quake(3, 8, 0, 220);
+        }
+        MISG B 5;
+        MISG A 0
+        {
+            if (player.cmd.buttons & BT_ATTACK)
+                return ResolveState("FireDualLeft");
+            return ResolveState("DualMirrorHold");
+        }
+
+    FireDualRight:
+        MISG A 3;
+        MISG B 5
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 1))
+                return ResolveState("DualMirrorHold");
+            A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
+            A_FireProjectile("NapalmGlob", useammo: false);
+            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
+            A_Quake(3, 8, 0, 220);
+        }
+        MISG B 5;
+        MISG A 0
+        {
+            if (player.cmd.buttons & BT_ALTATTACK)
+                return ResolveState("FireDualRight");
+            return ResolveState("DualMirrorHold");
+        }
+
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
+
 
     Flash:
         MISF A 2 Bright A_Light1;
@@ -4593,6 +4741,14 @@ class AirstrikeDesignator : Weapon
         Loop;
 
     Fire:
+        ZISG A 0
+        {
+            TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
+            if (dualPlayer && dualPlayer.tlhDualWieldActive &&
+                dualPlayer.tlhDualWieldWeapon == invoker)
+                return ResolveState("Ready");
+            return ResolveState(null);
+        }
         ZISG A 8;
         ZISG B 12
         {
@@ -4603,6 +4759,45 @@ class AirstrikeDesignator : Weapon
         }
         ZISG A 40;
         Goto Ready;
+
+    FireDualLeft:
+        ZISG A 8;
+        ZISG B 12
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 5))
+                return ResolveState("DualMirrorHold");
+            A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
+            A_FireProjectile("AirstrikeBeacon", useammo: false);
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
+        }
+        ZISG A 40;
+        Goto DualMirrorHold;
+
+    FireDualRight:
+        ZISG A 8;
+        ZISG B 12
+        {
+            bool infinite = sv_infiniteammo ||
+                (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 5))
+                return ResolveState("DualMirrorHold");
+            A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
+            A_FireProjectile("AirstrikeBeacon", useammo: false);
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
+            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+            A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
+        }
+        ZISG A 40;
+        Goto DualMirrorHold;
+
+    DualMirrorHold:
+        TNT1 A -1;
+        Stop;
+
 
     Flash:
         ZISF A 3 Bright A_Light1;
@@ -5596,6 +5791,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // configured +user3 binding and sends a per-player NetworkCommand here.
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
+    double tlhDualWieldBlend; // 0..1 deployment interpolation; never times out the mode.
     double tlhDualOriginalPrimaryAlpha;
     bool tlhDualPrimaryAlphaCaptured;
     SpriteID tlhDualOriginalSprite;
@@ -5765,6 +5961,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
 
+        tlhDualWieldBlend = 0.0;
         tlhDualOriginalPrimaryAlpha = 1.0;
         tlhDualPrimaryAlphaCaptured = false;
         tlhDualOriginalSprite = GetSpriteIndex("TNT1");
@@ -5830,6 +6027,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return false;
 
         tlhDualWieldWeapon = weapon;
+        tlhDualWieldBlend = 0.0;
         tlhDualWieldActive = true;
         return true;
     }
@@ -5984,11 +6182,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 dualRevolver.altTriggerLatched = false;
         }
 
-        // Toggle state is persistent, so the two hands are placed immediately.
-        // There is no timed rise/fall blend or automatic expiration.
-        double cloneY = tlhDualCloneBaseY;
-        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD;
-        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD;
+        // The mode itself is persistent. Only the initial presentation animates:
+        // the right weapon slides outward while the mirrored left weapon rises
+        // from below. Smoothstep keeps the motion procedural without a timer
+        // that can deactivate Dual Wield.
+        tlhDualWieldBlend = min(1.0, tlhDualWieldBlend + 0.12);
+        double deployProgress = clamp(tlhDualWieldBlend, 0.0, 1.0);
+        double deployEase = deployProgress * deployProgress * (3.0 - 2.0 * deployProgress);
+        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * deployEase;
+        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD * deployEase;
+        double rightCloneY = tlhDualCloneBaseY;
+        double leftCloneY = tlhDualCloneBaseY + (1.0 - deployEase) * 22.0;
         double cloneAlpha = tlhDualOriginalPrimaryAlpha;
 
         // Mirror the live primary animation on the left clone. When the hidden
@@ -6002,9 +6206,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         CopyTLHDualClone(leftClone, cloneState, primary,
-            false, leftCloneX, cloneY, cloneAlpha, leftSprite, leftFrame, true);
+            false, leftCloneX, leftCloneY, cloneAlpha, leftSprite, leftFrame, true);
         CopyTLHDualClone(rightClone, cloneState, primary,
-            true, rightCloneX, cloneY, cloneAlpha,
+            true, rightCloneX, rightCloneY, cloneAlpha,
             tlhDualOriginalSprite, tlhDualOriginalFrame, true);
 
         // Keep the primary state machine alive for M1, but hide its weapon body.
