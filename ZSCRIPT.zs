@@ -1240,11 +1240,15 @@ class RecoilPistol : Pistol replaces Pistol
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
-            {
-                double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx -= 36.0 * slide;
-            }
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
     }
@@ -1308,6 +1312,11 @@ class RecoilPistol : Pistol replaces Pistol
 
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -1546,11 +1555,15 @@ class OfficerVulkanPistol : Weapon
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
-            {
-                double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx -= 36.0 * slide;
-            }
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
     }
@@ -1640,6 +1653,11 @@ class OfficerVulkanPistol : Weapon
 
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -2148,11 +2166,15 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
-            {
-                double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx -= 36.0 * slide;
-            }
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
     }
@@ -2409,6 +2431,11 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         Goto Ready;
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -2634,7 +2661,14 @@ class HeavyChaingun : DoomWeapon
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
                 wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -3141,6 +3175,11 @@ Default
         Goto Ready;
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -3686,7 +3725,14 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
                 wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -3923,6 +3969,11 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         Goto Ready;
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -4236,7 +4287,14 @@ class AMR99RailRifle : Weapon
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
                 wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
@@ -4418,6 +4476,11 @@ class AMR99RailRifle : Weapon
         Goto Ready;
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -4921,11 +4984,15 @@ class ServiceRevolver : Weapon
         {
             TacticalPlayer tlhPlayer = TacticalPlayer(player.mo);
             Weapon dualWeapon = Weapon(invoker);
-            if (tlhPlayer && tlhPlayer.tlhDualWieldWeapon == dualWeapon)
-            {
-                double slide = tlhPlayer.GetTLHDualPrimarySlide();
-                wx -= 36.0 * slide;
-            }
+            bool dualPresentation = tlhPlayer &&
+                tlhPlayer.tlhDualWieldWeapon == dualWeapon &&
+                (tlhPlayer.tlhDualWieldActive || tlhPlayer.tlhDualWieldBlend > 0.0);
+
+            // Alpha must be forced so a zero-alpha engine PSprite is actually invisible.
+            A_OverlayFlags(layer, PSPF_FORCEALPHA, dualPresentation);
+
+            if (dualPresentation)
+                wx -= 36.0 * tlhPlayer.GetTLHDualPrimarySlide();
         }
         A_OverlayOffset(layer, wx, wy, flags);
     }
@@ -5035,6 +5102,11 @@ class ServiceRevolver : Weapon
         Loop;
 
     DualMirrorHold:
+        TNT1 A 0
+        {
+            A_OverlayFlags(PSP_WEAPON, PSPF_FORCEALPHA, true);
+            A_OverlayAlpha(PSP_WEAPON, 0.0);
+        }
         TNT1 A -1;
         Stop;
 
@@ -5560,7 +5632,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     double tlhDualWieldBlend;
-    double tlhDualAppliedPrimaryDrop;
     double tlhDualOriginalPrimaryAlpha;
     bool tlhDualPrimaryAlphaCaptured;
     double tlhDualCloneBaseX;
@@ -5723,14 +5794,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
 
         PSprite primary = player.FindPSprite(PSP_WEAPON);
-        if (primary && tlhDualWieldWeapon && primary.Caller == tlhDualWieldWeapon)
-        {
-            if (tlhDualAppliedPrimaryDrop != 0.0)
-                primary.y -= tlhDualAppliedPrimaryDrop;
-            if (tlhDualPrimaryAlphaCaptured)
-                primary.alpha = tlhDualOriginalPrimaryAlpha;
-        }
-        tlhDualAppliedPrimaryDrop = 0.0;
+        if (primary && tlhDualWieldWeapon && primary.Caller == tlhDualWieldWeapon &&
+            tlhDualPrimaryAlphaCaptured)
+            primary.alpha = tlhDualOriginalPrimaryAlpha;
+
         tlhDualOriginalPrimaryAlpha = 1.0;
         tlhDualPrimaryAlphaCaptured = false;
         tlhDualCloneBaseX = 0.0;
@@ -5753,17 +5820,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (tlhDualWieldWeapon && tlhDualWieldWeapon != selected)
         {
             tlhDualWieldActive = false;
-            tlhDualWieldWeapon = null;
             tlhDualWieldBlend = 0.0;
             ClearTLHDualOverlay();
+            tlhDualWieldWeapon = null;
         }
 
         if (selected && !SupportsTLHProceduralDualWield(selected))
         {
             tlhDualWieldActive = false;
-            tlhDualWieldWeapon = null;
             tlhDualWieldBlend = 0.0;
             ClearTLHDualOverlay();
+            tlhDualWieldWeapon = null;
         }
     }
 
@@ -5813,16 +5880,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return 0.0;
     }
 
-    // Phase one lowers the real weapon. Phase two raises both clones.
-    double GetTLHDualStowProgress()
-    {
-        double t = clamp(tlhDualWieldBlend / 0.32, 0.0, 1.0);
-        return t * t * (3.0 - 2.0 * t);
-    }
-
+    // The original disappears instantly; both clones animate in one phase.
     double GetTLHDualCloneRise()
     {
-        double t = clamp((tlhDualWieldBlend - 0.32) / 0.68, 0.0, 1.0);
+        double t = clamp(tlhDualWieldBlend, 0.0, 1.0);
         return t * t * (3.0 - 2.0 * t);
     }
 
@@ -5885,6 +5946,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!cloneState)
             return;
 
+        // Preserve the engine weapon's real alpha while it is hidden.
+        // It remains the gameplay/state source, never the clones' position anchor.
+        if (!tlhDualPrimaryAlphaCaptured)
+        {
+            tlhDualOriginalPrimaryAlpha = primary.alpha;
+            tlhDualPrimaryAlphaCaptured = true;
+        }
+
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         if (!leftClone || leftClone.Caller != weapon)
         {
@@ -5904,21 +5973,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!leftClone || !rightClone)
             return;
 
-        // Preserve the engine weapon's real alpha while it is hidden.
-        // It remains the gameplay/state source, never the clones' position anchor.
-        if (!tlhDualPrimaryAlphaCaptured)
-        {
-            tlhDualOriginalPrimaryAlpha = primary.alpha;
-            tlhDualPrimaryAlphaCaptured = true;
-        }
-
-        // Undo only the offset applied by this presentation layer.
-        primary.y -= tlhDualAppliedPrimaryDrop;
-        tlhDualAppliedPrimaryDrop = 0.0;
-
         // Capture the weapon's authored resting coordinates exactly once.
-        // Strip our procedural motion delta so the clones inherit only the
-        // weapon's static HUD placement, not its live bob/sway/engine jitter.
+        // Strip procedural motion so both clones have a stable independent base.
         if (!tlhDualCloneBaseCaptured)
         {
             tlhDualCloneBaseX = primary.x - tlhAnimAppliedWeaponX;
@@ -5926,19 +5982,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhDualCloneBaseCaptured = true;
         }
 
-        double stow = GetTLHDualStowProgress();
+        // The engine-owned weapon remains active for firing and ammo, but
+        // disappears immediately. The clone pair owns all visible presentation.
+        primary.alpha = 0.0;
+
         double rise = GetTLHDualCloneRise();
 
-        // Lower the engine-owned weapon completely off-screen before the pair rises.
-        // The original remains gameplay-active but is no longer a visual anchor.
-        double primaryDrop = stow * 108.0;
-        primary.y += primaryDrop;
-        tlhDualAppliedPrimaryDrop = primaryDrop;
-        primary.alpha = (stow >= 1.0) ? 0.0 : tlhDualOriginalPrimaryAlpha;
-
-        // Each clone starts below the captured resting point and rises to it.
-        // Their base is frozen for the whole activation, so movement of the
-        // hidden engine PSprite cannot pull either hand vertically or sideways.
+        // Both clones rise from below to the captured HUD resting coordinates.
         // bMirror reverses the right clone's -36 offset to +36.
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
         double cloneX = tlhDualCloneBaseX - 36.0 * rise;
