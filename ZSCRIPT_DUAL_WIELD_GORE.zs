@@ -4700,9 +4700,9 @@ class HellfireProjector : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
             {
                 A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
-            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
-            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
-            A_GunFlash();
+                TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+                if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+                A_GunFlash();
                 A_FireProjectile("NapalmGlob", useammo: false);
                 A_StartSound("weapons/shotgf", CHAN_WEAPON);
                 A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
@@ -4731,9 +4731,9 @@ class HellfireProjector : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
             {
                 A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
-            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
-            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
-            A_GunFlash();
+                TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+                if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+                A_GunFlash();
                 A_FireProjectile("NapalmGlob", useammo: false);
                 A_StartSound("weapons/shotgf", CHAN_WEAPON);
                 A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
@@ -4841,9 +4841,9 @@ class AirstrikeDesignator : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 5))
             {
                 A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
-            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
-            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
-            A_GunFlash();
+                TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+                if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+                A_GunFlash();
                 A_FireProjectile("AirstrikeBeacon", useammo: false);
                 A_StartSound("weapons/rocklf", CHAN_WEAPON);
                 A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -4862,9 +4862,9 @@ class AirstrikeDesignator : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 5))
             {
                 A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
-            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
-            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
-            A_GunFlash();
+                TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+                if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+                A_GunFlash();
                 A_FireProjectile("AirstrikeBeacon", useammo: false);
                 A_StartSound("weapons/rocklf", CHAN_WEAPON);
                 A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -5890,6 +5890,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualOriginalSpriteCaptured;
     double tlhDualCloneBaseX;
     double tlhDualCloneBaseY;
+    double tlhDualCloneBaseRotation;
     bool tlhDualCloneBaseCaptured;
     bool tlhDualFlashLeftPending;
     bool tlhDualFlashRightPending;
@@ -6056,6 +6057,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             {
                 primary.x = tlhDualCloneBaseX;
                 primary.y = tlhDualCloneBaseY;
+                primary.rotation = tlhDualCloneBaseRotation;
             }
         }
 
@@ -6067,6 +6069,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         tlhDualOriginalSpriteCaptured = false;
         tlhDualCloneBaseX = 0.0;
         tlhDualCloneBaseY = 32.0;
+        tlhDualCloneBaseRotation = 0.0;
         tlhDualCloneBaseCaptured = false;
 
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
@@ -6334,6 +6337,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (tlhAnimSwayBaseCaptured && tlhAnimSwayPSP == primary)
                 tlhDualCloneBaseX -= tlhAnimSwayAppliedX;
             tlhDualCloneBaseY = primary.y;
+            tlhDualCloneBaseRotation = primary.rotation;
             tlhDualCloneBaseCaptured = true;
         }
 
@@ -6382,11 +6386,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Capture authored overlay motion performed by weapon states on PSP_WEAPON.
         // These deltas are projected onto both clones; X is mirrored for the
         // left hand while vertical movement remains shared.
-        double authoredOffsetX = primary.x - tlhDualCloneBaseX;
-        double authoredOffsetY = primary.y - tlhDualCloneBaseY;
+        // The first frame can still contain the last non-dual sway offset.
+        // Remove that once, so it is not mistaken for a weapon-authored slide.
         if (tlhDualWieldBlend <= 0.0 &&
             tlhAnimSwayBaseCaptured && tlhAnimSwayPSP == primary)
-            authoredOffsetX -= tlhAnimSwayAppliedX;
+            primary.x = tlhDualCloneBaseX;
+
+        double authoredOffsetX = primary.x - tlhDualCloneBaseX;
+        double authoredOffsetY = primary.y - tlhDualCloneBaseY;
 
         // Staged entry, in the intended order:
         // 1) the original right-hand weapon slides to the right;
@@ -6443,26 +6450,41 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         // Each hand owns a separate copy of the exact native flash generated by
-        // A_GunFlash at that hand's projectile/bullet action.
+        // A_GunFlash at that hand's projectile/bullet action. Create the custom
+        // flash PSprites lazily from the real engine flash state.
+        PSprite engineFlash = player.FindPSprite(PSP_FLASH);
+        if (engineFlash && engineFlash.CurState)
+        {
+            if (tlhDualFlashLeftPending)
+                player.SetPsprite(TLH_DUAL_LEFT_FLASH_LAYER, engineFlash.CurState);
+            if (tlhDualFlashRightPending)
+                player.SetPsprite(TLH_DUAL_RIGHT_FLASH_LAYER, engineFlash.CurState);
+        }
+
         PSprite leftFlash = player.FindPSprite(TLH_DUAL_LEFT_FLASH_LAYER);
         PSprite rightFlash = player.FindPSprite(TLH_DUAL_RIGHT_FLASH_LAYER);
+
+        if (tlhDualFlashLeftPending && engineFlash && engineFlash.CurState && leftFlash)
+        {
+            CopyTLHDualFlash(leftFlash, engineFlash, leftClone, primary, true);
+            tlhDualFlashLeftPending = false;
+        }
+        if (tlhDualFlashRightPending && engineFlash && engineFlash.CurState && rightFlash)
+        {
+            CopyTLHDualFlash(rightFlash, engineFlash, rightClone, primary, false);
+            tlhDualFlashRightPending = false;
+        }
+
+        // Keep both active flash layers attached to their own weapon clones.
         FollowTLHDualFlash(leftFlash, leftClone, primary, true);
         FollowTLHDualFlash(rightFlash, rightClone, primary, false);
-
-        PSprite engineFlash = player.FindPSprite(PSP_FLASH);
-        if (tlhDualFlashLeftPending && engineFlash && engineFlash.CurState)
-            CopyTLHDualFlash(leftFlash, engineFlash, leftClone, primary, true);
-        if (tlhDualFlashRightPending && engineFlash && engineFlash.CurState)
-            CopyTLHDualFlash(rightFlash, engineFlash, rightClone, primary, false);
-
-        tlhDualFlashLeftPending = false;
-        tlhDualFlashRightPending = false;
 
         // Keep the primary state machine alive for M1, but hide its weapon body.
         primary.Sprite = GetSpriteIndex("ZISF");
         primary.Frame = 0;
-        primary.x = tlhDualCloneBaseX;
-        primary.y = tlhDualCloneBaseY;
+        // Keep the hidden primary PSprite's authored transform offsets alive.
+        // Weapon state actions often set them only once at animation entry;
+        // the clones consume these values until the source state restores them.
         primary.alpha = tlhDualOriginalPrimaryAlpha;
 
         // Neither hand uses the centered engine flash overlay. Their authored
