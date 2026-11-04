@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.19 - add procedural Dual Wield firing routes to heavy weapons and AMR-99
+// TLH v52.20 - remove weapon sway and route recoil exclusively to camera pitch
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -109,6 +109,8 @@ const TLH_MAX_CELLS = 300;
 // v52.12: use player.mo/self-owner and invoker-weapon explicitly inside weapon actions, avoiding ambiguous Owner lookups.
 // v52.19: add independent left/right firing routes to Heavy Chaingun, Rocket Launcher and AMR-99;
 // repair the SSG's legacy pistol-like Dual Wield route to fire proper shotgun shells.
+// v52.20: disable native/procedural weapon sway, remove per-shot PSprite recoil and physical
+// A_Recoil thrust, retain camera pitch/quakes, and keep weapon draw/reload animations.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -1061,8 +1063,8 @@ class DashFist : Fist replaces Fist
         }
         PUNG A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -1086,7 +1088,7 @@ class DashFist : Fist replaces Fist
     AltFire:
         PUNG B 4
         {
-            A_Recoil(-25);
+            
             A_StartSound("skeleton/swing", CHAN_WEAPON);
         }
         PUNG C 3
@@ -1146,8 +1148,8 @@ class HookChainsaw : Chainsaw replaces Chainsaw
         }
         SAWG C 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -1163,13 +1165,13 @@ class HookChainsaw : Chainsaw replaces Chainsaw
         SAWG A 4
         {
             A_Saw();
-            A_Recoil(-4);
+            
             A_SetPitch(pitch - 0.5, SPF_INTERPOLATE);
         }
         SAWG B 4
         {
             A_Saw();
-            A_Recoil(-4);
+            
             A_SetPitch(pitch + 0.5, SPF_INTERPOLATE);
         }
         SAWG B 0 A_ReFire;
@@ -1198,10 +1200,10 @@ class HookChainsaw : Chainsaw replaces Chainsaw
             A_DamageSelf(5);
             A_StartSound("weapons/sawup", CHAN_WEAPON);
         }
-        SAWG A 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
-        SAWG B 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
-        SAWG A 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
-        SAWG B 1 { A_Saw(); A_Recoil(-6); A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
+        SAWG A 1 { A_Saw();  A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
+        SAWG B 1 { A_Saw();  A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
+        SAWG A 1 { A_Saw();  A_SetPitch(pitch - 1.0, SPF_INTERPOLATE); }
+        SAWG B 1 { A_Saw();  A_SetPitch(pitch + 1.0, SPF_INTERPOLATE); }
         SAWG C 15;
         Goto Ready;
     Spawn:
@@ -1295,8 +1297,8 @@ class RecoilPistol : Pistol replaces Pistol
         }
         PISG A 1
         {
-            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -1395,8 +1397,8 @@ class RecoilPistol : Pistol replaces Pistol
             A_FirePistol();
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        PISG C 3 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
-        PISG B 3 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
+        PISG C 3 
+        PISG B 3 
         Goto Ready;
 
     FireAuto:
@@ -1406,7 +1408,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_FirePistol();
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
-        PISG C 2 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG C 2 
         PISG A 0 A_ReFire;
         Goto Ready;
 
@@ -1426,7 +1428,7 @@ class RecoilPistol : Pistol replaces Pistol
             }
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
-            A_Recoil(2);
+            
             return ResolveState(null);
         }
         PISG B 2;
@@ -1454,7 +1456,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_GunFlash();
             A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
-            A_Recoil(2);
+            
             return ResolveState(null);
         }
         PISG B 2;
@@ -1610,8 +1612,8 @@ class OfficerVulkanPistol : Weapon
         PISG A 1
         {
             A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -1627,8 +1629,8 @@ class OfficerVulkanPistol : Weapon
         PISG A 1
         {
             A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -1674,29 +1676,29 @@ class OfficerVulkanPistol : Weapon
         PISG B 4
         {
             A_GunFlash();
-            A_TLHDualWeaponOffset(0, 37, WOF_INTERPOLATE);
+            
             A_FireBullets(2.0, 0, 1, 8, "BulletPuff");
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Quake(1, 2, 0, 100);
-            A_Recoil(1.4);
+            
         }
-        PISG C 3 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
-        PISG B 3 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
+        PISG C 3 
+        PISG B 3 
         Goto Ready;
 
     FireAuto:
         PISG B 3
         {
             A_GunFlash();
-            A_TLHDualWeaponOffset(0, 38, WOF_INTERPOLATE);
+            
             A_FireBullets(3.0, 0, 1, 5, "BulletPuff");
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_Quake(1.8, 3.0, 0, 100);
-            A_Recoil(1.8);
+            
         }
-        PISG C 2 A_TLHDualWeaponOffset(0, 34, WOF_INTERPOLATE);
+        PISG C 2 
         PISG A 0 A_ReFire;
         Goto Ready;
 
@@ -1717,7 +1719,7 @@ class OfficerVulkanPistol : Weapon
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_Quake(1.2, 2.0, 0, 80);
-            A_Recoil(1.5);
+            
             return ResolveState(null);
         }
         PISG B 2;
@@ -1746,7 +1748,7 @@ class OfficerVulkanPistol : Weapon
             A_GunFlash();
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             A_Quake(1.2, 2.0, 0, 80);
-            A_Recoil(1.5);
+            
             return ResolveState(null);
         }
         PISG B 2;
@@ -1772,7 +1774,7 @@ class OfficerVulkanPistol : Weapon
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.5, SPF_INTERPOLATE);
             A_Quake(3, 5, 0, 200);
-            A_Recoil(3.5);
+            
         }
         PISG C 5;
         PISG A 5 A_ReFire;
@@ -1988,8 +1990,8 @@ class RecoilShotgun : Shotgun replaces Shotgun
         }
         SHTG A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -2038,7 +2040,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
         SHTG A 7
         {
             A_GunFlash();
-            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
+            
             A_FireShotgun();
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
         }
@@ -2046,7 +2048,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
         SHTG D 4;
         SHTG CB 5;
         SHTG A 3;
-        SHTG A 7 { A_WeaponOffset(0, 34, WOF_INTERPOLATE); A_ReFire(); }
+        SHTG A 7 {  A_ReFire(); }
         Goto Ready;
 
     FireOverdrive:
@@ -2066,7 +2068,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
             A_FireBullets(15.0, 5.0, 28, 5, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 8.0, SPF_INTERPOLATE);
-            A_Recoil(5);
+            
             A_Quake(4, 8, 0, 200);
         }
         SHTG BC 6;
@@ -2099,7 +2101,7 @@ class RecoilShotgun : Shotgun replaces Shotgun
             A_FireProjectile("ShotgunSlug");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
-            A_Recoil(3);
+            
         }
         SHTG BC 6;
         SHTG D 8;
@@ -2201,8 +2203,8 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         }
         SHT2 A 1
         {
-            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -2335,7 +2337,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         {
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
             A_GunFlash();
-            A_TLHDualWeaponOffset(0, 41, WOF_INTERPOLATE);
+            
             A_FireBullets(11.2, 7.1, 20, 5, "BulletPuff", 0);
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -2466,8 +2468,8 @@ class SemiAutoShotgun : Weapon
         ZHTG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -2520,7 +2522,7 @@ class SemiAutoShotgun : Weapon
             A_FireBullets(7.0, 4.0, 8, 5, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.5, SPF_INTERPOLATE);
-            A_Recoil(2.5);
+            
             A_Quake(1.4, 3.0, 0, 100);
         }
         ZHTG C 2;
@@ -2540,7 +2542,7 @@ class SemiAutoShotgun : Weapon
             A_FireBullets(8.0, 4.0, 7, 5, "BulletPuff", 0);
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 5.0, SPF_INTERPOLATE);
-            A_Recoil(2.5);
+            
         }
         ZHTG B 2
         {
@@ -2565,7 +2567,7 @@ class SemiAutoShotgun : Weapon
             A_FireProjectile("FlakGrenade");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
-            A_Recoil(5);
+            
             A_Quake(4, 8, 0, 150);
         }
         ZHTG C 3;
@@ -2580,7 +2582,7 @@ class SemiAutoShotgun : Weapon
             A_FireProjectile("ShotgunSlug");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
-            A_Recoil(5);
+            
             A_Quake(4, 8, 0, 150);
         }
         ZHTG C 3;
@@ -2748,7 +2750,7 @@ Default
         }
 
     SetBurst:
-        CHGG A 2 A_TLHDualWeaponOffset(0, 37, WOF_INTERPOLATE);
+        CHGG A 2 
         CHGG A 4
         {
             invoker.burstMode = true;
@@ -2757,7 +2759,7 @@ Default
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: 3-ROUND BURST");
         }
-        CHGG A 2 A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
+        CHGG A 2 
         Goto Ready;
 
     SetAuto:
@@ -2984,8 +2986,8 @@ Default
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 0.75, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, 0.0, 41.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.85);
+            
+            
             invoker.heat += 3;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
             if (invoker.heat >= MaxHeat)
@@ -3007,8 +3009,8 @@ Default
             A_FireBullets(3.0, 3.0, 1, 15, "BulletPuff");
             A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, FRandom(-0.7, 0.7), 42.0 + FRandom(-1.0, 1.0), 0);
-            A_OverlayRotate(PSP_WEAPON, FRandom(-1.15, -0.45));
+            
+            
             invoker.heat += 4;
             if (invoker.heat > MaxHeat) invoker.heat = MaxHeat;
             if (invoker.heat >= MaxHeat)
@@ -3318,7 +3320,7 @@ class TacticalM4A1 : DoomWeapon
             A_FireProjectile("M203Grenade", useammo: false);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
-            A_Recoil(2);
+            
             return ResolveState(null);
         }
         ZHGG B 10;
@@ -3450,20 +3452,8 @@ class M60MachineGun : DoomWeapon
 
         MSYA A 1
         {
-            double swayScale = invoker.braced ? 0.35 : 1.0;
-            double movement = invoker.braced ? 0.10 : 0.28;
-
-            A_OverlayOffset(
-                PSP_WEAPON,
-                sin(level.time * 0.031 * TLH_RAD_TO_DEG) * movement * swayScale,
-                32.0 + cos(level.time * 0.024 * TLH_RAD_TO_DEG) * 0.10 * swayScale,
-                0
-            );
-
-            A_OverlayRotate(
-                PSP_WEAPON,
-                sin(level.time * 0.02 * TLH_RAD_TO_DEG) * 0.18 * swayScale
-            );
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
 
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
@@ -3545,17 +3535,17 @@ class M60MachineGun : DoomWeapon
             if (invoker.stability < 45)
                 invoker.stability = 45;
 
-            A_WeaponOffset(0, 39.5, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, invoker.braced ? 0.0 : 0.7, 39.5, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -recoil);
+            
+            
+            
             A_SetPitch(pitch - (invoker.braced ? 0.18 : 0.42), SPF_INTERPOLATE);
         }
         MSYB A 1;
         MSYA A 2
         {
-            A_WeaponOffset(0, 34.0, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0.0, 33.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, invoker.braced ? 0.10 : 0.22);
+            
+            
+            
         }
         MSYA A 0 A_ReFire;
         Goto Ready;
@@ -3573,17 +3563,17 @@ class M60MachineGun : DoomWeapon
             if (invoker.stability < 55)
                 invoker.stability = 55;
 
-            A_WeaponOffset(0, invoker.braced ? 38.5 : 40.0, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, invoker.braced ? 0.0 : 0.5, invoker.braced ? 38.5 : 40.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -recoil);
+            
+            
+            
             A_SetPitch(pitch - (invoker.braced ? 0.14 : 0.32), SPF_INTERPOLATE);
         }
         MSYB A 1;
         MSYA A 3
         {
-            A_WeaponOffset(0, 34.0, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0.0, 33.0, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, invoker.braced ? 0.08 : 0.18);
+            
+            
+            
         }
         MSYA A 0 A_ReFire;
         Goto Ready;
@@ -3597,16 +3587,16 @@ class M60MachineGun : DoomWeapon
 
             A_FireProjectile("M203Grenade");
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
-            A_WeaponOffset(0, 39, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.0);
+            
+            
+            
             A_SetPitch(pitch - 2.0, SPF_INTERPOLATE);
-            A_Recoil(2);
+            
             return ResolveState(null);
         }
         MSYA A 3;
-        MSYA A 4 A_WeaponOffset(0, 34, WOF_INTERPOLATE);
-        MSYA A 2 A_OverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
+        MSYA A 4 
+        MSYA A 2 
         Goto Ready;
 
     Zoom:
@@ -3746,8 +3736,8 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         }
         RISG A 1
         {
-            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -3819,7 +3809,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             A_TakeInventory("RocketAmmo", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("NukeMissile", useammo: false);
             A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
-            A_Recoil(8);
+            
             A_Quake(3, 8, 0, 200);
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
         }
@@ -3840,7 +3830,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             {
                 A_FireProjectile("NukeMissile", useammo: false);
                 A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
-                A_Recoil(8);
+                
                 A_Quake(3, 8, 0, 200);
             }
             else
@@ -3872,7 +3862,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             {
                 A_FireProjectile("NukeMissile", useammo: false);
                 A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
-                A_Recoil(8);
+                
                 A_Quake(3, 8, 0, 200);
             }
             else
@@ -3980,9 +3970,8 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         }
         PLSG A 1
         {
-            double sway = sin(level.time * 1.9480565) * 0.30;
-            A_OverlayOffset(PSP_WEAPON, sway, 32 + cos(level.time * 0.027 * TLH_RAD_TO_DEG) * 0.13, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.021 * TLH_RAD_TO_DEG) * 0.28);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -4035,7 +4024,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         // Standard plasma bolts cycle at 3 tics per shot (~700 RPM at 35 tics/sec).
         PLSG A 2
         {
-            A_WeaponOffset(0, 35, WOF_INTERPOLATE);
+            
             A_FirePlasma();
             A_SetPitch(pitch - 0.3, SPF_INTERPOLATE);
         }
@@ -4128,8 +4117,8 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
         }
         ZFGG A 1
         {
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -4164,7 +4153,7 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
         {
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_Explode(50, 128, XF_EXPLICITDAMAGETYPE, false, 128);
-            A_Recoil(-5);
+            
             Thrust(15, pitch - 90);
             A_SetPitch(pitch - 6.0, SPF_INTERPOLATE);
             A_Quake(4, 10, 0, 200);
@@ -4203,7 +4192,7 @@ class RecoilBFG9000 : BFG9000 replaces BFG9000
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("BFGSlowOrb", useammo: false);
             A_SetPitch(pitch - 10.0, SPF_INTERPOLATE);
-            A_Recoil(5);
+            
             A_Quake(3, 10, 0, 300);
         }
         ZFGG B 30;
@@ -4295,8 +4284,8 @@ class AMR99RailRifle : Weapon
         ZLSG A 1
         {
             A_TLHDualWeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -4325,12 +4314,12 @@ class AMR99RailRifle : Weapon
         ZLSG B 6
         {
             A_GunFlash();
-            A_TLHDualWeaponOffset(0, 46, WOF_INTERPOLATE);
+            
             A_FireProjectile("GaussSlug");
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
             A_Quake(7, 14, 0, 350);
-            A_Recoil(5);
+            
         }
         ZLSG B 28;
         ZLSG A 8;
@@ -4350,7 +4339,7 @@ class AMR99RailRifle : Weapon
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
             A_Quake(7, 14, 0, 350);
-            A_Recoil(5);
+            
             return ResolveState(null);
         }
         ZLSG B 28;
@@ -4374,7 +4363,7 @@ class AMR99RailRifle : Weapon
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
             A_Quake(7, 14, 0, 350);
-            A_Recoil(5);
+            
             return ResolveState(null);
         }
         ZLSG B 28;
@@ -4471,8 +4460,8 @@ class HellfireProjector : Weapon
         MISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -4488,7 +4477,7 @@ class HellfireProjector : Weapon
         MISG B 5
         {
             A_GunFlash();
-            A_WeaponOffset(0, 36, WOF_INTERPOLATE);
+            
             A_FireProjectile("NapalmGlob");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
@@ -4552,8 +4541,8 @@ class AirstrikeDesignator : Weapon
         ZISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
-            A_OverlayRotate(PSP_WEAPON, sin(level.time * 0.023 * TLH_RAD_TO_DEG) * 0.30);
+            A_OverlayOffset(PSP_WEAPON, 0, 32, 0);
+            A_OverlayRotate(PSP_WEAPON, 0);
             A_WeaponReady(WRF_ALLOWZOOM | WRF_ALLOWRELOAD);
         }
         Loop;
@@ -4725,8 +4714,8 @@ class HunterRifle : Weapon
             A_FireBullets(0.04, 0.02, 1, 36, "BulletPuff", 0);
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_OverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.2);
+            
+            
         }
         RIFL C 1;
         RIFL D 1;
@@ -5036,13 +5025,8 @@ class ServiceRevolver : Weapon
             if (invoker.triggerLatched || invoker.altTriggerLatched)
                 readyFlags |= WRF_NOPRIMARY | WRF_NOSECONDARY;
 
-            // Primitive look sway: subtle and smoothed by TacticalPlayer's
-            // existing look-inertia variables. WRF_NoBob keeps A_WeaponReady
-            // from overwriting these offsets immediately afterward.
-            let tp = TacticalPlayer(player.mo);
-            double swayX = tp ? clamp(tp.tlhAnimLookX * 1.25, -1.8, 1.8) : 0.0;
-            double swayY = tp ? clamp(-tp.tlhAnimLookY * 0.85, -1.2, 1.2) : 0.0;
-            A_TLHDualOverlayOffset(PSP_WEAPON, swayX, 32.0 + swayY, 0);
+            // Fixed ready pose. WRF_NoBob prevents native weapon bob.
+            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, 0);
             A_WeaponReady(readyFlags);
         }
         Loop;
@@ -5164,8 +5148,8 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.6, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.0);
+            
+            
 
             if (!infinite && invoker.cylinderAmmo == 1)
                 A_Print("REVOLVER: LAST ROUND");
@@ -5173,12 +5157,12 @@ class ServiceRevolver : Weapon
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 2
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 35, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.0);
+        {            
+            
         }
         RVOL Q 4
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
+        {            
+            
         }
         Goto Ready;
 
@@ -5201,9 +5185,9 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.2, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.0);
-            A_Recoil(1.4);
+            
+            
+            
 
             if (!infinite && invoker.cylinderAmmo == 1)
                 A_Print("REVOLVER: LAST ROUND");
@@ -5238,9 +5222,9 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 3.2, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, -38, 51, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.0);
-            A_Recoil(1.4);
+            
+            
+            
 
             if (!infinite && invoker.cylinderAmmo == 1)
                 A_Print("REVOLVER: LAST ROUND");
@@ -5281,8 +5265,8 @@ class ServiceRevolver : Weapon
         // M4A1-style burst rhythm: show the pre-shot A frame for one tic,
         // then the B firing frame; repeat for each cartridge.
         RVOL A 1
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
+        {            
+            
         }
         RVOL B 1
         {
@@ -5292,12 +5276,12 @@ class ServiceRevolver : Weapon
             A_FireBullets(0.7, 0.3, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 38, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -2.4);
+            
+            
         }
         RVOL A 1
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 33, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -0.8);
+        {            
+            
         }
         RVOL B 1
         {
@@ -5307,12 +5291,12 @@ class ServiceRevolver : Weapon
             A_FireBullets(1.8, 0.7, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.0, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 39, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.0);
+            
+            
         }
         RVOL A 1
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 34, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.0);
+        {            
+            
         }
         RVOL B 1
         {
@@ -5322,18 +5306,18 @@ class ServiceRevolver : Weapon
             A_FireBullets(3.0, 1.0, 1, 4, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
             A_SetPitch(pitch - 1.4, SPF_INTERPOLATE);
-            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 41, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -3.8);
+            
+            
             if (!infinite && invoker.cylinderAmmo <= 0)
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
         }
         RVOL C 3
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 36, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, -1.3);
+        {            
+            
         }
         RVOL Q 4
-        {            A_TLHDualOverlayOffset(PSP_WEAPON, 0, 32, WOF_INTERPOLATE);
-            A_OverlayRotate(PSP_WEAPON, 0);
+        {            
+            
         }
         Goto Ready;
 
@@ -5423,7 +5407,7 @@ Default
             A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
             A_StartSound("weapons/shotgf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
-            A_Recoil(1.5);
+            
         }
         ASLT A 7 A_ReFire;
         Goto Ready;
@@ -5439,7 +5423,7 @@ Default
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0, 0, 8192, 9, 1.0, 1.0);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
-            A_Recoil(2.2);
+            
         }
         ASLT A 6 A_ReFire;
         Goto Ready;
@@ -5457,7 +5441,7 @@ Default
             A_FireBullets(4.5, 3.5, 14, 4, "BulletPuff");
             A_StartSound("weapons/sshotf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Recoil(2.0);
+            
         }
         SHTG C 4;
         ASLT B 5;
@@ -5475,7 +5459,7 @@ Default
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0.35, 0.15, 8192, 12, 0.75, 1.0);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
-            A_Recoil(3.4);
+            
         }
         ASLT A 8 A_ReFire;
         Goto Ready;
@@ -6650,119 +6634,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
     override Vector2 BobWeapon(double ticfrac)
     {
-        if (!player)
-            return (0, 0);
-
-        let weapon = player.ReadyWeapon;
-        if (!weapon || weapon.bDontBob)
-            return (0, 0);
-
-        // Never apply custom weapon bob while the engine is switching weapons.
-        // Otherwise the old PSprite's moving bob is layered over A_Lower/A_Raise.
-        if (player.PendingWeapon != WP_NOCHANGE)
-            return (0, 0);
-
-        double speed = Vel.XY.Length();
-        // The revolver has authored recoil/reload offsets of its own. Do not
-        // layer the player's procedural bob over those offsets, while moving or
-        // standing still; that second transform is what causes vertical jitter.
-        if (weapon is "ServiceRevolver")
-            return (0, 0);
-        double speed01 = clamp(speed / 18.0, 0.0, 1.0);
-        double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
-        double phase = tlhAnimStepPhase +
-            ((6.0 + speed01 * 12.0) * bobSpeed * ticfrac);
-
-        double gait = sin(phase);
-        double gaitDouble = sin(phase * 2.0);
-        double gaitHalf = sin(phase * 0.5 + 22.0);
-        double weight = GetTLHWeaponMotionWeight(weapon);
-
-        double rangeX = weapon.BobRangeX;
-        double rangeY = weapon.BobRangeY;
-        if (rangeX <= 0.001) rangeX = 1.0;
-        if (rangeY <= 0.001) rangeY = 1.0;
-
-        double intensity = (player.WeaponState & WF_WEAPONBOBBING) ?
-            1.0 : player.GetWBobFire();
-
-        double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
-        double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
-        double idleBlend = clamp(1.0 - speed01 * 2.2, 0.0, 1.0);
-
-        // Layer 1: gait. The half-frequency term keeps the gun from looking
-        // mechanically symmetrical on every single footstep.
-        double walkX =
-            gait * (1.05 + 2.35 * speed01) +
-            gaitHalf * (0.18 + 0.42 * speed01);
-
-        double walkY =
-            gaitDouble * (0.62 + 1.55 * speed01) +
-            gait * (0.12 * speed01) -
-            gait * (0.20 * (1.0 - crouchFactor));
-
-        // Layer 2: velocity and acceleration sway.
-        double worldForwardX = cos(angle);
-        double worldForwardY = sin(angle);
-        double worldRightX = sin(angle);
-        double worldRightY = -cos(angle);
-
-        double forwardVelocity = Vel.X * worldForwardX + Vel.Y * worldForwardY;
-        double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
-
-        double velocitySwayX = -sideVelocity * 0.115;
-        double velocitySwayY = abs(forwardVelocity) * 0.020;
-
-        // Layer 3: look inertia. cmd yaw/pitch is smoothed in the player tick,
-        // keeping quick mouse movement from snapping the PSprite.
-        double lookX = tlhAnimLookX * 0.90;
-        double lookY = -tlhAnimLookY * 0.48;
-
-        // Primitive weapon sway: a small smoothed offset opposing view motion.
-        // It is deliberately subtle so the weapon follows the view without
-        // feeling like a second camera-bob system.
-        double simpleSwayX = clamp(tlhAnimLookX * 1.35, -2.0, 2.0);
-        double simpleSwayY = clamp(-tlhAnimLookY * 0.90, -1.25, 1.25);
-
-        // Layer 4: braking/settling. This is the visual memory of the body
-        // continuing to move for a fraction of a second after the player stops.
-        double sprintSettle = speed01 * speed01 * 0.34;
-        double stopX = tlhAnimStopKick * 0.30;
-        double stopY = -abs(tlhAnimStopKick) * 0.12;
-
-        // Layer 5: recoil and landing compression.
-        double recoilY = -tlhAnimWeaponKick * (0.80 + 0.22 * weight);
-        double recoilX = tlhAnimWeaponKickSide * 0.48;
-        double landingY = tlhAnimLandingKick * 0.26;
-        double damageY = tlhAnimDamageKick * 0.10;
-
-        // Standing still gets a tiny breathing motion. In the air the gait is
-        // mostly suppressed and the weapon enters a light floating state.
-        double idleX = sin(double(level.time) * 0.105 * TLH_RAD_TO_DEG) * 0.16 * idleBlend;
-        double idleY = cos(double(level.time) * 4.7555497) * 0.13 * idleBlend;
-        double airX = sin(double(level.time) * 0.07 * TLH_RAD_TO_DEG) * 0.08 * airBlend;
-        double airY = cos(double(level.time) * 0.055 * TLH_RAD_TO_DEG) * 0.18 * airBlend;
-
-        double x =
-            (walkX * 0.92 + velocitySwayX + tlhAnimSwayX +
-             tlhAnimInertiaX + lookX + simpleSwayX + stopX +
-             recoilX + idleX + airX) * weight;
-
-        double y =
-            (walkY * 0.90 + velocitySwayY + tlhAnimSwayY +
-             tlhAnimInertiaY + lookY + simpleSwayY + sprintSettle +
-             stopY + recoilY + landingY + damageY + idleY + airY) * weight;
-
-        // Reduce the visual amplitude while airborne and while crouched.
-        x *= intensity * rangeX * (1.0 - 0.32 * airBlend);
-        y *= intensity * rangeY * (1.0 - 0.18 * airBlend);
-
-        // Keep authored weapon ranges sane even for weapons that were never
-        // intended to use such large procedural offsets.
-        x = clamp(x, -11.0, 11.0);
-        y = clamp(y, -15.0, 15.0);
-
-        return (x, y);
+        // Keep the weapon fixed in view space. Camera movement remains independent.
+        return (0, 0);
     }
 
     // Apply positional and rotational motion to the actual weapon PSprite
@@ -6812,25 +6685,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!psp || !player || !player.mo || !player.ReadyWeapon ||
             psp.ID != PSP_WEAPON)
             return;
-
         Weapon weapon = player.ReadyWeapon;
         if (psp.Caller != weapon)
             return;
 
-        // Every weapon starts on its original palette. Blue Simple Rifle mode
-        // is the sole exception and is applied directly to its weapon PSprite.
         psp.Translation = 0;
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
             TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
-            if (blueTint)
-                psp.Translation = blueTint;
+            if (blueTint) psp.Translation = blueTint;
         }
 
         bool sameState = (tlhAnimLastWeaponPSPState == psp.CurState);
-
-        // Remove only the transform applied on the previous tic. A state
-        // transition supplies a new authored baseline and is left untouched.
         if (sameState)
         {
             psp.x -= tlhAnimAppliedWeaponX;
@@ -6843,11 +6709,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhAnimAppliedWeaponY = 0;
             tlhAnimAppliedWeaponRoll = 0;
         }
-
         tlhAnimLastWeaponPSPState = psp.CurState;
 
-        // TacticalM4A1 deliberately opts out of every global procedural HUD
-        // transform. The previous tic's transform was already removed above.
         if (weapon is "TacticalM4A1")
         {
             tlhAnimAppliedWeaponX = 0;
@@ -6859,75 +6722,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double visualOffsetX = 0.0;
         double visualOffsetY = 0.0;
         double visualBaseRoll = 0.0;
-        double visualSway = 1.0;
+        double unusedSway = 0.0;
         GetTLHWeaponVisualProfile(weapon,
-            visualOffsetX, visualOffsetY, visualBaseRoll, visualSway);
+            visualOffsetX, visualOffsetY, visualBaseRoll, unusedSway);
 
-        double speed01 = clamp(Vel.XY.Length() / 18.0, 0.0, 1.0);
-        double weight = GetTLHWeaponMotionWeight(weapon);
-        double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
-        double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
-
-        double worldRightX = sin(angle);
-        double worldRightY = -cos(angle);
-        double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
-        double bodyTilt = clamp(-sideVelocity * 0.055, -3.2, 3.2);
-        double airTilt = clamp(-Vel.Z * 0.050, -3.0, 3.0) * airBlend;
+        // Only the weapon draw/equip spring remains. It never reacts to firing or movement.
         double drawRoll = -tlhAnimDrawKick * 0.10;
-
-        double stepRoll = sin(tlhAnimStepPhase) * (0.65 + 1.10 * speed01);
-        double swayRoll = -tlhAnimSwayX * 0.62;
-        double inertiaRoll = -tlhAnimInertiaX * 0.40;
-        double lookRoll = -tlhAnimLookX * 0.52;
-        double recoilRoll = tlhAnimWeaponKickSide * 1.15;
-        double landingRoll = tlhAnimLandingKick * 0.10;
-        double stopRoll = tlhAnimStopKick * 0.24;
-
-        double totalRoll =
-            visualBaseRoll + drawRoll +
-            (stepRoll + swayRoll + inertiaRoll + lookRoll +
-             recoilRoll + landingRoll + stopRoll + bodyTilt + airTilt) *
-            visualSway * (0.78 + 0.22 * weight);
-
-        String cls = weapon.GetClassName();
-        if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
-            cls == "RecoilBFG9000" || cls == "AMR99RailRifle")
-            totalRoll *= 0.60;
-        else if (cls == "RecoilPistol" || cls == "OfficerVulkanPistol")
-            totalRoll *= 1.12;
-
-        totalRoll = clamp(totalRoll, -4.25, 4.25);
-
-        double swayX =
-            (tlhAnimSwayX * 1.10 + tlhAnimInertiaX * 0.85 +
-             tlhAnimLookX * 0.68 + tlhAnimStopKick * 0.40) * visualSway;
-
-        double swayY =
-            (tlhAnimSwayY * 0.75 + tlhAnimInertiaY * 0.55 -
-             tlhAnimLookY * 0.40) * visualSway;
-
-        double crouchY = -(1.0 - crouchFactor) * (1.4 + 1.2 * weight);
-        double airFloatY = airBlend * cos(double(level.time) * 0.09 * TLH_RAD_TO_DEG) * 0.35;
-        double recoilY = -tlhAnimWeaponKick * 0.92;
-        double recoilX = tlhAnimWeaponKickSide * 0.56;
-        double landingY = tlhAnimLandingKick * 0.30;
-        double damageY = tlhAnimDamageKick * 0.12;
         double drawY = tlhAnimDrawKick * 0.72;
         double drawX = -tlhAnimDrawKick * 0.06;
-
-        double totalX = visualOffsetX + swayX + recoilX + drawX;
-        double totalY = visualOffsetY + swayY + crouchY + airFloatY +
-                        recoilY + landingY + damageY + drawY;
-
-        totalX = clamp(totalX, -12.0, 12.0);
-        // The dual-hand horizontal offset is authored by the active weapon's
-        // state wrappers so it cannot be overwritten by frame actions.
-        totalY = clamp(totalY, -18.0, 18.0);
+        double totalX = visualOffsetX + drawX;
+        double totalY = visualOffsetY + drawY;
+        double totalRoll = visualBaseRoll + drawRoll;
 
         psp.x += totalX;
         psp.y += totalY;
         psp.rotation += totalRoll;
-
         tlhAnimAppliedWeaponX = totalX;
         tlhAnimAppliedWeaponY = totalY;
         tlhAnimAppliedWeaponRoll = totalRoll;
@@ -8023,7 +7832,8 @@ class TLHCompactSMG : Weapon
             A_GunFlash();
             A_FireBullets(3.5, 2.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/pistol", CHAN_WEAPON);
-            A_Recoil(1.2);
+            A_SetPitch(pitch - 0.35, SPF_INTERPOLATE);
+            
         }
         ZHGG B 1;
         ZHGG A 0 A_ReFire;
@@ -8044,7 +7854,10 @@ class TLHCompactSMG : Weapon
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Recoil(2.0);
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            A_SetPitch(pitch - 0.55, SPF_INTERPOLATE);
+            
         }
         ZHGG B 1;
         ZHGG A 2
@@ -8052,7 +7865,7 @@ class TLHCompactSMG : Weapon
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Recoil(2.0);
+            
         }
         ZHGG B 1;
         ZHGG A 2
@@ -8060,7 +7873,7 @@ class TLHCompactSMG : Weapon
             A_GunFlash();
             A_FireBullets(5.0, 3.0, 1, 5, "BulletPuff");
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
-            A_Recoil(2.0);
+            
         }
         Goto Ready;
 
@@ -9136,10 +8949,10 @@ class TacticalHUDHandler : EventHandler
                 {
                     tlhSSGVisible = true;
 
-                    tlhSSGOffsetX = tpState.tlhAnimSwayX + tpState.tlhAnimInertiaX + tpState.tlhAnimLookX * 0.60;
-                    tlhSSGOffsetY = tpState.tlhAnimSwayY + tpState.tlhAnimInertiaY - tpState.tlhAnimLookY * 0.35;
-                    tlhSSGRoll = tpState.tlhAnimWeaponKickSide * 1.1 + tpState.tlhAnimSwayX * -0.4;
-                    tlhSSGRecoil = tpState.tlhAnimWeaponKick;
+                    tlhSSGOffsetX = 0;
+                    tlhSSGOffsetY = 0;
+                    tlhSSGRoll = 0;
+                    tlhSSGRecoil = 0;
                 }
             }
 
@@ -9951,13 +9764,7 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         double liveBobX = 0.0;
         double liveBobY = 0.0;
 
-        let tp = TacticalPlayer(p);
-        if (tp)
-        {
-            liveRoll = clamp(tp.tlhAnimWeaponKickSide * 0.35, -4.0, 4.0);
-            liveBobX = clamp(tp.tlhAnimSwayX * 0.55 + tp.tlhAnimInertiaX * 0.32, -8.0, 8.0);
-            liveBobY = clamp(tp.tlhAnimSwayY * 0.40 + tp.tlhAnimInertiaY * 0.25, -6.0, 6.0);
-        }
+        // Fixed weapon preview; active recoil is camera-only.
 
         double fit = min(38.0 / tw, 23.0 / th);
         double dw = clamp(tw * fit, 18.0, 48.0);
