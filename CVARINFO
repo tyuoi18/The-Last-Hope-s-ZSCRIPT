@@ -3,3 +3,8 @@
 // CVar.FindCVar and remain authoritative in multiplayer.
 server int tlh_gamemode = 0;
 server bool tlh_ssg_only = false;
+
+// Local gore customization. User CVars are saved per player.
+user bool tlh_gore_enabled = true;
+user float tlh_gore_intensity = 1.0;
+user int tlh_gore_color = 0;
