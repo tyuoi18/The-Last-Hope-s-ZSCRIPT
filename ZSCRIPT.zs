@@ -5969,8 +5969,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double rise = GetTLHDualCloneRise();
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
-        double leftCloneX = tlhDualCloneBaseX - 48.0 * rise;
-        double rightCloneX = tlhDualCloneBaseX + 48.0 * rise;
+        double leftCloneX = tlhDualCloneBaseX - 72.0 * rise; // Negative X: left-hand weapon.
+        double rightCloneX = tlhDualCloneBaseX + 72.0 * rise; // Positive X: right-hand weapon.
         double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
 
         // Mirror the live primary animation on the left clone. When the hidden
