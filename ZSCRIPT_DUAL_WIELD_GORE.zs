@@ -4666,7 +4666,12 @@ class HellfireProjector : Weapon
         MISG A 0
         {
             if (player.cmd.buttons & BT_ATTACK)
-                return ResolveState("FireDualLeft");
+            {
+                bool infinite = sv_infiniteammo ||
+                    (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+                if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+                    return ResolveState("FireDualLeft");
+            }
             return ResolveState("DualMirrorHold");
         }
 
@@ -4689,7 +4694,12 @@ class HellfireProjector : Weapon
         MISG A 0
         {
             if (player.cmd.buttons & BT_ALTATTACK)
-                return ResolveState("FireDualRight");
+            {
+                bool infinite = sv_infiniteammo ||
+                    (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+                if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+                    return ResolveState("FireDualRight");
+            }
             return ResolveState("DualMirrorHold");
         }
 
