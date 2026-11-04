@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.25 - persistent Dual Wield auto-release on queued weapon switch; configurable gore controls
+// TLH v52.26 - Dual Wield pickup fix; camera-only recoil; routed gore controls
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
