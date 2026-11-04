@@ -5893,6 +5893,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualCloneBaseCaptured;
     bool tlhDualFlashLeftPending;
     bool tlhDualFlashRightPending;
+    double tlhDualLeftFlashOffsetX;
+    double tlhDualLeftFlashOffsetY;
+    double tlhDualRightFlashOffsetX;
+    double tlhDualRightFlashOffsetY;
     PSprite tlhAnimSwayPSP;
     Actor tlhAnimSwayCaller;
     double tlhAnimSwayBaseX;
@@ -6081,6 +6085,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         tlhDualFlashLeftPending = false;
         tlhDualFlashRightPending = false;
+        tlhDualLeftFlashOffsetX = 0.0;
+        tlhDualLeftFlashOffsetY = 0.0;
+        tlhDualRightFlashOffsetX = 0.0;
+        tlhDualRightFlashOffsetY = 0.0;
     }
 
     void ResetTLHDualForWeaponSwitch()
@@ -6227,19 +6235,43 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         flashClone.bPowDouble = sourceFlash.bPowDouble;
         // Preserve the flash's authored offset relative to the primary hand,
         // then anchor it to this clone's own hand position.
-        flashClone.x = handClone.x + (sourceFlash.x - primary.x);
-        flashClone.y = handClone.y + (sourceFlash.y - primary.y);
+        double localFlashOffsetX = sourceFlash.x - primary.x;
+        double localFlashOffsetY = sourceFlash.y - primary.y;
+        if (mirrored)
+            localFlashOffsetX = -localFlashOffsetX;
+
+        if (mirrored)
+        {
+            tlhDualLeftFlashOffsetX = localFlashOffsetX;
+            tlhDualLeftFlashOffsetY = localFlashOffsetY;
+        }
+        else
+        {
+            tlhDualRightFlashOffsetX = localFlashOffsetX;
+            tlhDualRightFlashOffsetY = localFlashOffsetY;
+        }
+
+        flashClone.x = handClone.x + localFlashOffsetX;
+        flashClone.y = handClone.y + localFlashOffsetY;
         flashClone.InterpolateTic = true;
     }
 
-    void FollowTLHDualFlash(PSprite flashClone, PSprite handClone,
-        PSprite primary, bool mirrored)
+    void FollowTLHDualFlash(PSprite flashClone, PSprite handClone, bool mirrored)
     {
-        if (!flashClone || !handClone || !primary)
+        if (!flashClone || !handClone)
             return;
 
-        flashClone.x = handClone.x;
-        flashClone.y = handClone.y;
+        if (mirrored)
+        {
+            flashClone.x = handClone.x + tlhDualLeftFlashOffsetX;
+            flashClone.y = handClone.y + tlhDualLeftFlashOffsetY;
+        }
+        else
+        {
+            flashClone.x = handClone.x + tlhDualRightFlashOffsetX;
+            flashClone.y = handClone.y + tlhDualRightFlashOffsetY;
+        }
+
         // Keep the rotation copied from the native flash state.
         flashClone.InterpolateTic = true;
     }
@@ -6470,8 +6502,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         // Keep both active flash layers attached to their own weapon clones.
-        FollowTLHDualFlash(leftFlash, leftClone, primary, true);
-        FollowTLHDualFlash(rightFlash, rightClone, primary, false);
+        FollowTLHDualFlash(leftFlash, leftClone, true);
+        FollowTLHDualFlash(rightFlash, rightClone, false);
 
         // Keep the primary state machine alive for M1, but hide its weapon body.
         primary.Sprite = GetSpriteIndex("ZISF");
