@@ -8094,7 +8094,8 @@ class TacticalHUDHandler : EventHandler
                 FRandom(-2.2, 2.2) * velocityScale,
                 FRandom(0.8, deathBurst ? 4.2 : 3.2) * velocityScale
             );
-            gore.Scale = FRandom(0.18, 0.34) * sizeScale;
+            double particleScale = FRandom(0.18, 0.34) * sizeScale;
+            gore.Scale = (particleScale, particleScale);
 
             if (goreTranslation)
                 gore.Translation = goreTranslation;
@@ -8103,12 +8104,12 @@ class TacticalHUDHandler : EventHandler
 
     // KEYCONF routes these controls into this existing input observer.
     // CVars are user-scoped, so the settings stay local and persist per player.
-    void ApplyTLHGoreControl(String command)
+    void ApplyTLHGoreControl(String command, int playerNum)
     {
-        if (consoleplayer < 0 || consoleplayer >= MAXPLAYERS)
+        if (playerNum < 0 || playerNum >= MAXPLAYERS)
             return;
 
-        PlayerInfo localPlayer = players[consoleplayer];
+        PlayerInfo localPlayer = players[playerNum];
         CVar enabled = CVar.GetCVar("tlh_gore_enabled", localPlayer);
         CVar intensity = CVar.GetCVar("tlh_gore_intensity", localPlayer);
         CVar goreColorCVar = CVar.GetCVar("tlh_gore_color", localPlayer);
@@ -8523,7 +8524,7 @@ class TacticalHUDHandler : EventHandler
             if (inputDown && !tlhGoreToggleDown)
             {
                 tlhGoreToggleDown = true;
-                ApplyTLHGoreControl(binding);
+                EventHandler.SendNetworkCommand('TLH_GoreToggle');
             }
             else if (!inputDown)
                 tlhGoreToggleDown = false;
@@ -8534,7 +8535,7 @@ class TacticalHUDHandler : EventHandler
             if (inputDown && !tlhGoreIntensityUpDown)
             {
                 tlhGoreIntensityUpDown = true;
-                ApplyTLHGoreControl(binding);
+                EventHandler.SendNetworkCommand('TLH_GoreIntensityUp');
             }
             else if (!inputDown)
                 tlhGoreIntensityUpDown = false;
@@ -8545,7 +8546,7 @@ class TacticalHUDHandler : EventHandler
             if (inputDown && !tlhGoreIntensityDownDown)
             {
                 tlhGoreIntensityDownDown = true;
-                ApplyTLHGoreControl(binding);
+                EventHandler.SendNetworkCommand('TLH_GoreIntensityDown');
             }
             else if (!inputDown)
                 tlhGoreIntensityDownDown = false;
@@ -8556,7 +8557,7 @@ class TacticalHUDHandler : EventHandler
             if (inputDown && !tlhGoreColorNextDown)
             {
                 tlhGoreColorNextDown = true;
-                ApplyTLHGoreControl(binding);
+                EventHandler.SendNetworkCommand('TLH_GoreColorNext');
             }
             else if (!inputDown)
                 tlhGoreColorNextDown = false;
@@ -8605,11 +8606,34 @@ class TacticalHUDHandler : EventHandler
 
     override void NetworkCommandProcess(NetworkCommand cmd)
     {
-        if (cmd.Command != 'TLH_DualWieldToggle')
-            return;
-
         int playerNum = cmd.Player;
         if (playerNum < 0 || playerNum >= MAXPLAYERS)
+            return;
+
+        // InputProcess is UI-scoped. Route gore changes here so CVar writes
+        // and Actor feedback execute from the normal play/network context.
+        if (cmd.Command == 'TLH_GoreToggle')
+        {
+            ApplyTLHGoreControl("tlh_gore_toggle", playerNum);
+            return;
+        }
+        if (cmd.Command == 'TLH_GoreIntensityUp')
+        {
+            ApplyTLHGoreControl("tlh_gore_intensity_up", playerNum);
+            return;
+        }
+        if (cmd.Command == 'TLH_GoreIntensityDown')
+        {
+            ApplyTLHGoreControl("tlh_gore_intensity_down", playerNum);
+            return;
+        }
+        if (cmd.Command == 'TLH_GoreColorNext')
+        {
+            ApplyTLHGoreControl("tlh_gore_color_next", playerNum);
+            return;
+        }
+
+        if (cmd.Command != 'TLH_DualWieldToggle')
             return;
 
         Actor pawn = players[playerNum].mo;
