@@ -5831,8 +5831,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return t * t * (3.0 - 2.0 * t);
     }
 
-    // Both hands are render-only PSprites using ZISFA0. The engine-owned
-    // weapon remains active for input, firing and ammo.
+    // Both hands are render-only PSprites. ZISFA0 is the idle hand sprite;
+    // while firing, each clone mirrors the weapon firing frame. The engine-owned
+    // weapon remains active for input, firing and ammo, but is hidden with PISFA0.
     void CopyTLHDualClone(PSprite clone, State cloneState, PSprite primary,
         bool mirrored, double cloneX, double cloneY)
     {
@@ -5842,9 +5843,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (clone.CurState != cloneState)
             clone.SetState(cloneState);
 
-        // ZISFA0 is the dedicated visual used by both Dual Wield hands.
-        clone.Sprite = GetSpriteIndex("ZISF");
-        clone.Frame = 0;
+        // Idle hands use ZISFA0. During an attack, mirror the live firing
+        // frame so both visible weapons reproduce the weapon's authored animation.
+        bool firing = (player.cmd.buttons & (BT_ATTACK | BT_ALTATTACK)) != 0;
+        clone.Sprite = firing ? primary.Sprite : GetSpriteIndex("ZISF");
+        clone.Frame = firing ? primary.Frame : 0;
         clone.Tics = -1;
         clone.Translation = primary.Translation;
         clone.scale = primary.scale;
@@ -5891,7 +5894,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!cloneState)
             return;
 
-        // Keep the weapon's real sprite and use only procedural Deselect motion.
+        // The primary PSprite remains the gameplay/action driver, but its
+        // rendered weapon is replaced with PISFA0 after its frame is copied.
+        // This prevents the original weapon and its muzzle flash from appearing.
 
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         if (!leftClone || leftClone.Caller != weapon)
@@ -5930,11 +5935,26 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // bMirror reverses the right clone's -36 offset to +36.
         // Larger travel and wider hand spacing make the entrance readable.
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 144.0;
-        double cloneX = tlhDualCloneBaseX - 48.0 * rise;
+        double cloneX = tlhDualCloneBaseX - 72.0 * rise;
         CopyTLHDualClone(leftClone, cloneState, primary,
             false, cloneX, cloneY);
         CopyTLHDualClone(rightClone, cloneState, primary,
             true, cloneX, cloneY);
+
+        // Hide the original gun with the TLH pistol muzzle-flash sprite.
+        // The weapon state still executes normally for firing/ammo; only its
+        // visible PSprite and engine flash overlay are suppressed.
+        primary.Sprite = GetSpriteIndex("PISF");
+        primary.Frame = 0;
+        primary.Tics = -1;
+
+        PSprite originalFlash = player.FindPSprite(PSP_FLASH);
+        if (originalFlash)
+        {
+            originalFlash.Sprite = GetSpriteIndex("PISF");
+            originalFlash.Frame = 0;
+            originalFlash.Tics = -1;
+        }
 
         // Match A_Lower's direction using position only. Reverse on exit.
         primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
