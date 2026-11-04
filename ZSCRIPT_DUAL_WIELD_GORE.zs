@@ -8111,10 +8111,10 @@ class TacticalHUDHandler : EventHandler
         PlayerInfo localPlayer = players[consoleplayer];
         CVar enabled = CVar.GetCVar("tlh_gore_enabled", localPlayer);
         CVar intensity = CVar.GetCVar("tlh_gore_intensity", localPlayer);
-        CVar color = CVar.GetCVar("tlh_gore_color", localPlayer);
+        CVar goreColorCVar = CVar.GetCVar("tlh_gore_color", localPlayer);
         Actor pawn = localPlayer.mo;
 
-        if (!enabled || !intensity || !color)
+        if (!enabled || !intensity || !goreColorCVar)
             return;
 
         if (command ~== "tlh_gore_toggle")
@@ -8139,8 +8139,8 @@ class TacticalHUDHandler : EventHandler
         }
         else if (command ~== "tlh_gore_color_next")
         {
-            int nextColor = (color.GetInt() + 1) % 4;
-            color.SetInt(nextColor);
+            int nextColor = (goreColorCVar.GetInt() + 1) % 4;
+            goreColorCVar.SetInt(nextColor);
 
             String colorName = "RED";
             if (nextColor == 1) colorName = "GREEN";
