@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.28 - staged entrance, paired clone animation/flash and X-only weapon sway
+// TLH v52.29 - per-hand native flash sync, mirrored authored offsets and dual-state polish
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -1456,6 +1456,9 @@ class RecoilPistol : Pistol replaces Pistol
                 return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             let mo = player.mo;
             if (mo)
             {
@@ -1483,6 +1486,9 @@ class RecoilPistol : Pistol replaces Pistol
                 return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             let mo = player.mo;
             if (mo)
             {
@@ -1746,6 +1752,9 @@ class OfficerVulkanPistol : Weapon
                 return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             let mo = player.mo;
             if (mo)
             {
@@ -1774,6 +1783,9 @@ class OfficerVulkanPistol : Weapon
                 return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             let mo = player.mo;
             if (mo)
             {
@@ -2290,6 +2302,9 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             if (!infinite && (!player.mo || player.mo.CountInv("Shell") < 2))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             if (invoker.dragonBreath)
             {
                 for (int i = 0; i < 13; i++)
@@ -2324,6 +2339,9 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             if (!infinite && (!player.mo || player.mo.CountInv("Shell") < 2))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             if (invoker.dragonBreath)
             {
                 for (int i = 0; i < 13; i++)
@@ -3093,6 +3111,9 @@ Default
             if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             if (player.mo)
                 player.mo.LineAttack(angle + FRandom(-3.0, 3.0), 2048,
                     pitch + FRandom(-2.0, 2.0), 15, "Normal", "BulletPuff",
@@ -3130,6 +3151,9 @@ Default
             if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             if (player.mo)
                 player.mo.LineAttack(angle + FRandom(-3.0, 3.0), 2048,
                     pitch + FRandom(-2.0, 2.0), 15, "Normal", "BulletPuff",
@@ -3867,6 +3891,9 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < cost))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("RocketAmmo", cost, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             if (invoker.nukeMode)
             {
                 A_FireProjectile("NukeMissile", useammo: false);
@@ -3898,6 +3925,9 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < cost))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("RocketAmmo", cost, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             if (invoker.nukeMode)
             {
                 A_FireProjectile("NukeMissile", useammo: false);
@@ -4141,6 +4171,9 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
                 return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Cell", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             if (invoker.empMode)
             {
                 A_FireProjectile("EMPPlasma", useammo: false);
@@ -4177,6 +4210,9 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
                 return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Cell", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             if (invoker.empMode)
             {
                 A_FireProjectile("EMPPlasma", useammo: false);
@@ -4470,6 +4506,9 @@ class AMR99RailRifle : Weapon
             if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 10))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
             A_FireProjectile("GaussSlug", useammo: false);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
@@ -4493,6 +4532,9 @@ class AMR99RailRifle : Weapon
             if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 10))
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
             A_FireProjectile("GaussSlug", useammo: false);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
@@ -4658,6 +4700,9 @@ class HellfireProjector : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
             {
                 A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
                 A_FireProjectile("NapalmGlob", useammo: false);
                 A_StartSound("weapons/shotgf", CHAN_WEAPON);
                 A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
@@ -4686,6 +4731,9 @@ class HellfireProjector : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
             {
                 A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
                 A_FireProjectile("NapalmGlob", useammo: false);
                 A_StartSound("weapons/shotgf", CHAN_WEAPON);
                 A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
@@ -4793,6 +4841,9 @@ class AirstrikeDesignator : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 5))
             {
                 A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
                 A_FireProjectile("AirstrikeBeacon", useammo: false);
                 A_StartSound("weapons/rocklf", CHAN_WEAPON);
                 A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -4811,6 +4862,9 @@ class AirstrikeDesignator : Weapon
             if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 5))
             {
                 A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
                 A_FireProjectile("AirstrikeBeacon", useammo: false);
                 A_StartSound("weapons/rocklf", CHAN_WEAPON);
                 A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
@@ -5442,6 +5496,9 @@ class ServiceRevolver : Weapon
 
             if (!infinite)
                 invoker.cylinderAmmo--;
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashLeftPending = true;
+            A_GunFlash();
 
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
@@ -5479,6 +5536,9 @@ class ServiceRevolver : Weapon
 
             if (!infinite)
                 invoker.cylinderAmmo--;
+            TacticalPlayer dualFlashPlayer = TacticalPlayer(player.mo);
+            if (dualFlashPlayer) dualFlashPlayer.tlhDualFlashRightPending = true;
+            A_GunFlash();
 
             A_FireBullets(0.18, 0.12, 1, 8, "BulletPuff", 0);
             A_StartSound("weapons/pistol", CHAN_WEAPON);
@@ -5831,10 +5891,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhDualCloneBaseX;
     double tlhDualCloneBaseY;
     bool tlhDualCloneBaseCaptured;
-    bool tlhDualLeftWasInFireSequence;
-    bool tlhDualRightWasInFireSequence;
-    int tlhDualLeftLastFireDistance;
-    int tlhDualRightLastFireDistance;
+    bool tlhDualFlashLeftPending;
+    bool tlhDualFlashRightPending;
     PSprite tlhAnimSwayPSP;
     Actor tlhAnimSwayCaller;
     double tlhAnimSwayBaseX;
@@ -6023,10 +6081,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         PSprite rightFlash = player.FindPSprite(TLH_DUAL_RIGHT_FLASH_LAYER);
         if (rightFlash) rightFlash.Destroy();
 
-        tlhDualLeftWasInFireSequence = false;
-        tlhDualRightWasInFireSequence = false;
-        tlhDualLeftLastFireDistance = -1;
-        tlhDualRightLastFireDistance = -1;
+        tlhDualFlashLeftPending = false;
+        tlhDualFlashRightPending = false;
     }
 
     void ResetTLHDualForWeaponSwitch()
@@ -6079,10 +6135,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         tlhDualWieldWeapon = weapon;
         tlhDualWieldBlend = 0.0;
-        tlhDualLeftWasInFireSequence = false;
-        tlhDualRightWasInFireSequence = false;
-        tlhDualLeftLastFireDistance = -1;
-        tlhDualRightLastFireDistance = -1;
+        tlhDualFlashLeftPending = false;
+        tlhDualFlashRightPending = false;
         tlhDualWieldActive = true;
         return true;
     }
@@ -6142,40 +6196,53 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         clone.InterpolateTic = primary.InterpolateTic;
     }
 
-    void TriggerTLHDualFlash(Weapon weapon, int layer)
+    void CopyTLHDualFlash(PSprite flashClone, PSprite sourceFlash,
+        PSprite handClone, PSprite primary, bool mirrored)
     {
-        if (!player || !weapon)
+        if (!flashClone || !sourceFlash || !sourceFlash.CurState ||
+            !handClone || !primary)
             return;
 
-        State flashState = weapon.FindStateByString("Flash");
-        if (flashState)
-            player.SetPsprite(layer, flashState);
+        // Reuse the exact native Flash state/frame produced by A_GunFlash().
+        if (flashClone.CurState != sourceFlash.CurState)
+            flashClone.SetState(sourceFlash.CurState);
+
+        flashClone.Sprite = sourceFlash.Sprite;
+        flashClone.Frame = sourceFlash.Frame;
+        flashClone.Tics = sourceFlash.Tics;
+        flashClone.Translation = sourceFlash.Translation;
+        flashClone.scale = sourceFlash.scale;
+        flashClone.baseScale = sourceFlash.baseScale;
+        flashClone.pivot = sourceFlash.pivot;
+        flashClone.alpha = sourceFlash.alpha;
+        flashClone.HAlign = sourceFlash.HAlign;
+        flashClone.VAlign = sourceFlash.VAlign;
+        flashClone.rotation = mirrored ? -sourceFlash.rotation : sourceFlash.rotation;
+        flashClone.bPlayerTranslated = sourceFlash.bPlayerTranslated;
+        flashClone.bPivotPercent = sourceFlash.bPivotPercent;
+        flashClone.bInterpolate = true;
+        flashClone.bFlip = mirrored ? !sourceFlash.bFlip : sourceFlash.bFlip;
+        flashClone.bMirror = false;
+        flashClone.bAddBob = false;
+        flashClone.bAddWeapon = false;
+        flashClone.bCVarFast = sourceFlash.bCVarFast;
+        flashClone.bPowDouble = sourceFlash.bPowDouble;
+        // Preserve the flash's authored offset relative to the primary hand,
+        // then anchor it to this clone's own hand position.
+        flashClone.x = handClone.x + (sourceFlash.x - primary.x);
+        flashClone.y = handClone.y + (sourceFlash.y - primary.y);
+        flashClone.InterpolateTic = true;
     }
 
-    void ConfigureTLHDualFlashClone(PSprite flashClone, PSprite handClone,
+    void FollowTLHDualFlash(PSprite flashClone, PSprite handClone,
         PSprite primary, bool mirrored)
     {
         if (!flashClone || !handClone || !primary)
             return;
 
-        flashClone.Translation = primary.Translation;
-        flashClone.scale = primary.scale;
-        flashClone.baseScale = primary.baseScale;
-        flashClone.pivot = primary.pivot;
-        flashClone.alpha = primary.alpha;
-        flashClone.HAlign = primary.HAlign;
-        flashClone.VAlign = primary.VAlign;
-        flashClone.bPlayerTranslated = primary.bPlayerTranslated;
-        flashClone.bPivotPercent = primary.bPivotPercent;
-        flashClone.bInterpolate = true;
-        flashClone.bFlip = mirrored ? !primary.bFlip : primary.bFlip;
-        flashClone.bMirror = false;
-        flashClone.bAddBob = false;
-        flashClone.bAddWeapon = false;
-        flashClone.bCVarFast = primary.bCVarFast;
-        flashClone.bPowDouble = primary.bPowDouble;
         flashClone.x = handClone.x;
         flashClone.y = handClone.y;
+        flashClone.rotation = mirrored ? -primary.rotation : primary.rotation;
         flashClone.InterpolateTic = true;
     }
 
@@ -6297,36 +6364,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
         }
 
-        // Detect entry/re-entry into each hand's FireDual state sequence.
-        // DistanceTo shrinks back toward the sequence start when an automatic
-        // weapon loops, so each repeated shot gets its own original Flash state.
-        State leftFireSequence = weapon.FindStateByString("FireDualLeft");
-        bool leftInFireSequence = leftFireSequence && leftClone.CurState &&
-            InStateSequence(leftClone.CurState, leftFireSequence);
-        int leftFireDistance = leftInFireSequence
-            ? abs(leftClone.CurState.DistanceTo(leftFireSequence)) : -1;
-
-        if (leftInFireSequence &&
-            (!tlhDualLeftWasInFireSequence ||
-             leftFireDistance < tlhDualLeftLastFireDistance))
-            TriggerTLHDualFlash(weapon, TLH_DUAL_LEFT_FLASH_LAYER);
-
-        tlhDualLeftWasInFireSequence = leftInFireSequence;
-        tlhDualLeftLastFireDistance = leftFireDistance;
-
-        State rightFireSequence = weapon.FindStateByString("FireDualRight");
-        bool rightInFireSequence = rightFireSequence && rightClone.CurState &&
-            InStateSequence(rightClone.CurState, rightFireSequence);
-        int rightFireDistance = rightInFireSequence
-            ? abs(rightClone.CurState.DistanceTo(rightFireSequence)) : -1;
-
-        if (rightInFireSequence &&
-            (!tlhDualRightWasInFireSequence ||
-             rightFireDistance < tlhDualRightLastFireDistance))
-            TriggerTLHDualFlash(weapon, TLH_DUAL_RIGHT_FLASH_LAYER);
-
-        tlhDualRightWasInFireSequence = rightInFireSequence;
-        tlhDualRightLastFireDistance = rightFireDistance;
+        // Native flash requests are set by the exact FireDual shot action.
+        // They are consumed below after the engine creates PSP_FLASH, so delayed
+        // shots (Airstrike) flash at launch instead of at animation entry.
 
         // A revolver uses a one-press latch on M2. Release it independently
         // of the primary-hand trigger so the next right-click can fire.
@@ -6339,6 +6379,15 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 dualRevolver.altTriggerLatched = false;
         }
 
+        // Capture authored overlay motion performed by weapon states on PSP_WEAPON.
+        // These deltas are projected onto both clones; X is mirrored for the
+        // left hand while vertical movement remains shared.
+        double authoredOffsetX = primary.x - tlhDualCloneBaseX;
+        double authoredOffsetY = primary.y - tlhDualCloneBaseY;
+        if (tlhDualWieldBlend <= 0.0 &&
+            tlhAnimSwayBaseCaptured && tlhAnimSwayPSP == primary)
+            authoredOffsetX -= tlhAnimSwayAppliedX;
+
         // Staged entry, in the intended order:
         // 1) the original right-hand weapon slides to the right;
         // 2) only after that finishes, the mirrored left weapon rises from below.
@@ -6350,10 +6399,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double rightEase = rightProgress * rightProgress * (3.0 - 2.0 * rightProgress);
         double leftEase = leftProgress * leftProgress * (3.0 - 2.0 * leftProgress);
         double swayX = clamp(tlhAnimSwayX, -2.0, 2.0);
-        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * rightEase + swayX;
-        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD + swayX;
-        double rightCloneY = tlhDualCloneBaseY;
-        double leftCloneY = tlhDualCloneBaseY + (1.0 - leftEase) * 64.0;
+        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * rightEase + swayX + authoredOffsetX;
+        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD + swayX - authoredOffsetX;
+        double rightCloneY = tlhDualCloneBaseY + authoredOffsetY;
+        double leftCloneY = tlhDualCloneBaseY + (1.0 - leftEase) * 64.0 + authoredOffsetY;
         double cloneAlpha = tlhDualOriginalPrimaryAlpha;
 
         // Mirror the live primary animation on the left clone. When the hidden
@@ -6393,12 +6442,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             rightClone.Frame = leftClone.Frame;
         }
 
-        // Each hand owns a separate copy of the weapon's authored Flash state.
-        // The original centered PSP_FLASH is suppressed below.
+        // Each hand owns a separate copy of the exact native flash generated by
+        // A_GunFlash at that hand's projectile/bullet action.
         PSprite leftFlash = player.FindPSprite(TLH_DUAL_LEFT_FLASH_LAYER);
         PSprite rightFlash = player.FindPSprite(TLH_DUAL_RIGHT_FLASH_LAYER);
-        ConfigureTLHDualFlashClone(leftFlash, leftClone, primary, true);
-        ConfigureTLHDualFlashClone(rightFlash, rightClone, primary, false);
+        FollowTLHDualFlash(leftFlash, leftClone, primary, true);
+        FollowTLHDualFlash(rightFlash, rightClone, primary, false);
+
+        PSprite engineFlash = player.FindPSprite(PSP_FLASH);
+        if (tlhDualFlashLeftPending && engineFlash && engineFlash.CurState)
+            CopyTLHDualFlash(leftFlash, engineFlash, leftClone, primary, true);
+        if (tlhDualFlashRightPending && engineFlash && engineFlash.CurState)
+            CopyTLHDualFlash(rightFlash, engineFlash, rightClone, primary, false);
+
+        tlhDualFlashLeftPending = false;
+        tlhDualFlashRightPending = false;
 
         // Keep the primary state machine alive for M1, but hide its weapon body.
         primary.Sprite = GetSpriteIndex("ZISF");
