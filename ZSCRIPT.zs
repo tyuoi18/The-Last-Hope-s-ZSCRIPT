@@ -5970,6 +5970,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Match A_Lower's direction, but drive it from the shared blend so
         // the original disappears as the mirrored pair rises. Reverse on exit.
+        // Replace only the original weapon's visible sprite with ZISFA0.
+        // The real weapon state remains active; clones keep rendering the
+        // original captured weapon sprite/frame from the 20d7095 system.
+        primary.Sprite = GetSpriteIndex("ZISF");
+        primary.Frame = 0;
+
         primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
         primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY + rise * 88.0;
         primary.alpha = tlhDualOriginalPrimaryAlpha;
