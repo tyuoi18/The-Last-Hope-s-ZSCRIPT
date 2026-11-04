@@ -5874,14 +5874,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         clone.bPivotPercent = primary.bPivotPercent;
         clone.bInterpolate = primary.bInterpolate;
         clone.bFlip = mirrored ? !primary.bFlip : primary.bFlip;
-        clone.bMirror = mirrored;
+        // bMirror also reverses position offsets. Keep it disabled so left/right placement
+        // remains controlled only by the signed X coordinates calculated below.
+        clone.bMirror = false;
         clone.bAddBob = false;
         clone.bAddWeapon = false;
         clone.bCVarFast = primary.bCVarFast;
         clone.bPowDouble = primary.bPowDouble;
-        // PSPF_MIRROR reverses horizontal overlay offsets. Invert the stored X for the right clone
-        // so its rendered position remains on positive screen X instead of collapsing onto the left.
-        clone.x = mirrored ? -cloneX : cloneX;
+        // Position is already expressed in screen-space overlay offsets. Do not mirror X here.
+        // The mirrored appearance is handled only by bFlip below.
+        clone.x = cloneX;
         clone.y = cloneY;
         clone.InterpolateTic = primary.InterpolateTic;
     }
@@ -5972,8 +5974,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double rise = GetTLHDualCloneRise();
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
-        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD * rise; // Rendered negative X.
-        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * rise; // Rendered positive X.
+        // The right-hand position is the reference. Place the left hand at the exact
+        // opposite distance from the same base point, without a second mirror transform.
+        double rightHandOffset = TLH_DUAL_HAND_SPREAD * rise;
+        double rightCloneX = tlhDualCloneBaseX + rightHandOffset;
+        double leftCloneX = tlhDualCloneBaseX - (rightCloneX - tlhDualCloneBaseX);
         double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
 
         // Mirror the live primary animation on the left clone. When the hidden
