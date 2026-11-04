@@ -4,16 +4,17 @@
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
 // using the user's actual +user3 binding, then routed through NetworkCommandProcess.
-// Weapons do not use User3 states or WRF_ALLOWUSER3. The offhand is a render-only
-// PSprite that mirrors the live primary sprite/frame without executing weapon actions.
+// Weapons do not use User3 states or WRF_ALLOWUSER3. PSP_WEAPON remains the
+// hidden M1 controller; the left clone mirrors its live weapon frames, while
+// the right clone runs FireDualRight independently when M2 is pressed.
 // Hellfire uses the Rocket Launcher sprite family at reduced HUD/drop scale.
 // ============================================================================
 
 version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
-const TLH_DUAL_MIRROR_LAYER = 2; // left-hand render-only clone
-const TLH_DUAL_SECOND_LAYER = 3; // right-hand render-only clone; PSP_WEAPON (1) and PSP_FLASH (1000) remain engine-owned
+const TLH_DUAL_MIRROR_LAYER = 2; // left-hand animated mirror
+const TLH_DUAL_SECOND_LAYER = 3; // independent M2 weapon PSprite; PSP_WEAPON (1) remains the M1 controller
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
@@ -84,9 +85,8 @@ const TLH_MAX_CELLS = 300;
 // remove M4A1 from the compatibility set and implement cylinder-aware ServiceRevolver dual fire.
 // v49.1: replace String-valued ternaries passed to ResolveState with explicit
 // StateLabel branches, and return ResolveState(null) from the ServiceRevolver ready shim.
-// v50.0: replace per-weapon left-hand animation states with a live PSprite mirror.
-// The offhand copies only the primary PSprite's rendered sprite/frame, never its
-// executable state sequence, so firing actions and ammo consumption are not duplicated.
+// v50.0: initial render-only mirror architecture. It is superseded by the
+// independent M2 PSprite firing route added in v52.21.1.
 // +user3 is edge-latched until release; the player owns the entrance/exit animation.
 // v50.0.1: keep overlay ownership inside TacticalPlayer and apply the full
 // offscreen-to-right displacement after ordinary procedural sway clamping.
@@ -5838,9 +5838,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return t * t * (3.0 - 2.0 * t);
     }
 
-    // Both hands are render-only PSprites. ZISFA0 is the idle hand sprite;
-    // while firing, each clone mirrors the weapon firing frame. The engine-owned
-    // weapon remains active for input, firing and ammo, but is hidden with PISFA0.
+    // The left clone mirrors the live primary firing frame. The right clone can
+    // execute FireDualRight on its own PSprite layer when M2 is pressed.
+    // The hidden primary remains the M1 gameplay/action controller.
     void CopyTLHDualClone(PSprite clone, State cloneState, PSprite primary,
         bool mirrored, double cloneX, double cloneY, double cloneAlpha,
         SpriteID sourceSprite, int sourceFrame, bool preserveActiveState)
