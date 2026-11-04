@@ -5946,14 +5946,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // visible PSprite and engine flash overlay are suppressed.
         primary.Sprite = GetSpriteIndex("PISF");
         primary.Frame = 0;
-        primary.Tics = -1;
 
+        // TNT1 is the invisible flash overlay; PISF is reserved for hiding
+        // the weapon body itself, not for displaying a permanent muzzle flash.
         PSprite originalFlash = player.FindPSprite(PSP_FLASH);
         if (originalFlash)
         {
-            originalFlash.Sprite = GetSpriteIndex("PISF");
+            originalFlash.Sprite = GetSpriteIndex("TNT1");
             originalFlash.Frame = 0;
-            originalFlash.Tics = -1;
         }
 
         // Match A_Lower's direction using position only. Reverse on exit.
