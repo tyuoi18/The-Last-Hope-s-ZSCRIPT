@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.15 - synchronize muzzle flash motion with weapon PSprite
+// TLH v52.16 - restore weapon HUD palettes and use vanilla Rocket Launcher sprites for Hellfire
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -1570,21 +1570,6 @@ class OfficerVulkanPistol : Weapon
         Weapon.AmmoUse2 1;
         Inventory.PickupMessage "I found an Officer's Vulkan Pistol!";
 
-        // Procedural recolor embedded in ZScript:
-        // red/pink + orange/red accents -> dark neutral gunmetal;
-        // existing Doom grays are pushed noticeably darker.
-        // PSP_FLASH deliberately does not inherit this mapping.
-        // ZScript palette remap, not a tint. Doom's documented player color
-        // ramps identify red as 32:47, gray as 96:111 and green as 112:127.
-        // Orange/warm ramps are redirected to the same dark gunmetal range.
-        Translation
-            "32:47=96:111",          // red -> gunmetal gray
-            "48:79=88:103",          // warm/orange-brown -> gray
-            "80:95=88:103",           // warm neutral -> gray
-            "168:175=96:111",         // deep warm -> gray
-            "176:191=96:111",         // light red -> gray
-            "192:203=96:111",         // remaining colored accents -> gray
-            "224:239=96:111";         // final warm/cool accent range -> gray
     }
 
     override bool CheckAmmo(int fireMode, bool autoSwitch, bool requireAmmo, int ammocount)
@@ -2453,12 +2438,6 @@ class SemiAutoShotgun : Weapon
         Weapon.AmmoUse2 1;
         Inventory.PickupMessage "I found a Blood-Iron Semi-Auto Shotgun!";
 
-        // Palette remap in ZScript. Doom's red/light-red ramps are converted
-        // into a controlled dark red, while neutral gray ranges remain intact.
-        Translation
-            "32:47=32:47",            // red -> dark red ramp
-            "176:191=32:47",           // light red -> dark red ramp
-            "192:203=32:47";            // warm accent -> dark red
     }
 
     States
@@ -4000,18 +3979,6 @@ class AMR99RailRifle : Weapon
         Weapon.AmmoUse1 10;
         Inventory.PickupMessage "I found an AMR-99 Gauss Rifle!";
 
-        // Palette remap in ZScript. Doom green is 112:127. The Plasma Rifle source
-        // uses that ramp, so it is redirected to Doom's light-blue family.
-        // Black/gray ramps are lifted to cleaner, lighter gunmetal values.
-        Translation
-            "0:31=88:103",            // black/dark -> light gunmetal
-            "32:47=96:111",           // red -> gray
-            "48:79=88:103",           // brown/warm -> light gunmetal
-            "80:95=96:111",           // dark neutral -> gray
-            "96:111=88:103",          // gray -> lighter gray
-            "112:127=192:207",        // Doom green -> electric blue family
-            "128:191=88:103",         // remaining warm/cool -> light gunmetal
-            "192:255=96:111";         // rest -> neutral gray
     }
 
     States
@@ -4122,34 +4089,22 @@ class HellfireProjector : Weapon
         Weapon.AmmoUse1 1;
         Inventory.PickupMessage "I found a Hellfire Napalm Projector!";
 
-        // Palette remap in ZScript. The source green ramp is used as the
-        // nozzle/accent channel and becomes intense red; body ramps become
-        // light gray. Flash states use their own sprite family and are not
-        // translated by this HUD preview unless the weapon itself is flashing.
-        Translation
-            "0:31=64:79",             // deep body -> dark gray
-            "32:47=88:103",           // warm/red shadows -> light gray
-            "48:95=88:103",            // body metal -> light gray
-            "96:111=96:111",           // gray metal -> neutral gray
-            "112:127=176:191",         // green nozzle ramp -> intense red
-            "128:175=88:103",          // secondary body tones -> light gray
-            "176:255=96:111";          // bright body tones -> gray
         Scale 0.56;
     }
 
     States
     {
     Ready:
-        PISG A 0;
+        MISG A 0;
 
     TLHPickupReadyShim:
-        PISG A 0
+        MISG A 0
         {
             A_OverlayScale(PSP_WEAPON, 0.72, 0.76);
             A_OverlayPivotAlign(PSP_WEAPON, PSPA_CENTER, PSPA_BOTTOM);
             A_OverlayFlags(PSP_WEAPON, PSPF_PLAYERTRANSLATED, false);
         }
-        PISG A 1
+        MISG A 1
         {
             A_WeaponOffset(0, 32, WOF_INTERPOLATE);
             A_OverlayOffset(PSP_WEAPON, sin(level.time * 0.035 * TLH_RAD_TO_DEG) * 0.35, 32 + cos(level.time * 0.028 * TLH_RAD_TO_DEG) * 0.12, 0);
@@ -4158,15 +4113,15 @@ class HellfireProjector : Weapon
         }
         Loop;
     Deselect:
-        PISG A 1 A_Lower;
+        MISG A 1 A_Lower;
         Loop;
     Select:
-        PISG A 1 A_Raise;
+        MISG A 1 A_Raise;
         Loop;
 
     Fire:
-        PISG A 3;
-        PISG B 5
+        MISG A 3;
+        MISG B 5
         {
             A_GunFlash();
             A_WeaponOffset(0, 36, WOF_INTERPOLATE);
@@ -4175,25 +4130,25 @@ class HellfireProjector : Weapon
             A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 220);
         }
-        PISG B 5;
-        PISG A 3 A_ReFire;
+        MISG B 5;
+        MISG A 3 A_ReFire;
         Goto Ready;
 
     AltFire:
-        PISG A 3;
-        PISG B 5
+        MISG A 3;
+        MISG B 5
         {
             A_FireProjectile("NapalmGlob", random(-4, 4), true, 0, 0, 0, random(-2, 2));
             A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(2, 5, 0, 160);
         }
-        PISG B 5;
+        MISG B 5;
         Goto Ready;
 
     Flash:
-        PISF A 2 Bright A_Light1;
-        PISF B 2 Bright A_Light2;
+        MISF A 2 Bright A_Light1;
+        MISF B 2 Bright A_Light2;
         Goto LightDone;
 
     Spawn:
@@ -4215,17 +4170,6 @@ class AirstrikeDesignator : Weapon
         Weapon.AmmoUse1 5;
         Inventory.PickupMessage "I found an Orbital Strike Beacon!";
 
-        // Palette remap in ZScript. This is a true flare treatment: most of
-        // the design is moved into red ramps, while black remains dark enough
-        // to preserve the object's silhouette and readability.
-        Translation
-            "0:31=32:47",              // black/dark -> dark red
-            "32:47=32:47",             // red -> dark red
-            "48:95=176:191",           // body/warm colors -> flare red
-            "96:111=176:191",          // gray -> flare red
-            "112:127=176:191",         // green -> flare red
-            "128:175=176:191",         // remaining warm colors -> red
-            "176:255=176:191";         // bright colors -> flare red
         Scale 0.56;
     }
 
@@ -6241,9 +6185,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         tlhCorpseReactionPlayed = true;
     }
 
-    // Restore each owned weapon's class-default translation. WorldThingSpawned
-    // deliberately clears translation from ground pickups so drops keep their
-    // original palette; equipped weapons regain the intended HUD recolor here.
+    // Keep owned weapons on their original palette. Blue Simple Rifle colour
+    // is applied to its weapon/flash PSprites only while that mode is unlocked.
     void RestoreTLHOwnedWeaponTranslations()
     {
         Inventory item = Inv;
@@ -6251,11 +6194,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         {
             Inventory nextItem = item.Inv;
             if (item is "Weapon" && item.Owner == self)
-            {
-                let classDefault = GetDefaultByType(item.GetClass());
-                if (classDefault)
-                    item.Translation = classDefault.Translation;
-            }
+                item.Translation = 0;
             item = nextItem;
         }
     }
@@ -6488,19 +6427,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!isWeaponPSP && !isFlashPSP)
             return;
 
-        if (isWeaponPSP)
-        {
-            let weaponDefault = GetDefaultByType(weapon.GetClass());
-            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
-        }
-        else if (isFlashPSP && weapon is "SimpleRifle")
-        {
-            let weaponDefault = GetDefaultByType(weapon.GetClass());
-            psp.Translation = weaponDefault ? weaponDefault.Translation : weapon.Translation;
-        }
+        // Start from the unmodified IWAD palette for every weapon and flash.
+        // The unlocked Blue Simple Rifle mode is the sole exception below.
+        psp.Translation = 0;
 
-        // Blue Simple Rifle uses a named TRNSLATE mapping. The mapping is
-        // applied directly to the weapon and flash PSprites, never to the screen.
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
             TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
@@ -7715,14 +7645,6 @@ class TLHCompactSMG : Weapon
         Weapon.AmmoUse1 1;
         Inventory.PickupMessage "I found the M12 Compact SMG!";
 
-        Translation
-            "0:31=64:79",
-            "32:47=112:127",
-            "48:79=64:79",
-            "80:111=80:95",
-            "112:167=64:79",
-            "168:191=112:127",
-            "192:255=64:79";
     }
 
     States
@@ -8007,7 +7929,6 @@ class TacticalHUDHandler : EventHandler
     TextureID hudWeaponTexture;
     bool hudWeaponTextureValid;
     bool hudWeaponFlip;
-    int hudWeaponTranslation;
     String hudWeaponTextureClass;
 
     // ------------------------------------------------------------------------
@@ -8782,7 +8703,6 @@ class TacticalHUDHandler : EventHandler
         hudWeaponTextureValid = false;
         hudWeaponTextureClass = "";
         hudWeaponFlip = false;
-        hudWeaponTranslation = 0;
 
         int sampledHealth = max(0, p.Health);
         if (!hudHealthSampleReady || level.maptime == 0 ||
@@ -9701,21 +9621,17 @@ if (hudWeaponName == "RecoilPistol") hudWeaponName = "RECOIL PISTOL";
         double cx = 485.0 + liveBobX;
         double cy = 294.0 + liveBobY;
 
-        // --------------------------------------------------------------------
-        // TRUE PALETTE TRANSLATION, NOT TINT
-        // --------------------------------------------------------------------
-        // DTA_TranslationIndex alone is not enough for the HUD path when the
-        // source is rendered through the truecolor/Vulkan drawer. DTA_Indexed
-        // explicitly tells GZDoom to treat the source as an indexed image and
-        // combine it with the supplied translation table. This is the same
-        // translation system used by GZDoom's indexed HUD sprite rendering,
-        // without putting a translucent color filter over the weapon.
-        //
-        // The translation comes from the weapon class, so Ready/Fire/Reload/
-        // Select/Deselect frames all use the same authored weapon design.
-        int hudTranslation = hudWeaponTranslation;
-        if (hudTranslation == 0)
-            hudTranslation = int(weapon.Translation);
+        // Keep the indexed sprite's original palette. Only the unlocked
+        // SimpleRifle Blue mode supplies a non-zero translation index.
+        int hudTranslation = 0;
+        TacticalPlayer hudTactical = TacticalPlayer(p);
+        if (weapon is "SimpleRifle" && hudTactical &&
+            hudTactical.tlhBlueSimpleRifleUnlocked)
+        {
+            TranslationID blueHUDTranslation = Translate.GetID("BlueSimpleRifle");
+            if (blueHUDTranslation)
+                hudTranslation = int(blueHUDTranslation);
+        }
 
         Screen.DrawTexture(
             tex, false,
