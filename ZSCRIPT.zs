@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.20 - remove weapon sway and route recoil exclusively to camera pitch
+// TLH v52.20.1 - restore state-frame terminators removed during sway cleanup
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -111,6 +111,7 @@ const TLH_MAX_CELLS = 300;
 // repair the SSG's legacy pistol-like Dual Wield route to fire proper shotgun shells.
 // v52.20: disable native/procedural weapon sway, remove per-shot PSprite recoil and physical
 // A_Recoil thrust, retain camera pitch/quakes, and keep weapon draw/reload animations.
+// v52.20.1: restore missing semicolons on frame-only state lines after removing overlay actions.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
 // v52.4: show the full BLUE SIMPLE RIFLE name in the compact weapon HUD after unlock.
@@ -1397,8 +1398,8 @@ class RecoilPistol : Pistol replaces Pistol
             A_FirePistol();
             A_SetPitch(pitch - 0.6, SPF_INTERPOLATE);
         }
-        PISG C 3 
-        PISG B 3 
+        PISG C 3;
+        PISG B 3;
         Goto Ready;
 
     FireAuto:
@@ -1408,7 +1409,7 @@ class RecoilPistol : Pistol replaces Pistol
             A_FirePistol();
             A_SetPitch(pitch - 0.8, SPF_INTERPOLATE);
         }
-        PISG C 2 
+        PISG C 2;
         PISG A 0 A_ReFire;
         Goto Ready;
 
@@ -1683,8 +1684,8 @@ class OfficerVulkanPistol : Weapon
             A_Quake(1, 2, 0, 100);
             
         }
-        PISG C 3 
-        PISG B 3 
+        PISG C 3;
+        PISG B 3;
         Goto Ready;
 
     FireAuto:
@@ -1698,7 +1699,7 @@ class OfficerVulkanPistol : Weapon
             A_Quake(1.8, 3.0, 0, 100);
             
         }
-        PISG C 2 
+        PISG C 2;
         PISG A 0 A_ReFire;
         Goto Ready;
 
@@ -2750,7 +2751,7 @@ Default
         }
 
     SetBurst:
-        CHGG A 2 
+        CHGG A 2;
         CHGG A 4
         {
             invoker.burstMode = true;
@@ -2759,7 +2760,7 @@ Default
             A_StartSound("weapons/sshotc", CHAN_WEAPON);
             A_Print("HEAVY CHAINGUN | FIRE MODE CHANGED: 3-ROUND BURST");
         }
-        CHGG A 2 
+        CHGG A 2;
         Goto Ready;
 
     SetAuto:
@@ -3595,8 +3596,8 @@ class M60MachineGun : DoomWeapon
             return ResolveState(null);
         }
         MSYA A 3;
-        MSYA A 4 
-        MSYA A 2 
+        MSYA A 4;
+        MSYA A 2;
         Goto Ready;
 
     Zoom:
