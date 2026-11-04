@@ -1389,7 +1389,7 @@ class RecoilPistol : Pistol replaces Pistol
         PISG A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
 
             if (invoker.fullAuto)
                 return ResolveState("FireAuto");
@@ -1422,7 +1422,7 @@ class RecoilPistol : Pistol replaces Pistol
         PISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -1442,7 +1442,7 @@ class RecoilPistol : Pistol replaces Pistol
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ATTACK))
                 return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -1668,7 +1668,7 @@ class OfficerVulkanPistol : Weapon
         PISG A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
 
             if (invoker.weaponMode == 1)
                 return ResolveState("FireLauncher");
@@ -1712,7 +1712,7 @@ class OfficerVulkanPistol : Weapon
         PISG A 0
         {
             if (!(sv_infiniteammo || player.mo.FindInventory("PowerInfiniteAmmo", true)) && player.mo.CountInv("Clip") < 1)
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
 
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             let mo = player.mo;
@@ -1733,7 +1733,7 @@ class OfficerVulkanPistol : Weapon
         {
             if (invoker.fullAuto && (player.cmd.buttons & BT_ATTACK))
                 return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -2257,7 +2257,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite && (!player.mo || player.mo.CountInv("Shell") < 2))
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
             A_TakeInventory("Shell", 2, TIF_NOTAKEINFINITE);
             if (invoker.dragonBreath)
             {
@@ -2282,7 +2282,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         SHT2 A 0
         {
             if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -2324,7 +2324,7 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         SHT2 A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
 
             if (invoker.dragonBreath)
                 return ResolveState("FireDragon");
@@ -2816,7 +2816,7 @@ Default
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
             if (invoker.overheated)
                 return ResolveState("Overheated");
 
@@ -3057,10 +3057,10 @@ Default
             if (invoker.overheated || invoker.heat >= MaxHeat)
             {
                 invoker.overheated = true;
-                return ResolveState("Overheated");
+                return ResolveState("DualMirrorHold");
             }
             if (!infinite && (!player.mo || player.mo.CountInv("Clip") < 1))
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
             A_TakeInventory("Clip", 1, TIF_NOTAKEINFINITE);
             if (player.mo)
                 player.mo.LineAttack(angle + FRandom(-3.0, 3.0), 2048,
@@ -3075,7 +3075,7 @@ Default
                 invoker.overheated = true;
                 A_StartSound("weapons/sshotl", CHAN_WEAPON);
                 A_Print("HEAVY CHAINGUN: OVERHEATED - VENTING");
-                return ResolveState("Overheated");
+                return ResolveState("DualMirrorHold");
             }
             return ResolveState(null);
         }
@@ -3083,7 +3083,7 @@ Default
         CHGG A 0
         {
             if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -3793,7 +3793,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
             if (invoker.nukeMode) return ResolveState("FireNuke");
             return ResolveState(null);
         }
@@ -3834,7 +3834,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             int cost = invoker.nukeMode ? 10 : 1;
             if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < cost))
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
             A_TakeInventory("RocketAmmo", cost, TIF_NOTAKEINFINITE);
             if (invoker.nukeMode)
             {
@@ -3855,7 +3855,7 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
         RISG A 0
         {
             if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -4319,7 +4319,7 @@ class AMR99RailRifle : Weapon
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
             return ResolveState(null);
         }
         ZLSG A 4;
@@ -4344,7 +4344,7 @@ class AMR99RailRifle : Weapon
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
             if (!infinite && (!player.mo || player.mo.CountInv("Cell") < 10))
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("GaussSlug", useammo: false);
             A_StartSound("weapons/railgf", CHAN_WEAPON);
@@ -4358,7 +4358,7 @@ class AMR99RailRifle : Weapon
         ZLSG A 0
         {
             if (player.cmd.buttons & BT_ATTACK) return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -5132,7 +5132,7 @@ class ServiceRevolver : Weapon
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && tp.tlhDualWieldActive && tp.tlhDualWieldWeapon == invoker)
-                return ResolveState("FireDualLeft");
+                return ResolveState("Ready");
 
             invoker.triggerLatched = true;
             bool infinite = sv_infiniteammo ||
@@ -5187,7 +5187,7 @@ class ServiceRevolver : Weapon
             {
                 A_StartSound("weapons/sshoto", CHAN_WEAPON);
                 A_Print("REVOLVER: CYLINDER EMPTY | PRESS R");
-                return ResolveState("Ready");
+                return ResolveState("DualMirrorHold");
             }
 
             if (!infinite)
@@ -5211,7 +5211,7 @@ class ServiceRevolver : Weapon
         {
             if ((player.cmd.buttons & BT_ATTACK) && !invoker.triggerLatched)
                 return ResolveState("FireDualLeft");
-            return ResolveState("Ready");
+            return ResolveState("DualMirrorHold");
         }
 
     FireDualRight:
@@ -5957,8 +5957,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // can execute their own weapon state sequences simultaneously.
         int dualButtons = player.cmd.buttons;
         int oldDualButtons = player.oldbuttons;
+        bool primaryPressed = (dualButtons & BT_ATTACK) != 0 &&
+                               (oldDualButtons & BT_ATTACK) == 0;
         bool altPressed = (dualButtons & BT_ALTATTACK) != 0 &&
                           (oldDualButtons & BT_ALTATTACK) == 0;
+
+        if (primaryPressed && leftClone.CurState == cloneState)
+        {
+            State leftFireState = weapon.FindStateByString("FireDualLeft");
+            if (leftFireState)
+                leftClone.SetState(leftFireState);
+        }
         if (altPressed && rightClone.CurState == cloneState)
         {
             State rightFireState = weapon.FindStateByString("FireDualRight");
@@ -5969,8 +5978,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // A revolver uses a one-press latch on M2. Release it independently
         // of the primary-hand trigger so the next right-click can fire.
         ServiceRevolver dualRevolver = ServiceRevolver(weapon);
-        if (dualRevolver && !(dualButtons & BT_ALTATTACK))
-            dualRevolver.altTriggerLatched = false;
+        if (dualRevolver)
+        {
+            if (!(dualButtons & BT_ATTACK))
+                dualRevolver.triggerLatched = false;
+            if (!(dualButtons & BT_ALTATTACK))
+                dualRevolver.altTriggerLatched = false;
+        }
 
         double rise = GetTLHDualCloneRise();
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
@@ -5992,7 +6006,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         CopyTLHDualClone(leftClone, cloneState, primary,
-            false, leftCloneX, cloneY, cloneAlpha, leftSprite, leftFrame, false);
+            false, leftCloneX, cloneY, cloneAlpha, leftSprite, leftFrame, true);
         CopyTLHDualClone(rightClone, cloneState, primary,
             true, rightCloneX, cloneY, cloneAlpha,
             tlhDualOriginalSprite, tlhDualOriginalFrame, true);
