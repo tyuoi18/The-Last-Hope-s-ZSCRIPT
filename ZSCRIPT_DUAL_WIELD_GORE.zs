@@ -5582,6 +5582,11 @@ class ServiceRevolver : Weapon
         }
         Goto Ready;
 
+    Flash:
+        PISF A 2 Bright A_Light1;
+        PISF B 2 Bright A_Light2;
+        Goto LightDone;
+
     Spawn:
         RVOL G -1;
         Stop;
@@ -5826,7 +5831,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhDualCloneBaseX;
     double tlhDualCloneBaseY;
     bool tlhDualCloneBaseCaptured;
-    int tlhDualLastAmmoSignature;
+    bool tlhDualLeftWasInFireSequence;
+    bool tlhDualRightWasInFireSequence;
+    int tlhDualLeftLastFireDistance;
+    int tlhDualRightLastFireDistance;
     PSprite tlhAnimSwayPSP;
     Actor tlhAnimSwayCaller;
     double tlhAnimSwayBaseX;
@@ -6015,7 +6023,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         PSprite rightFlash = player.FindPSprite(TLH_DUAL_RIGHT_FLASH_LAYER);
         if (rightFlash) rightFlash.Destroy();
 
-        tlhDualLastAmmoSignature = -1;
+        tlhDualLeftWasInFireSequence = false;
+        tlhDualRightWasInFireSequence = false;
+        tlhDualLeftLastFireDistance = -1;
+        tlhDualRightLastFireDistance = -1;
     }
 
     void ResetTLHDualForWeaponSwitch()
@@ -6068,7 +6079,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         tlhDualWieldWeapon = weapon;
         tlhDualWieldBlend = 0.0;
-        tlhDualLastAmmoSignature = GetTLHAmmoSignature();
+        tlhDualLeftWasInFireSequence = false;
+        tlhDualRightWasInFireSequence = false;
+        tlhDualLeftLastFireDistance = -1;
+        tlhDualRightLastFireDistance = -1;
         tlhDualWieldActive = true;
         return true;
     }
@@ -6134,10 +6148,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
 
         State flashState = weapon.FindStateByString("Flash");
-        if (!flashState)
-            return;
+        if (!flashState && weapon is "ServiceRevolver")
+            flashState = weapon.FindStateByString("Flash");
 
-        player.SetPsprite(layer, flashState);
+        if (flashState)
+            player.SetPsprite(layer, flashState);
     }
 
     void ConfigureTLHDualFlashClone(PSprite flashClone, PSprite handClone,
@@ -6274,7 +6289,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (leftFireState)
             {
                 leftClone.SetState(leftFireState);
-                TriggerTLHDualFlash(weapon, TLH_DUAL_LEFT_FLASH_LAYER);
             }
         }
         if (altPressed && rightClone.CurState == cloneState)
@@ -6283,25 +6297,39 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (rightFireState)
             {
                 rightClone.SetState(rightFireState);
-                TriggerTLHDualFlash(weapon, TLH_DUAL_RIGHT_FLASH_LAYER);
             }
         }
 
-        // Re-trigger cloned muzzle flashes on every real ammo-consuming shot.
-        // This also covers automatic fire loops after the initial button edge.
-        int currentDualAmmoSignature = GetTLHAmmoSignature();
-        if (tlhDualLastAmmoSignature >= 0 &&
-            currentDualAmmoSignature < tlhDualLastAmmoSignature)
-        {
-            if (!primaryPressed && (dualButtons & BT_ATTACK) &&
-                leftClone.CurState != cloneState)
-                TriggerTLHDualFlash(weapon, TLH_DUAL_LEFT_FLASH_LAYER);
+        // Detect entry/re-entry into each hand's FireDual state sequence.
+        // DistanceTo shrinks back toward the sequence start when an automatic
+        // weapon loops, so each repeated shot gets its own original Flash state.
+        State leftFireSequence = weapon.FindStateByString("FireDualLeft");
+        bool leftInFireSequence = leftFireSequence && leftClone.CurState &&
+            InStateSequence(leftClone.CurState, leftFireSequence);
+        int leftFireDistance = leftInFireSequence
+            ? abs(leftClone.CurState.DistanceTo(leftFireSequence)) : -1;
 
-            if (!altPressed && (dualButtons & BT_ALTATTACK) &&
-                rightClone.CurState != cloneState)
-                TriggerTLHDualFlash(weapon, TLH_DUAL_RIGHT_FLASH_LAYER);
-        }
-        tlhDualLastAmmoSignature = currentDualAmmoSignature;
+        if (leftInFireSequence &&
+            (!tlhDualLeftWasInFireSequence ||
+             leftFireDistance < tlhDualLeftLastFireDistance))
+            TriggerTLHDualFlash(weapon, TLH_DUAL_LEFT_FLASH_LAYER);
+
+        tlhDualLeftWasInFireSequence = leftInFireSequence;
+        tlhDualLeftLastFireDistance = leftFireDistance;
+
+        State rightFireSequence = weapon.FindStateByString("FireDualRight");
+        bool rightInFireSequence = rightFireSequence && rightClone.CurState &&
+            InStateSequence(rightClone.CurState, rightFireSequence);
+        int rightFireDistance = rightInFireSequence
+            ? abs(rightClone.CurState.DistanceTo(rightFireSequence)) : -1;
+
+        if (rightInFireSequence &&
+            (!tlhDualRightWasInFireSequence ||
+             rightFireDistance < tlhDualRightLastFireDistance))
+            TriggerTLHDualFlash(weapon, TLH_DUAL_RIGHT_FLASH_LAYER);
+
+        tlhDualRightWasInFireSequence = rightInFireSequence;
+        tlhDualRightLastFireDistance = rightFireDistance;
 
         // A revolver uses a one-press latch on M2. Release it independently
         // of the primary-hand trigger so the next right-click can fire.
@@ -6317,8 +6345,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Staged entry, in the intended order:
         // 1) the original right-hand weapon slides to the right;
         // 2) only after that finishes, the mirrored left weapon rises from below.
-        // Positive PSprite Y is down, so the left clone starts at baseY + 26.
-        tlhDualWieldBlend = min(1.0, tlhDualWieldBlend + 0.10);
+        // Positive PSprite Y is down, so the left clone starts below the visible stance at baseY + 64.
+        tlhDualWieldBlend = min(1.0, tlhDualWieldBlend + 0.08);
         double deployProgress = clamp(tlhDualWieldBlend, 0.0, 1.0);
         double rightProgress = clamp(deployProgress * 2.0, 0.0, 1.0);
         double leftProgress = clamp((deployProgress - 0.5) * 2.0, 0.0, 1.0);
@@ -6328,7 +6356,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * rightEase + swayX;
         double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD + swayX;
         double rightCloneY = tlhDualCloneBaseY;
-        double leftCloneY = tlhDualCloneBaseY + (1.0 - leftEase) * 26.0;
+        double leftCloneY = tlhDualCloneBaseY + (1.0 - leftEase) * 64.0;
         double cloneAlpha = tlhDualOriginalPrimaryAlpha;
 
         // Mirror the live primary animation on the left clone. When the hidden
