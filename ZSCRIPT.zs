@@ -15,6 +15,7 @@ version "4.14"
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
 const TLH_DUAL_MIRROR_LAYER = 2; // left-hand animated mirror
 const TLH_DUAL_SECOND_LAYER = 3; // independent M2 weapon PSprite; PSP_WEAPON (1) remains the M1 controller
+const TLH_DUAL_HAND_SPREAD = 56.0; // Visible spacing from the screen center for each hand.
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
@@ -5878,7 +5879,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         clone.bAddWeapon = false;
         clone.bCVarFast = primary.bCVarFast;
         clone.bPowDouble = primary.bPowDouble;
-        clone.x = cloneX;
+        // PSPF_MIRROR reverses horizontal overlay offsets. Invert the stored X for the right clone
+        // so its rendered position remains on positive screen X instead of collapsing onto the left.
+        clone.x = mirrored ? -cloneX : cloneX;
         clone.y = cloneY;
         clone.InterpolateTic = primary.InterpolateTic;
     }
@@ -5969,8 +5972,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double rise = GetTLHDualCloneRise();
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
-        double leftCloneX = tlhDualCloneBaseX - 30.0 * rise; // Negative X: left-hand weapon.
-        double rightCloneX = tlhDualCloneBaseX + 30.0 * rise; // Positive X: right-hand weapon.
+        double leftCloneX = tlhDualCloneBaseX - TLH_DUAL_HAND_SPREAD * rise; // Rendered negative X.
+        double rightCloneX = tlhDualCloneBaseX + TLH_DUAL_HAND_SPREAD * rise; // Rendered positive X.
         double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
 
         // Mirror the live primary animation on the left clone. When the hidden
