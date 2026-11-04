@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.20.4 - refined layered weapon sway; preserve authored weapon scale
+// TLH v52.20.5 - visible weapon sway timing and two-clone Dual Wield presentation
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -12,8 +12,8 @@
 version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
-const TLH_DUAL_MIRROR_LAYER = 2;
-const TLH_STOWED_LAYER = 3; // reserved folded-launcher layer; PSP_WEAPON (1) and PSP_FLASH (1000) remain engine-owned
+const TLH_DUAL_MIRROR_LAYER = 2; // left-hand render-only clone
+const TLH_DUAL_SECOND_LAYER = 3; // right-hand render-only clone; PSP_WEAPON (1) and PSP_FLASH (1000) remain engine-owned
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
@@ -109,6 +109,7 @@ const TLH_MAX_CELLS = 300;
 // v52.12: use player.mo/self-owner and invoker-weapon explicitly inside weapon actions, avoiding ambiguous Owner lookups.
 // v52.19: add independent left/right firing routes to Heavy Chaingun, Rocket Launcher and AMR-99;
 // repair the SSG's legacy pistol-like Dual Wield route to fire proper shotgun shells.
+// v52.20.5: advance weapon gait in player Tick, strengthen camera/movement sway, and replace the original-visible Dual Wield with a lower-then-two-clone entrance.
 // v52.20.4: refine movement, look, inertia and gait sway with tighter limits; authored scale remains unchanged.
 // v52.20: disable native/procedural weapon sway, remove per-shot PSprite recoil and physical
 // A_Recoil thrust, retain camera pitch/quakes, and keep weapon draw/reload animations.
@@ -5559,6 +5560,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     bool tlhDualWieldActive;
     Weapon tlhDualWieldWeapon;
     double tlhDualWieldBlend;
+    double tlhDualAppliedPrimaryDrop;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5715,9 +5717,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!player)
             return;
 
-        PSprite mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
-        if (mirror)
-            mirror.Destroy();
+        PSprite primary = player.FindPSprite(PSP_WEAPON);
+        if (primary && tlhDualWieldWeapon && primary.Caller == tlhDualWieldWeapon &&
+            tlhDualAppliedPrimaryDrop != 0.0)
+            primary.y -= tlhDualAppliedPrimaryDrop;
+        tlhDualAppliedPrimaryDrop = 0.0;
+
+        PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
+        if (leftClone) leftClone.Destroy();
+
+        PSprite rightClone = player.FindPSprite(TLH_DUAL_SECOND_LAYER);
+        if (rightClone) rightClone.Destroy();
     }
 
     void ResetTLHDualForWeaponSwitch()
@@ -5781,27 +5791,61 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
     }
 
-    // Separate eased tracks create a deliberate two-step entrance:
-    // 1) slide the original weapon left of screen center;
-    // 2) bring the mirrored weapon up from below on the right.
-    // The original and clone remain horizontally mirrored around screen center.
-    // The same tracks naturally reverse in the correct order when disabled.
+    // Legacy state wrappers remain, but no longer move the engine-owned PSprite.
     double GetTLHDualPrimarySlide()
     {
-        double t = clamp(tlhDualWieldBlend / 0.40, 0.0, 1.0);
-        return t * t * (3.0 - 2.0 * t);
+        return 0.0;
     }
 
-    double GetTLHDualOffhandRise()
+    // Phase one lowers the real weapon. Phase two raises both clones.
+    double GetTLHDualStowProgress()
     {
-        double t = clamp((tlhDualWieldBlend - 0.40) / 0.60, 0.0, 1.0);
+        double t = clamp(tlhDualWieldBlend / 0.32, 0.0, 1.0);
         return t * t * (3.0 - 2.0 * t);
     }
 
-    // The second PSprite is pinned to an inert state. Every tic it receives
-    // only the visible sprite ID/frame and presentation data from PSP_WEAPON.
-    // It never executes the weapon's Fire/Reload actions, so the visual clone
-    // cannot spend ammo or apply damage a second time.
+    double GetTLHDualCloneRise()
+    {
+        double t = clamp((tlhDualWieldBlend - 0.32) / 0.68, 0.0, 1.0);
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    // Both hands are render-only PSprites. The engine-owned weapon remains
+    // active for input, firing and ammo, but is lowered out of view first.
+    void CopyTLHDualClone(PSprite clone, State cloneState, PSprite primary,
+        bool mirrored, double cloneX, double cloneY, double cloneAlpha)
+    {
+        if (!clone || !cloneState || !primary)
+            return;
+
+        if (clone.CurState != cloneState)
+            clone.SetState(cloneState);
+
+        clone.Sprite = primary.Sprite;
+        clone.Frame = primary.Frame;
+        clone.Tics = -1;
+        clone.Translation = primary.Translation;
+        clone.scale = primary.scale;
+        clone.baseScale = primary.baseScale;
+        clone.pivot = primary.pivot;
+        clone.rotation = mirrored ? -primary.rotation : primary.rotation;
+        clone.alpha = cloneAlpha;
+        clone.HAlign = primary.HAlign;
+        clone.VAlign = primary.VAlign;
+        clone.bPlayerTranslated = primary.bPlayerTranslated;
+        clone.bPivotPercent = primary.bPivotPercent;
+        clone.bInterpolate = primary.bInterpolate;
+        clone.bFlip = mirrored ? !primary.bFlip : primary.bFlip;
+        clone.bMirror = mirrored;
+        clone.bAddBob = false;
+        clone.bAddWeapon = false;
+        clone.bCVarFast = primary.bCVarFast;
+        clone.bPowDouble = primary.bPowDouble;
+        clone.x = cloneX;
+        clone.y = cloneY;
+        clone.InterpolateTic = primary.InterpolateTic;
+    }
+
     void UpdateTLHDualWieldPresentation(PSprite primary)
     {
         if (!player || !player.ReadyWeapon || !primary)
@@ -5821,62 +5865,52 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
         }
 
-        State mirrorState = weapon.FindStateByString("DualMirrorHold");
-        if (!mirrorState)
+        State cloneState = weapon.FindStateByString("DualMirrorHold");
+        if (!cloneState)
             return;
 
-        PSprite mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
-        if (!mirror || mirror.Caller != weapon)
+        PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
+        if (!leftClone || leftClone.Caller != weapon)
         {
-            if (mirror)
-                mirror.Destroy();
-
-            // PlayerInfo.GetPSprite binds Caller to the current ReadyWeapon.
-            player.SetPsprite(TLH_DUAL_MIRROR_LAYER, mirrorState);
-            mirror = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
-            if (!mirror)
-                return;
+            if (leftClone) leftClone.Destroy();
+            player.SetPsprite(TLH_DUAL_MIRROR_LAYER, cloneState);
+            leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         }
 
-        if (mirror.CurState != mirrorState)
-            mirror.SetState(mirrorState);
+        PSprite rightClone = player.FindPSprite(TLH_DUAL_SECOND_LAYER);
+        if (!rightClone || rightClone.Caller != weapon)
+        {
+            if (rightClone) rightClone.Destroy();
+            player.SetPsprite(TLH_DUAL_SECOND_LAYER, cloneState);
+            rightClone = player.FindPSprite(TLH_DUAL_SECOND_LAYER);
+        }
 
-        // Mirror the rendered frame, not the executable state machine.
-        mirror.Sprite = primary.Sprite;
-        mirror.Frame = primary.Frame;
-        mirror.Tics = -1;
-        mirror.Translation = primary.Translation;
-        mirror.scale = primary.scale;
-        mirror.baseScale = primary.baseScale;
-        mirror.pivot = primary.pivot;
-        mirror.rotation = -primary.rotation;
-        mirror.alpha = primary.alpha;
-        mirror.HAlign = primary.HAlign;
-        mirror.VAlign = primary.VAlign;
-        mirror.bPlayerTranslated = primary.bPlayerTranslated;
-        mirror.bPivotPercent = primary.bPivotPercent;
-        mirror.bInterpolate = primary.bInterpolate;
-        mirror.bFlip = !primary.bFlip;
-        mirror.bMirror = true;
-        mirror.bAddBob = false;
-        mirror.bAddWeapon = false;
-        mirror.bCVarFast = primary.bCVarFast;
-        mirror.bPowDouble = primary.bPowDouble;
+        if (!leftClone || !rightClone)
+            return;
 
-        double offhandRise = GetTLHDualOffhandRise();
-        // The primary PSprite has already moved to the negative X side.
-        // bMirror reverses the clone's horizontal offset and sprite origin, so
-        // copying the live X value places it on the positive side with its
-        // horizontal sway mirrored as well. This avoids a centered pistol.
-        mirror.x = primary.x;
+        // Remove last tic's vertical stow offset before reading the live base.
+        primary.y -= tlhDualAppliedPrimaryDrop;
+        tlhDualAppliedPrimaryDrop = 0.0;
+        double baseX = primary.x;
+        double baseY = primary.y;
 
-        // The offhand starts below the HUD and rises after the original has
-        // reached its left-hand position. Fade follows the same path.
-        mirror.y = primary.y + (1.0 - offhandRise) * 70.0;
-        mirror.alpha = primary.alpha * offhandRise;
+        double stow = GetTLHDualStowProgress();
+        double rise = GetTLHDualCloneRise();
+        double primaryDrop = stow * 88.0;
 
-        // Match the engine's one-tic interpolation marker after copying offsets.
-        mirror.InterpolateTic = primary.InterpolateTic;
+        // Lower the real engine PSprite first, like a normal deselection.
+        primary.y += primaryDrop;
+        tlhDualAppliedPrimaryDrop = primaryDrop;
+
+        // Both clones rise together from below into mirrored hand positions.
+        double cloneY = baseY + (1.0 - rise) * 88.0;
+        double cloneX = baseX - 36.0 * rise;
+        double cloneAlpha = primary.alpha * rise;
+
+        CopyTLHDualClone(leftClone, cloneState, primary,
+            false, cloneX, cloneY, cloneAlpha);
+        CopyTLHDualClone(rightClone, cloneState, primary,
+            true, cloneX, cloneY, cloneAlpha);
     }
 
     override void Tick()
@@ -6563,26 +6597,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         bool grounded = (Pos.Z <= floorz + 0.5);
         double speed = Vel.XY.Length();
         double speed01 = clamp(speed / 12.0, 0.0, 1.0);
-        double bobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
-
-        if (grounded && speed01 > 0.025 && !(player.cheats & CF_NOCLIP2))
-        {
-            // Faster movement increases stride frequency rather than merely
-            // increasing amplitude. This avoids the "sine wave in a corridor"
-            // feel of simple headbob implementations.
-            tlhAnimStepPhase += (6.0 + speed01 * 12.0) * bobSpeed;
-        }
-        else
-        {
-            // Let the gait phase continue drifting very slowly when stopped so
-            // the transition back into walking never snaps to a new phase.
-            tlhAnimStepPhase += 0.65 * bobSpeed;
-        }
-
-        while (tlhAnimStepPhase >= 36000.0)
-            tlhAnimStepPhase -= 36000.0;
-        while (tlhAnimStepPhase < 0.0)
-            tlhAnimStepPhase += 36000.0;
 
         double cameraBob = 0.0;
         if (grounded && speed01 > 0.025 && !(player.cheats & CF_NOCLIP2))
@@ -6742,20 +6756,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // vertical compression make walking feel planted rather than sinusoidal.
         double gait = sin(tlhAnimStepPhase);
         double gaitDouble = sin(tlhAnimStepPhase * 2.0);
-        double stepX = gait * 0.26 * movementBlend * groundedBlend;
+        double stepX = gait * 1.05 * movementBlend * groundedBlend;
         double stepY = -abs(gaitDouble) *
-            (0.28 + 0.42 * movementBlend) * movementBlend * groundedBlend;
-        double stepRoll = gait * (0.35 + 0.75 * movementBlend) *
+            (0.65 + 1.10 * movementBlend) * movementBlend * groundedBlend;
+        double stepRoll = gait * (0.70 + 1.15 * movementBlend) *
             movementBlend * groundedBlend;
 
         // These channels are smoothed in UpdateTLHProceduralMotion. The gun
         // lags opposite camera turns while acceleration adds a slower counter-swing.
-        double movementX = tlhAnimSwayX * 0.78;
-        double movementY = tlhAnimSwayY * 0.55;
-        double inertiaX = tlhAnimInertiaX * 0.72;
-        double inertiaY = tlhAnimInertiaY * 0.65;
-        double lookX = -tlhAnimLookX * 0.88;
-        double lookY = -tlhAnimLookY * 0.38;
+        double movementX = tlhAnimSwayX * 1.10;
+        double movementY = tlhAnimSwayY * 0.95;
+        double inertiaX = tlhAnimInertiaX * 0.92;
+        double inertiaY = tlhAnimInertiaY * 0.85;
+        double lookX = -tlhAnimLookX * 1.15;
+        double lookY = -tlhAnimLookY * 0.65;
 
         double swayX = (movementX + inertiaX + lookX + stepX) * response;
         double swayY = (movementY + inertiaY + lookY + stepY) * response;
@@ -6770,9 +6784,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Gait, camera turn and acceleration each contribute limited roll.
         // Firing recoil, landing kick and damage kick stay outside this layer.
-        double swayRoll = -tlhAnimSwayX * 0.38;
-        double inertiaRoll = -tlhAnimInertiaX * 0.27;
-        double lookRoll = -tlhAnimLookX * 0.48;
+        double swayRoll = -tlhAnimSwayX * 0.55;
+        double inertiaRoll = -tlhAnimInertiaX * 0.40;
+        double lookRoll = -tlhAnimLookX * 0.72;
         double stopRoll = clamp(tlhAnimStopKick * 0.16, 0.0, 0.75);
 
         double totalRoll = visualBaseRoll +
@@ -6964,11 +6978,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
     void UpdateTLHProceduralMotion(bool onGroundNow, int bt, int oldbt)
     {
+        // Advance weapon gait in the same Tick as the PSprite transform.
+        double gaitSpeed = clamp(Vel.XY.Length() / 12.0, 0.0, 1.0);
+        double gaitBobSpeed = clamp(player.GetWBobSpeed(), 0.45, 2.40);
+        if (onGroundNow && gaitSpeed > 0.025 && !(player.cheats & CF_NOCLIP2))
+            tlhAnimStepPhase += (6.0 + gaitSpeed * 12.0) * gaitBobSpeed;
+        else
+            tlhAnimStepPhase += 0.65 * gaitBobSpeed;
+        while (tlhAnimStepPhase >= 36000.0) tlhAnimStepPhase -= 36000.0;
+        while (tlhAnimStepPhase < 0.0) tlhAnimStepPhase += 36000.0;
+
         // ------------------------------------------------------------
         // Look inertia
         // ------------------------------------------------------------
-        double targetLookX = clamp(double(player.cmd.yaw) / 1024.0, -1.0, 1.0);
-        double targetLookY = clamp(double(player.cmd.pitch) / 1024.0, -1.0, 1.0);
+        double targetLookX = clamp(double(player.cmd.yaw) / 48.0, -1.0, 1.0);
+        double targetLookY = clamp(double(player.cmd.pitch) / 48.0, -1.0, 1.0);
 
         tlhAnimLookX += (targetLookX - tlhAnimLookX) * 0.30;
         tlhAnimLookY += (targetLookY - tlhAnimLookY) * 0.30;
@@ -6984,8 +7008,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double forwardVelocity = Vel.X * worldForwardX + Vel.Y * worldForwardY;
         double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
 
-        double targetSwayX = -sideVelocity * 0.075;
-        double targetSwayY = abs(forwardVelocity) * 0.010;
+        double targetSwayX = -sideVelocity * 0.145;
+        double targetSwayY = abs(forwardVelocity) * 0.035;
 
         tlhAnimSwayX += (targetSwayX - tlhAnimSwayX) * 0.20;
         tlhAnimSwayY += (targetSwayY - tlhAnimSwayY) * 0.18;
