@@ -5580,6 +5580,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     double tlhDualCloneBaseX;
     double tlhDualCloneBaseY;
     bool tlhDualCloneBaseCaptured;
+    // Last real weapon frame observed before the primary PSprite is hidden.
+    int tlhDualLastVisibleSprite;
+    int tlhDualLastVisibleFrame;
+    bool tlhDualLastVisibleCaptured;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5744,11 +5748,21 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
                 primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY;
             }
+
+            // Restore the last real weapon frame immediately when leaving Dual Wield.
+            if (tlhDualLastVisibleCaptured)
+            {
+                primary.Sprite = tlhDualLastVisibleSprite;
+                primary.Frame = tlhDualLastVisibleFrame;
+            }
         }
 
         tlhDualCloneBaseX = 0.0;
         tlhDualCloneBaseY = 32.0;
         tlhDualCloneBaseCaptured = false;
+        tlhDualLastVisibleSprite = 0;
+        tlhDualLastVisibleFrame = 0;
+        tlhDualLastVisibleCaptured = false;
 
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         if (leftClone) leftClone.Destroy();
@@ -5843,18 +5857,24 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (clone.CurState != cloneState)
             clone.SetState(cloneState);
 
-        // Idle hands use ZISFA0. During an attack, mirror the live firing
-        // frame so both visible weapons reproduce the weapon's authored animation.
+        // Idle hands use ZISFA0. During an attack, use the last real weapon
+        // frame captured before the primary PSprite is replaced by PISFA0.
         bool firing = (player.cmd.buttons & (BT_ATTACK | BT_ALTATTACK)) != 0;
-        clone.Sprite = firing ? primary.Sprite : GetSpriteIndex("ZISF");
-        clone.Frame = firing ? primary.Frame : 0;
+        int idleSprite = GetSpriteIndex("ZISF");
+        if (idleSprite == 0 && tlhDualLastVisibleCaptured)
+            idleSprite = tlhDualLastVisibleSprite;
+
+        clone.Sprite = firing && tlhDualLastVisibleCaptured
+            ? tlhDualLastVisibleSprite : idleSprite;
+        clone.Frame = firing && tlhDualLastVisibleCaptured
+            ? tlhDualLastVisibleFrame : 0;
         clone.Tics = -1;
         clone.Translation = primary.Translation;
         clone.scale = primary.scale;
         clone.baseScale = primary.baseScale;
         clone.pivot = primary.pivot;
         clone.rotation = mirrored ? -primary.rotation : primary.rotation;
-        clone.alpha = primary.alpha;
+        clone.alpha = 1.0;
         clone.HAlign = primary.HAlign;
         clone.VAlign = primary.VAlign;
         clone.bPlayerTranslated = primary.bPlayerTranslated;
@@ -5917,8 +5937,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!leftClone || !rightClone)
             return;
 
+        // Cache the weapon's real frame whenever its state advances. The
+        // primary sprite is overwritten at the end of each tick, so this cache
+        // keeps multi-tic firing frames alive on both clones.
+        int hiddenSprite = GetSpriteIndex("PISF");
+        if (primary.Sprite != hiddenSprite)
+        {
+            tlhDualLastVisibleSprite = primary.Sprite;
+            tlhDualLastVisibleFrame = primary.Frame;
+            tlhDualLastVisibleCaptured = true;
+        }
+
         // Capture the weapon's authored resting coordinates exactly once.
-        // Strip procedural motion so both clones have a stable independent base.
         if (!tlhDualCloneBaseCaptured)
         {
             tlhDualCloneBaseX = primary.x - tlhAnimAppliedWeaponX;
@@ -5926,37 +5956,26 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhDualCloneBaseCaptured = true;
         }
 
-        // The original weapon remains active for gameplay. Its actual sprite
-        // follows a Deselect-style lowering motion while the two independent
-        // render-only copies rise into their resting positions.
         double rise = GetTLHDualCloneRise();
-
-        // Both clones rise from below to the captured HUD resting coordinates.
-        // bMirror reverses the right clone's -36 offset to +36.
-        // Larger travel and wider hand spacing make the entrance readable.
         double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 144.0;
-        double cloneX = tlhDualCloneBaseX - 72.0 * rise;
-        CopyTLHDualClone(leftClone, cloneState, primary,
-            false, cloneX, cloneY);
-        CopyTLHDualClone(rightClone, cloneState, primary,
-            true, cloneX, cloneY);
+        double leftCloneX = tlhDualCloneBaseX - 72.0 * rise;
+        double rightCloneX = tlhDualCloneBaseX + 72.0 * rise;
 
-        // Hide the original gun with the TLH pistol muzzle-flash sprite.
-        // The weapon state still executes normally for firing/ammo; only its
-        // visible PSprite and engine flash overlay are suppressed.
-        primary.Sprite = GetSpriteIndex("PISF");
+        CopyTLHDualClone(leftClone, cloneState, primary,
+            false, leftCloneX, cloneY);
+        CopyTLHDualClone(rightClone, cloneState, primary,
+            true, rightCloneX, cloneY);
+
+        // The real PSP_WEAPON keeps driving input, ammo and state actions, but
+        // its rendered body is replaced by the PISFA0 muzzle-flash sprite.
+        primary.Sprite = hiddenSprite;
         primary.Frame = 0;
 
-        // TNT1 is the invisible flash overlay; PISF is reserved for hiding
-        // the weapon body itself, not for displaying a permanent muzzle flash.
-        PSprite originalFlash = player.FindPSprite(PSP_FLASH);
-        if (originalFlash)
-        {
-            originalFlash.Sprite = GetSpriteIndex("TNT1");
-            originalFlash.Frame = 0;
-        }
+        // Remove the engine flash layer completely while Dual Wield is active.
+        // The weapon's own A_GunFlash calls may recreate it on a later tic.
+        player.SetPsprite(PSP_FLASH, null);
 
-        // Match A_Lower's direction using position only. Reverse on exit.
+        // Lower the hidden primary as the two independent hands rise.
         primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
         primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY + rise * 144.0;
     }
