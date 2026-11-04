@@ -111,8 +111,9 @@ const TLH_MAX_CELLS = 300;
 // repair the SSG's legacy pistol-like Dual Wield route to fire proper shotgun shells.
 // v52.20.5: advance weapon gait in player Tick, strengthen camera/movement sway, and replace the original-visible Dual Wield with a lower-then-two-clone entrance.
 // v52.20.4: refine movement, look, inertia and gait sway with tighter limits; authored scale remains unchanged.
-// v52.20: disable native/procedural weapon sway, remove per-shot PSprite recoil and physical
-// A_Recoil thrust, retain camera pitch/quakes, and keep weapon draw/reload animations.
+// v52.21: restore expressive universal first-person weapon motion, including
+// movement inertia, gait, firing/landing/damage springs and wider motion bounds.
+// v52.20: remove physical A_Recoil thrust while retaining camera pitch/quakes.
 // v52.20.1: restore missing semicolons on frame-only state lines after removing overlay actions.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
@@ -6782,15 +6783,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
         tlhAnimLastWeaponPSPState = psp.CurState;
 
-        // The M4A1 retains its authored HUD placement and animation.
-        if (weapon is "TacticalM4A1")
-        {
-            tlhAnimAppliedWeaponX = 0.0;
-            tlhAnimAppliedWeaponY = 0.0;
-            tlhAnimAppliedWeaponRoll = 0.0;
-            return;
-        }
-
         double visualOffsetX = 0.0;
         double visualOffsetY = 0.0;
         double visualBaseRoll = 0.0;
@@ -6811,20 +6803,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // vertical compression make walking feel planted rather than sinusoidal.
         double gait = sin(tlhAnimStepPhase);
         double gaitDouble = sin(tlhAnimStepPhase * 2.0);
-        double stepX = gait * 1.05 * movementBlend * groundedBlend;
+        double stepX = gait * 1.75 * movementBlend * groundedBlend;
         double stepY = -abs(gaitDouble) *
-            (0.65 + 1.10 * movementBlend) * movementBlend * groundedBlend;
-        double stepRoll = gait * (0.70 + 1.15 * movementBlend) *
+            (0.90 + 1.65 * movementBlend) * movementBlend * groundedBlend;
+        double stepRoll = gait * (1.15 + 1.85 * movementBlend) *
             movementBlend * groundedBlend;
 
         // These channels are smoothed in UpdateTLHProceduralMotion. The gun
         // lags opposite camera turns while acceleration adds a slower counter-swing.
-        double movementX = tlhAnimSwayX * 1.10;
-        double movementY = tlhAnimSwayY * 0.95;
-        double inertiaX = tlhAnimInertiaX * 0.92;
-        double inertiaY = tlhAnimInertiaY * 0.85;
-        double lookX = -tlhAnimLookX * 1.15;
-        double lookY = -tlhAnimLookY * 0.65;
+        double movementX = tlhAnimSwayX * 1.55;
+        double movementY = tlhAnimSwayY * 1.25;
+        double inertiaX = tlhAnimInertiaX * 1.35;
+        double inertiaY = tlhAnimInertiaY * 1.15;
+        double lookX = -tlhAnimLookX * 1.75;
+        double lookY = -tlhAnimLookY * 1.00;
 
         double swayX = (movementX + inertiaX + lookX + stepX) * response;
         double swayY = (movementY + inertiaY + lookY + stepY) * response;
@@ -6834,19 +6826,20 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double worldRightX = sin(angle);
         double worldRightY = -cos(angle);
         double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
-        double bodyTilt = clamp(-sideVelocity * 0.035, -1.4, 1.4);
-        double airTilt = clamp(-Vel.Z * 0.025, -1.5, 1.5) * airBlend;
+        double bodyTilt = clamp(-sideVelocity * 0.055, -2.4, 2.4);
+        double airTilt = clamp(-Vel.Z * 0.040, -2.2, 2.2) * airBlend;
 
         // Gait, camera turn and acceleration each contribute limited roll.
         // Firing recoil, landing kick and damage kick stay outside this layer.
-        double swayRoll = -tlhAnimSwayX * 0.55;
-        double inertiaRoll = -tlhAnimInertiaX * 0.40;
-        double lookRoll = -tlhAnimLookX * 0.72;
-        double stopRoll = clamp(tlhAnimStopKick * 0.16, 0.0, 0.75);
+        double swayRoll = -tlhAnimSwayX * 0.82;
+        double inertiaRoll = -tlhAnimInertiaX * 0.62;
+        double lookRoll = -tlhAnimLookX * 1.05;
+        double stopRoll = clamp(tlhAnimStopKick * 0.24, 0.0, 1.25);
+        double firingRoll = -tlhAnimWeaponKickSide * 0.30;
 
         double totalRoll = visualBaseRoll +
             (stepRoll + swayRoll + inertiaRoll + lookRoll +
-             stopRoll + bodyTilt + airTilt) * response;
+             stopRoll + firingRoll + bodyTilt + airTilt) * response;
 
         String cls = weapon.GetClassName();
         if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
@@ -6858,18 +6851,29 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Minimal idle breathing prevents a completely static weapon.
         double idleBlend = (1.0 - movementBlend) * groundedBlend;
         double idleBreath = sin(double(level.time) * 0.045 * TLH_RAD_TO_DEG) *
-            0.10 * idleBlend;
+            0.22 * idleBlend;
         double airFloatY = airBlend *
-            cos(double(level.time) * 0.07 * TLH_RAD_TO_DEG) * 0.20;
-        double crouchY = -(1.0 - crouchFactor) * (1.4 + 1.2 * weight);
+            cos(double(level.time) * 0.07 * TLH_RAD_TO_DEG) * 0.45;
+        double crouchY = -(1.0 - crouchFactor) * (1.8 + 1.5 * weight);
 
-        double totalX = visualOffsetX + swayX;
-        double totalY = visualOffsetY + swayY + crouchY + idleBreath + airFloatY;
+        // Firing, landing, damage and draw springs now move the weapon sprite
+        // itself instead of affecting only the camera or remaining unused.
+        double firingKickY = tlhAnimWeaponKick * 0.62;
+        double firingKickX = tlhAnimWeaponKickSide * 0.72;
+        double landingKickY = tlhAnimLandingKick * 0.48;
+        double damageKickX = sin(double(level.time) * 0.11 * TLH_RAD_TO_DEG) *
+            tlhAnimDamageKick * 0.42;
+        double drawKickY = tlhAnimDrawKick * 0.38;
 
-        // Clamp position and rotation only; authored sprite size is untouched.
-        totalX = clamp(totalX, -7.0, 7.0);
-        totalY = clamp(totalY, -10.0, 10.0);
-        totalRoll = clamp(totalRoll, -3.5, 3.5);
+        double totalX = visualOffsetX + swayX + firingKickX + damageKickX;
+        double totalY = visualOffsetY + swayY + crouchY + idleBreath +
+            airFloatY + firingKickY + landingKickY + drawKickY;
+
+        // Wider safety bounds preserve expressive motion without allowing
+        // the weapon to disappear off-screen. Sprite scale remains authored.
+        totalX = clamp(totalX, -12.0, 12.0);
+        totalY = clamp(totalY, -16.0, 16.0);
+        totalRoll = clamp(totalRoll, -6.5, 6.5);
 
         psp.x += totalX;
         psp.y += totalY;
