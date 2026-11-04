@@ -6633,12 +6633,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             player.viewz = floorz + 4;
     }
 
-    override Vector2 BobWeapon(double ticfrac)
-    {
-        // Keep the weapon fixed in view space. Camera movement remains independent.
-        return (0, 0);
-    }
-
     // Apply positional and rotational motion to the actual weapon PSprite
     // and flash PSprite. Sprite scale remains exactly as authored by the weapon.
     //
