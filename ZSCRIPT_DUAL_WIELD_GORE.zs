@@ -6148,9 +6148,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
 
         State flashState = weapon.FindStateByString("Flash");
-        if (!flashState && weapon is "ServiceRevolver")
-            flashState = weapon.FindStateByString("Flash");
-
         if (flashState)
             player.SetPsprite(layer, flashState);
     }
