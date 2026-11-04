@@ -5858,16 +5858,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     {
         if (tlhDualWieldActive)
         {
-            // Linear tic progression gives the deselect phase enough time to
-            // visibly lower the original before either clone starts rising.
+            // One smooth timeline drives both clones; the original is hidden instantly.
             tlhDualWieldBlend += 0.05;
             if (tlhDualWieldBlend >= 1.0)
                 tlhDualWieldBlend = 1.0;
         }
         else
         {
-            // Reverse the same timeline: clones descend first, then the real
-            // weapon is brought back from below.
+            // Reverse the same timeline: clones descend, then the original reappears.
             tlhDualWieldBlend -= 0.05;
             if (tlhDualWieldBlend <= 0.0)
                 tlhDualWieldBlend = 0.0;
@@ -6039,8 +6037,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (player.playerstate == PST_DEAD)
         {
             tlhDualWieldActive = false;
-            tlhDualWieldWeapon = null;
+            tlhDualWieldBlend = 0.0;
             ClearTLHDualOverlay();
+            tlhDualWieldWeapon = null;
 
             if (tlhProneActive)
             {
