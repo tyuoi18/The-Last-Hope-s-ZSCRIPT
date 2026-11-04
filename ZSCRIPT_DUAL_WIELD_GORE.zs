@@ -6206,9 +6206,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         CopyTLHDualClone(leftClone, cloneState, primary,
-            false, leftCloneX, leftCloneY, cloneAlpha, leftSprite, leftFrame, true);
+            true, leftCloneX, leftCloneY, cloneAlpha, leftSprite, leftFrame, true);
         CopyTLHDualClone(rightClone, cloneState, primary,
-            true, rightCloneX, rightCloneY, cloneAlpha,
+            false, rightCloneX, rightCloneY, cloneAlpha,
             tlhDualOriginalSprite, tlhDualOriginalFrame, true);
 
         // Keep the primary state machine alive for M1, but hide its weapon body.
