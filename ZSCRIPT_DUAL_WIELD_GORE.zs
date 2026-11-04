@@ -4157,7 +4157,12 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         PLSG A 0
         {
             if (player.cmd.buttons & BT_ATTACK)
-                return ResolveState("FireDualLeft");
+            {
+                bool infinite = sv_infiniteammo ||
+                    (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+                if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+                    return ResolveState("FireDualLeft");
+            }
             return ResolveState("DualMirrorHold");
         }
 
@@ -4188,7 +4193,12 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
         PLSG A 0
         {
             if (player.cmd.buttons & BT_ALTATTACK)
-                return ResolveState("FireDualRight");
+            {
+                bool infinite = sv_infiniteammo ||
+                    (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
+                if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+                    return ResolveState("FireDualRight");
+            }
             return ResolveState("DualMirrorHold");
         }
 
@@ -4643,13 +4653,14 @@ class HellfireProjector : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 1))
-                return ResolveState("DualMirrorHold");
-            A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
-            A_FireProjectile("NapalmGlob", useammo: false);
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
-            A_Quake(3, 8, 0, 220);
+            if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+            {
+                A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
+                A_FireProjectile("NapalmGlob", useammo: false);
+                A_StartSound("weapons/shotgf", CHAN_WEAPON);
+                A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
+                A_Quake(3, 8, 0, 220);
+            }
         }
         MISG B 5;
         MISG A 0
@@ -4665,13 +4676,14 @@ class HellfireProjector : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 1))
-                return ResolveState("DualMirrorHold");
-            A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
-            A_FireProjectile("NapalmGlob", useammo: false);
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
-            A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
-            A_Quake(3, 8, 0, 220);
+            if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 1))
+            {
+                A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
+                A_FireProjectile("NapalmGlob", useammo: false);
+                A_StartSound("weapons/shotgf", CHAN_WEAPON);
+                A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
+                A_Quake(3, 8, 0, 220);
+            }
         }
         MISG B 5;
         MISG A 0
@@ -4766,13 +4778,14 @@ class AirstrikeDesignator : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 5))
-                return ResolveState("DualMirrorHold");
-            A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
-            A_FireProjectile("AirstrikeBeacon", useammo: false);
-            A_StartSound("weapons/rocklf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
+            if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 5))
+            {
+                A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
+                A_FireProjectile("AirstrikeBeacon", useammo: false);
+                A_StartSound("weapons/rocklf", CHAN_WEAPON);
+                A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+                A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
+            }
         }
         ZISG A 40;
         Goto DualMirrorHold;
@@ -4783,13 +4796,14 @@ class AirstrikeDesignator : Weapon
         {
             bool infinite = sv_infiniteammo ||
                 (player.mo && player.mo.FindInventory("PowerInfiniteAmmo", true));
-            if (!infinite && (!player.mo || player.mo.CountInv("RocketAmmo") < 5))
-                return ResolveState("DualMirrorHold");
-            A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
-            A_FireProjectile("AirstrikeBeacon", useammo: false);
-            A_StartSound("weapons/rocklf", CHAN_WEAPON);
-            A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
-            A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
+            if (infinite || (player.mo && player.mo.CountInv("RocketAmmo") >= 5))
+            {
+                A_TakeInventory("RocketAmmo", 5, TIF_NOTAKEINFINITE);
+                A_FireProjectile("AirstrikeBeacon", useammo: false);
+                A_StartSound("weapons/rocklf", CHAN_WEAPON);
+                A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
+                A_Print("ORBITAL BEACON DEPLOYED! Seek cover immediately!");
+            }
         }
         ZISG A 40;
         Goto DualMirrorHold;
