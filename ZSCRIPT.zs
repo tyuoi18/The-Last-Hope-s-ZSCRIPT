@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.16 - restore weapon HUD palettes and use vanilla Rocket Launcher sprites for Hellfire
+// TLH v52.17 - let muzzle flashes inherit weapon offsets and match weapon rotation
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -5255,15 +5255,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // Per-PSprite positional transform bookkeeping. Authored sprite scale is
     // never modified by the procedural motion layer.
     State tlhAnimLastWeaponPSPState;
-    State tlhAnimLastFlashPSPState;
 
     double tlhAnimAppliedWeaponX;
     double tlhAnimAppliedWeaponY;
     double tlhAnimAppliedWeaponRoll;
-
-    double tlhAnimAppliedFlashX;
-    double tlhAnimAppliedFlashY;
-    double tlhAnimAppliedFlashRoll;
 
     // Additional body-acceleration layers for a more physical first-person
     // feel. StopKick handles abrupt deceleration without affecting gameplay.
@@ -6047,7 +6042,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         PSprite flashPSP = player.FindPSprite(PSP_FLASH);
 
         if (weaponPSP) ApplyTLHWeaponPSpriteMotion(weaponPSP);
-        if (flashPSP) ApplyTLHWeaponPSpriteMotion(flashPSP);
+        if (weaponPSP && flashPSP)
+            AlignTLHWeaponFlashPSprite(weaponPSP, flashPSP);
 
         // Duplicate the final visible primary frame on the mirrored layer.
         UpdateTLHDualWieldPresentation(weaponPSP);
@@ -6413,24 +6409,54 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // PSpriteTick while processing weapon overlays. The authored state remains
     // intact because the procedural layer is tracked and removed before the
     // next modification when the PSprite is still in the same state.
+    // The engine already supports automatic weapon-layer attachment for
+    // overlays. PSP_FLASH must use that instead of receiving the weapon sway
+    // a second time, otherwise it drifts away from the muzzle or gets clipped.
+    // Its sprite origin remains authored; only its rotation mirrors the gun.
+    void AlignTLHWeaponFlashPSprite(PSprite weaponPSP, PSprite flashPSP)
+    {
+        if (!weaponPSP || !flashPSP || !player || !player.mo ||
+            !player.ReadyWeapon)
+            return;
+
+        Weapon weapon = player.ReadyWeapon;
+        if (weaponPSP.Caller != weapon || flashPSP.Caller != weapon)
+            return;
+
+        // PSPF_ADDWEAPON makes the flash inherit the live weapon offset.
+        // ADDBOB also keeps it attached if native weapon bob is enabled.
+        flashPSP.bAddWeapon = true;
+        flashPSP.bAddBob = true;
+
+        // The flash is a separate layer, so explicitly mirror the weapon's
+        // current rotation. Do not add another positional sway/recoil delta.
+        flashPSP.rotation = weaponPSP.rotation;
+
+        // Preserve the one intentional palette exception.
+        flashPSP.Translation = 0;
+        if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
+        {
+            TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
+            if (blueTint)
+                flashPSP.Translation = blueTint;
+        }
+    }
+
+    // Apply positional and rotational motion only to the primary weapon layer.
+    // Sprite scale remains exactly as authored by the weapon.
     void ApplyTLHWeaponPSpriteMotion(PSprite psp)
     {
-        if (!psp || !player || !player.mo || !player.ReadyWeapon)
+        if (!psp || !player || !player.mo || !player.ReadyWeapon ||
+            psp.ID != PSP_WEAPON)
             return;
 
         Weapon weapon = player.ReadyWeapon;
         if (psp.Caller != weapon)
             return;
 
-        bool isWeaponPSP = (psp.ID == PSP_WEAPON);
-        bool isFlashPSP = (psp.ID == PSP_FLASH);
-        if (!isWeaponPSP && !isFlashPSP)
-            return;
-
-        // Start from the unmodified IWAD palette for every weapon and flash.
-        // The unlocked Blue Simple Rifle mode is the sole exception below.
+        // Every weapon starts on its original palette. Blue Simple Rifle mode
+        // is the sole exception and is applied directly to its weapon PSprite.
         psp.Translation = 0;
-
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
             TranslationID blueTint = Translate.GetID("BlueSimpleRifle");
@@ -6438,63 +6464,32 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
                 psp.Translation = blueTint;
         }
 
-        State lastState = isWeaponPSP ? tlhAnimLastWeaponPSPState : tlhAnimLastFlashPSPState;
-        bool sameState = (lastState == psp.CurState);
+        bool sameState = (tlhAnimLastWeaponPSPState == psp.CurState);
 
-        // Remove only the transform we applied on the previous tic. A state
-        // transition supplies a new authored baseline, so it must not be undone.
+        // Remove only the transform applied on the previous tic. A state
+        // transition supplies a new authored baseline and is left untouched.
         if (sameState)
         {
-            if (isWeaponPSP)
-            {
-                psp.x -= tlhAnimAppliedWeaponX;
-                psp.y -= tlhAnimAppliedWeaponY;
-                psp.rotation -= tlhAnimAppliedWeaponRoll;
-            }
-            else
-            {
-                psp.x -= tlhAnimAppliedFlashX;
-                psp.y -= tlhAnimAppliedFlashY;
-                psp.rotation -= tlhAnimAppliedFlashRoll;
-            }
+            psp.x -= tlhAnimAppliedWeaponX;
+            psp.y -= tlhAnimAppliedWeaponY;
+            psp.rotation -= tlhAnimAppliedWeaponRoll;
         }
         else
         {
-            if (isWeaponPSP)
-            {
-                tlhAnimAppliedWeaponX = 0;
-                tlhAnimAppliedWeaponY = 0;
-                tlhAnimAppliedWeaponRoll = 0;
-            }
-            else
-            {
-                tlhAnimAppliedFlashX = 0;
-                tlhAnimAppliedFlashY = 0;
-                tlhAnimAppliedFlashRoll = 0;
-            }
+            tlhAnimAppliedWeaponX = 0;
+            tlhAnimAppliedWeaponY = 0;
+            tlhAnimAppliedWeaponRoll = 0;
         }
 
-        if (isWeaponPSP)
-            tlhAnimLastWeaponPSPState = psp.CurState;
-        else
-            tlhAnimLastFlashPSPState = psp.CurState;
+        tlhAnimLastWeaponPSPState = psp.CurState;
 
         // TacticalM4A1 deliberately opts out of every global procedural HUD
         // transform. The previous tic's transform was already removed above.
         if (weapon is "TacticalM4A1")
         {
-            if (isWeaponPSP)
-            {
-                tlhAnimAppliedWeaponX = 0;
-                tlhAnimAppliedWeaponY = 0;
-                tlhAnimAppliedWeaponRoll = 0;
-            }
-            else
-            {
-                tlhAnimAppliedFlashX = 0;
-                tlhAnimAppliedFlashY = 0;
-                tlhAnimAppliedFlashRoll = 0;
-            }
+            tlhAnimAppliedWeaponX = 0;
+            tlhAnimAppliedWeaponY = 0;
+            tlhAnimAppliedWeaponRoll = 0;
             return;
         }
 
@@ -6509,9 +6504,6 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double weight = GetTLHWeaponMotionWeight(weapon);
         double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
         double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
-        // The flash is a separate PSprite, but it must inherit the exact same
-        // procedural delta as the weapon to stay locked to the muzzle.
-        double weaponFactor = 1.0;
 
         double worldRightX = sin(angle);
         double worldRightY = -cos(angle);
@@ -6532,7 +6524,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             visualBaseRoll + drawRoll +
             (stepRoll + swayRoll + inertiaRoll + lookRoll +
              recoilRoll + landingRoll + stopRoll + bodyTilt + airTilt) *
-            visualSway * weaponFactor * (0.78 + 0.22 * weight);
+            visualSway * (0.78 + 0.22 * weight);
 
         String cls = weapon.GetClassName();
         if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
@@ -6545,11 +6537,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         double swayX =
             (tlhAnimSwayX * 1.10 + tlhAnimInertiaX * 0.85 +
-             tlhAnimLookX * 0.68 + tlhAnimStopKick * 0.40) * visualSway * weaponFactor;
+             tlhAnimLookX * 0.68 + tlhAnimStopKick * 0.40) * visualSway;
 
         double swayY =
             (tlhAnimSwayY * 0.75 + tlhAnimInertiaY * 0.55 -
-             tlhAnimLookY * 0.40) * visualSway * weaponFactor;
+             tlhAnimLookY * 0.40) * visualSway;
 
         double crouchY = -(1.0 - crouchFactor) * (1.4 + 1.2 * weight);
         double airFloatY = airBlend * cos(double(level.time) * 0.09 * TLH_RAD_TO_DEG) * 0.35;
@@ -6573,20 +6565,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         psp.y += totalY;
         psp.rotation += totalRoll;
 
-        if (isWeaponPSP)
-        {
-            tlhAnimAppliedWeaponX = totalX;
-            tlhAnimAppliedWeaponY = totalY;
-            tlhAnimAppliedWeaponRoll = totalRoll;
-        }
-        else
-        {
-            tlhAnimAppliedFlashX = totalX;
-            tlhAnimAppliedFlashY = totalY;
-            tlhAnimAppliedFlashRoll = totalRoll;
-        }
+        tlhAnimAppliedWeaponX = totalX;
+        tlhAnimAppliedWeaponY = totalY;
+        tlhAnimAppliedWeaponRoll = totalRoll;
     }
-
 
 
     // Per-weapon motion profile. This changes only first-person offsets,
