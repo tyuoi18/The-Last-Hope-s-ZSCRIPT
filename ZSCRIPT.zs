@@ -6890,7 +6890,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double inertiaRoll = -tlhAnimInertiaX * 0.62;
         double lookRoll = -tlhAnimLookX * 1.05;
         double stopRoll = clamp(tlhAnimStopKick * 0.24, 0.0, 1.25);
-        double firingRoll = -tlhAnimWeaponKickSide * 0.30;
+        bool suppressHudFiringRecoil = SuppressTLHWeaponHudFiringRecoil(weapon);
+        if (suppressHudFiringRecoil)
+        {
+            // Drop any residual spring when switching a selectable weapon into
+            // Full Auto, so no stored semi-auto kick leaks into automatic fire.
+            tlhAnimWeaponKick = 0.0;
+            tlhAnimWeaponKickVel = 0.0;
+            tlhAnimWeaponKickSide = 0.0;
+        }
+
+        double firingRoll = suppressHudFiringRecoil
+            ? 0.0 : -tlhAnimWeaponKickSide * 0.30;
 
         double totalRoll = visualBaseRoll +
             (stepRoll + swayRoll + inertiaRoll + lookRoll +
@@ -6913,8 +6924,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
 
         // Firing, landing, damage and draw springs now move the weapon sprite
         // itself instead of affecting only the camera or remaining unused.
-        double firingKickY = tlhAnimWeaponKick * 0.62;
-        double firingKickX = tlhAnimWeaponKickSide * 0.72;
+        double firingKickY = suppressHudFiringRecoil ? 0.0 : tlhAnimWeaponKick * 0.62;
+        double firingKickX = suppressHudFiringRecoil ? 0.0 : tlhAnimWeaponKickSide * 0.72;
         double landingKickY = tlhAnimLandingKick * 0.48;
         double damageKickX = sin(double(level.time) * 0.11 * TLH_RAD_TO_DEG) *
             tlhAnimDamageKick * 0.42;
@@ -7069,6 +7080,37 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return 0.90;
     }
 
+    // Automatic weapons rely on their authored firing cadence/frames. Suppress
+    // only the extra ammo-driven HUD sprite kick that can accumulate during
+    // sustained fire and push the weapon outside the visible screen.
+    bool SuppressTLHWeaponHudFiringRecoil(Weapon weapon)
+    {
+        if (!weapon)
+            return false;
+
+        String cls = weapon.GetClassName();
+        if (cls == "TacticalM4A1" ||
+            cls == "HeavyChaingun" ||
+            cls == "M60MachineGun" ||
+            cls == "TLHCompactSMG" ||
+            cls == "RecoilPlasmaRifle" ||
+            cls == "Chaingun" ||
+            cls == "PlasmaRifle")
+            return true;
+
+        // These pistols support a selectable Full Auto mode. Keep normal
+        // single-shot HUD recoil when they are in their semi-auto mode.
+        RecoilPistol recoilPistol = RecoilPistol(weapon);
+        if (recoilPistol && recoilPistol.fullAuto)
+            return true;
+
+        OfficerVulkanPistol officerPistol = OfficerVulkanPistol(weapon);
+        if (officerPistol && officerPistol.fullAuto && officerPistol.weaponMode == 0)
+            return true;
+
+        return false;
+    }
+
     int GetTLHAmmoSignature()
     {
         // A simple aggregate signature is used only for detecting a firing
@@ -7178,7 +7220,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (tlhAnimLastAmmoSignature >= 0 && ammoSignature < tlhAnimLastAmmoSignature)
         {
             int spent = tlhAnimLastAmmoSignature - ammoSignature;
-            if (spent > 0 && spent < 96 && player.ReadyWeapon != null)
+            if (spent > 0 && spent < 96 && player.ReadyWeapon != null &&
+                !SuppressTLHWeaponHudFiringRecoil(player.ReadyWeapon))
             {
                 String cls = player.ReadyWeapon.GetClassName();
                 double impulse = 1.15 + double(min(spent, 8)) * 0.20;
