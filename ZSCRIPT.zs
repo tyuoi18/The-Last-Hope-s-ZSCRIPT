@@ -5751,6 +5751,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             }
             if (tlhDualPrimaryAlphaCaptured)
                 primary.alpha = tlhDualOriginalPrimaryAlpha;
+            if (tlhDualCloneBaseCaptured)
+            {
+                primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
+                primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY;
+            }
         }
 
         tlhDualOriginalPrimaryAlpha = 1.0;
@@ -5905,15 +5910,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!cloneState)
             return;
 
-        // Preserve the real weapon sprite/frame while the visible primary
-        // PSprite is temporarily replaced by the TLH pistol muzzle-flash sprite.
-        SpriteID dualFlashSprite = GetSpriteIndex("PISF");
+        // Keep the weapon's real sprite. Dual Wield uses a procedural
+        // deselect/lower motion on the active PSprite instead of a flash sprite.
         if (!tlhDualPrimaryAlphaCaptured)
         {
             tlhDualOriginalPrimaryAlpha = primary.alpha;
             tlhDualPrimaryAlphaCaptured = true;
         }
-        if (primary.Sprite != dualFlashSprite || !tlhDualOriginalSpriteCaptured)
+        if (!tlhDualOriginalSpriteCaptured)
         {
             tlhDualOriginalSprite = primary.Sprite;
             tlhDualOriginalFrame = primary.Frame;
@@ -5948,9 +5952,9 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             tlhDualCloneBaseCaptured = true;
         }
 
-        // The original weapon remains active for gameplay, but its visible
-        // sprite is replaced with TLH's own pistol muzzle-flash sprite.
-        // The two clones continue rendering the captured weapon sprite/frame.
+        // The original weapon remains active for gameplay. Its actual sprite
+        // follows a Deselect-style lowering motion while the two independent
+        // render-only copies rise into their resting positions.
         double rise = GetTLHDualCloneRise();
 
         // Both clones rise from below to the captured HUD resting coordinates.
@@ -5964,8 +5968,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         CopyTLHDualClone(rightClone, cloneState, primary,
             true, cloneX, cloneY, cloneAlpha);
 
-        primary.Sprite = dualFlashSprite;
-        primary.Frame = 0;
+        // Match A_Lower's direction, but drive it from the shared blend so
+        // the original disappears as the mirrored pair rises. Reverse on exit.
+        primary.x = tlhDualCloneBaseX + tlhAnimAppliedWeaponX;
+        primary.y = tlhDualCloneBaseY + tlhAnimAppliedWeaponY + rise * 88.0;
         primary.alpha = tlhDualOriginalPrimaryAlpha;
     }
 
