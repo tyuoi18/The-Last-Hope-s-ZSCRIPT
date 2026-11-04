@@ -5785,16 +5785,18 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     {
         if (tlhDualWieldActive)
         {
-            tlhDualWieldBlend += (1.0 - tlhDualWieldBlend) * 0.25;
-            if (tlhDualWieldBlend >= 0.995)
+            // Linear tic progression gives the deselect phase enough time to
+            // visibly lower the original before either clone starts rising.
+            tlhDualWieldBlend += 0.05;
+            if (tlhDualWieldBlend >= 1.0)
                 tlhDualWieldBlend = 1.0;
         }
         else
         {
-            // The mirrored hand descends first. The primary weapon only begins
-            // returning after the offhand has mostly cleared the screen.
-            tlhDualWieldBlend *= 0.76;
-            if (tlhDualWieldBlend <= 0.01)
+            // Reverse the same timeline: clones descend first, then the real
+            // weapon is brought back from below.
+            tlhDualWieldBlend -= 0.05;
+            if (tlhDualWieldBlend <= 0.0)
                 tlhDualWieldBlend = 0.0;
         }
     }
