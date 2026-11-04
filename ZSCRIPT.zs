@@ -5561,6 +5561,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     Weapon tlhDualWieldWeapon;
     double tlhDualWieldBlend;
     double tlhDualAppliedPrimaryDrop;
+    double tlhDualOriginalPrimaryAlpha;
+    bool tlhDualPrimaryAlphaCaptured;
     bool tlhProneActive;
     bool tlhPronePreviousShadow;
     bool tlhProneStealthActive;
@@ -5718,10 +5720,16 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             return;
 
         PSprite primary = player.FindPSprite(PSP_WEAPON);
-        if (primary && tlhDualWieldWeapon && primary.Caller == tlhDualWieldWeapon &&
-            tlhDualAppliedPrimaryDrop != 0.0)
-            primary.y -= tlhDualAppliedPrimaryDrop;
+        if (primary && tlhDualWieldWeapon && primary.Caller == tlhDualWieldWeapon)
+        {
+            if (tlhDualAppliedPrimaryDrop != 0.0)
+                primary.y -= tlhDualAppliedPrimaryDrop;
+            if (tlhDualPrimaryAlphaCaptured)
+                primary.alpha = tlhDualOriginalPrimaryAlpha;
+        }
         tlhDualAppliedPrimaryDrop = 0.0;
+        tlhDualOriginalPrimaryAlpha = 1.0;
+        tlhDualPrimaryAlphaCaptured = false;
 
         PSprite leftClone = player.FindPSprite(TLH_DUAL_MIRROR_LAYER);
         if (leftClone) leftClone.Destroy();
@@ -5888,24 +5896,35 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (!leftClone || !rightClone)
             return;
 
-        // Remove last tic's vertical stow offset before reading the live base.
+        // Preserve the engine weapon's real alpha while it is hidden.
+        // It remains the gameplay/state source, never the clones' position anchor.
+        if (!tlhDualPrimaryAlphaCaptured)
+        {
+            tlhDualOriginalPrimaryAlpha = primary.alpha;
+            tlhDualPrimaryAlphaCaptured = true;
+        }
+
+        // Undo only the offset applied by this presentation layer.
         primary.y -= tlhDualAppliedPrimaryDrop;
         tlhDualAppliedPrimaryDrop = 0.0;
-        double baseX = primary.x;
-        double baseY = primary.y;
 
         double stow = GetTLHDualStowProgress();
         double rise = GetTLHDualCloneRise();
-        double primaryDrop = stow * 88.0;
 
-        // Lower the real engine PSprite first, like a normal deselection.
+        // Lower the engine-owned weapon completely off-screen before the pair rises.
+        // 108 units passes WEAPONBOTTOM from the usual resting Y=32.
+        double primaryDrop = stow * 108.0;
         primary.y += primaryDrop;
         tlhDualAppliedPrimaryDrop = primaryDrop;
+        primary.alpha = (stow >= 1.0) ? 0.0 : tlhDualOriginalPrimaryAlpha;
 
-        // Both clones rise together from below into mirrored hand positions.
-        double cloneY = baseY + (1.0 - rise) * 88.0;
-        double cloneX = baseX - 36.0 * rise;
-        double cloneAlpha = primary.alpha * rise;
+        // The two render-only hands use fixed, screen-centered anchors.
+        // Both PSprites use X=-36; bMirror reverses the right clone's offset to +36.
+        // Neither clone inherits the engine weapon's X/Y, so primary bob/limits
+        // cannot drag the pair around or make the original act as their pivot.
+        double cloneY = 32.0 + (1.0 - rise) * 88.0;
+        double cloneX = -36.0;
+        double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
 
         CopyTLHDualClone(leftClone, cloneState, primary,
             false, cloneX, cloneY, cloneAlpha);
