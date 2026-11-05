@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.20.5 - visible weapon sway timing and two-clone Dual Wield presentation
+// TLH v52.22 - movement-only positional weapon sway and two-clone Dual Wield presentation
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -5987,12 +5987,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         double rise = GetTLHDualCloneRise();
-        double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0;
-        // The right-hand position is the reference. Place the left hand at the exact
-        // opposite distance from the same base point, without a second mirror transform.
+        // Both visible hands inherit the same locomotion-only PSprite offset.
+        double movementX = tlhAnimAppliedWeaponX;
+        double movementY = tlhAnimAppliedWeaponY;
+        double cloneY = tlhDualCloneBaseY + (1.0 - rise) * 88.0 + movementY;
+        // Keep the two hands symmetrically spaced around the same moving center.
         double rightHandOffset = TLH_DUAL_HAND_SPREAD * rise;
-        double rightCloneX = tlhDualCloneBaseX + rightHandOffset;
-        double leftCloneX = tlhDualCloneBaseX - (rightCloneX - tlhDualCloneBaseX);
+        double rightCloneX = tlhDualCloneBaseX + rightHandOffset + movementX;
+        double leftCloneX = tlhDualCloneBaseX - rightHandOffset + movementX;
         double cloneAlpha = tlhDualOriginalPrimaryAlpha * rise;
 
         // Mirror the live primary animation on the left clone. When the hidden
@@ -6806,10 +6808,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
     }
 
-    // Apply positional and rotational motion only to the primary weapon layer.
-    // Sprite scale remains exactly as authored by the weapon.
-    // Keep only palette handling here. Weapon position and bob are left to
-    // GZDoom's native DoomPlayer/PSprite pipeline.
+    // Movement-only PSprite response.
+    // The weapon can move in screen-space X/Y as the player walks, strafes,
+    // accelerates or changes direction. Firing recoil, damage, landing,
+    // equip springs and all procedural rotation are intentionally excluded.
+    // Authored weapon states and sprite scale remain untouched.
     void ApplyTLHWeaponPSpriteMotion(PSprite psp)
     {
         if (!psp || !player || !player.mo || !player.ReadyWeapon ||
@@ -6820,7 +6823,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (psp.Caller != weapon)
             return;
 
-        // Preserve palette handling independently of the motion layer.
+        // Preserve the Simple Rifle's intentional Blue-mode palette.
         psp.Translation = 0;
         if (weapon is "SimpleRifle" && tlhBlueSimpleRifleUnlocked)
         {
@@ -6828,8 +6831,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             if (blueTint) psp.Translation = blueTint;
         }
 
-        // Remove only the transform applied on the previous PSprite tick.
-        // State-authored offsets remain the source of truth.
+        // Undo only the offsets applied on the previous tic. Also remove any
+        // rotation left by the former procedural layer, then never add a new one.
         bool sameState = (tlhAnimLastWeaponPSPState == psp.CurState);
         if (sameState)
         {
@@ -6845,116 +6848,39 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
         tlhAnimLastWeaponPSPState = psp.CurState;
 
-        double visualOffsetX = 0.0;
-        double visualOffsetY = 0.0;
-        double visualBaseRoll = 0.0;
-        double visualSway = 1.0;
-        GetTLHWeaponVisualProfile(weapon,
-            visualOffsetX, visualOffsetY, visualBaseRoll, visualSway);
-
-        // Ease the movement response to avoid a sudden change at walk/run speed.
         double speed01 = clamp(Vel.XY.Length() / 18.0, 0.0, 1.0);
         double movementBlend = speed01 * speed01 * (3.0 - 2.0 * speed01);
-        double crouchFactor = clamp(player.crouchfactor, 0.0, 1.0);
-        double airBlend = (Pos.Z <= floorz + 0.5) ? 0.0 : 1.0;
-        double groundedBlend = 1.0 - airBlend;
-        double weight = GetTLHWeaponMotionWeight(weapon);
-        double response = visualSway * (0.78 + 0.22 * weight);
+        double groundedBlend = (Pos.Z <= floorz + 0.5) ? 1.0 : 0.0;
 
-        // Alternating footfall motion: a light lateral shift and a double-step
-        // vertical compression make walking feel planted rather than sinusoidal.
-        double gait = sin(tlhAnimStepPhase);
-        double gaitDouble = sin(tlhAnimStepPhase * 2.0);
-        double stepX = gait * 1.75 * movementBlend * groundedBlend;
-        double stepY = -abs(gaitDouble) *
-            (0.90 + 1.65 * movementBlend) * movementBlend * groundedBlend;
-        double stepRoll = gait * (1.15 + 1.85 * movementBlend) *
-            movementBlend * groundedBlend;
+        // Weapon mass only changes how strongly it follows locomotion.
+        double response = 0.86 + 0.14 * GetTLHWeaponMotionWeight(weapon);
 
-        // These channels are smoothed in UpdateTLHProceduralMotion. The gun
-        // lags opposite camera turns while acceleration adds a slower counter-swing.
+        // Smoothed velocity and acceleration response. Strafing shifts the
+        // weapon horizontally; forward movement and footfalls add a small
+        // vertical displacement. Looking, firing and being hit do not move it.
         double movementX = tlhAnimSwayX * 1.55;
         double movementY = tlhAnimSwayY * 1.25;
-        double inertiaX = tlhAnimInertiaX * 1.35;
-        double inertiaY = tlhAnimInertiaY * 1.15;
-        double lookX = -tlhAnimLookX * 1.75;
-        double lookY = -tlhAnimLookY * 1.00;
+        double inertiaX = tlhAnimInertiaX * 1.10;
+        double inertiaY = tlhAnimInertiaY * 1.00;
 
-        double swayX = (movementX + inertiaX + lookX + stepX) * response;
-        double swayY = (movementY + inertiaY + lookY + stepY) * response;
+        double gait = sin(tlhAnimStepPhase);
+        double gaitDouble = sin(tlhAnimStepPhase * 2.0);
+        double stepX = gait * 1.25 * movementBlend * groundedBlend;
+        double stepY = -abs(gaitDouble) * 1.30 * movementBlend * groundedBlend;
 
-        // Restrained body lean follows lateral velocity. Air movement adds
-        // only a slight tilt, separate from landing and damage reactions.
-        double worldRightX = sin(angle);
-        double worldRightY = -cos(angle);
-        double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
-        double bodyTilt = clamp(-sideVelocity * 0.055, -2.4, 2.4);
-        double airTilt = clamp(-Vel.Z * 0.040, -2.2, 2.2) * airBlend;
+        double totalX = (movementX + inertiaX + stepX) * response;
+        double totalY = (movementY + inertiaY + stepY) * response;
 
-        // Gait, camera turn and acceleration each contribute limited roll.
-        // Firing recoil, landing kick and damage kick stay outside this layer.
-        double swayRoll = -tlhAnimSwayX * 0.82;
-        double inertiaRoll = -tlhAnimInertiaX * 0.62;
-        double lookRoll = -tlhAnimLookX * 1.05;
-        double stopRoll = clamp(tlhAnimStopKick * 0.24, 0.0, 1.25);
-        bool suppressHudFiringRecoil = SuppressTLHWeaponHudFiringRecoil(weapon);
-        if (suppressHudFiringRecoil)
-        {
-            // Drop any residual spring when switching a selectable weapon into
-            // Full Auto, so no stored semi-auto kick leaks into automatic fire.
-            tlhAnimWeaponKick = 0.0;
-            tlhAnimWeaponKickVel = 0.0;
-            tlhAnimWeaponKickSide = 0.0;
-        }
-
-        double firingRoll = suppressHudFiringRecoil
-            ? 0.0 : -tlhAnimWeaponKickSide * 0.30;
-
-        double totalRoll = visualBaseRoll +
-            (stepRoll + swayRoll + inertiaRoll + lookRoll +
-             stopRoll + firingRoll + bodyTilt + airTilt) * response;
-
-        String cls = weapon.GetClassName();
-        if (cls == "M60MachineGun" || cls == "RecoilRocketLauncher" ||
-            cls == "RecoilBFG9000" || cls == "AMR99RailRifle")
-            totalRoll *= 0.60;
-        else if (cls == "RecoilPistol" || cls == "OfficerVulkanPistol")
-            totalRoll *= 1.12;
-
-        // Minimal idle breathing prevents a completely static weapon.
-        double idleBlend = (1.0 - movementBlend) * groundedBlend;
-        double idleBreath = sin(double(level.time) * 0.045 * TLH_RAD_TO_DEG) *
-            0.22 * idleBlend;
-        double airFloatY = airBlend *
-            cos(double(level.time) * 0.07 * TLH_RAD_TO_DEG) * 0.45;
-        double crouchY = -(1.0 - crouchFactor) * (1.8 + 1.5 * weight);
-
-        // Firing, landing, damage and draw springs now move the weapon sprite
-        // itself instead of affecting only the camera or remaining unused.
-        double firingKickY = suppressHudFiringRecoil ? 0.0 : tlhAnimWeaponKick * 0.62;
-        double firingKickX = suppressHudFiringRecoil ? 0.0 : tlhAnimWeaponKickSide * 0.72;
-        double landingKickY = tlhAnimLandingKick * 0.48;
-        double damageKickX = sin(double(level.time) * 0.11 * TLH_RAD_TO_DEG) *
-            tlhAnimDamageKick * 0.42;
-        double drawKickY = tlhAnimDrawKick * 0.38;
-
-        double totalX = visualOffsetX + swayX + firingKickX + damageKickX;
-        double totalY = visualOffsetY + swayY + crouchY + idleBreath +
-            airFloatY + firingKickY + landingKickY + drawKickY;
-
-        // Wider safety bounds preserve expressive motion without allowing
-        // the weapon to disappear off-screen. Sprite scale remains authored.
-        totalX = clamp(totalX, -12.0, 12.0);
-        totalY = clamp(totalY, -16.0, 16.0);
-        totalRoll = clamp(totalRoll, -6.5, 6.5);
+        // Conservative bounds keep every weapon and muzzle flash on-screen.
+        totalX = clamp(totalX, -8.0, 8.0);
+        totalY = clamp(totalY, -6.0, 6.0);
 
         psp.x += totalX;
         psp.y += totalY;
-        psp.rotation += totalRoll;
 
         tlhAnimAppliedWeaponX = totalX;
         tlhAnimAppliedWeaponY = totalY;
-        tlhAnimAppliedWeaponRoll = totalRoll;
+        tlhAnimAppliedWeaponRoll = 0.0;
     }
 
 
@@ -7221,61 +7147,14 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         }
 
         // ------------------------------------------------------------
-        // Ammo delta -> procedural firing recoil
+        // HUD firing recoil disabled
         // ------------------------------------------------------------
-        int ammoSignature = GetTLHAmmoSignature();
-        if (tlhAnimLastAmmoSignature >= 0 && ammoSignature < tlhAnimLastAmmoSignature)
-        {
-            int spent = tlhAnimLastAmmoSignature - ammoSignature;
-            if (spent > 0 && spent < 96 && player.ReadyWeapon != null &&
-                !SuppressTLHWeaponHudFiringRecoil(player.ReadyWeapon))
-            {
-                String cls = player.ReadyWeapon.GetClassName();
-                double impulse = 1.15 + double(min(spent, 8)) * 0.20;
-
-                if (cls == "RecoilPistol" || cls == "OfficerVulkanPistol")
-                    impulse *= 0.90;
-                else if (cls == "RecoilShotgun" || cls == "SemiAutoShotgun")
-                    impulse *= 1.45;
-                else if (cls == "FastRecoilSSG")
-                    impulse *= 1.70;
-                else if (cls == "M60MachineGun" || cls == "HeavyChaingun")
-                    impulse *= 1.25;
-                else if (cls == "RecoilRocketLauncher" || cls == "HellfireProjector")
-                    impulse *= 2.00;
-                else if (cls == "RecoilPlasmaRifle")
-                    impulse *= 0.72;
-                else if (cls == "AMR99RailRifle")
-                    impulse *= 1.80;
-                else if (cls == "RecoilBFG9000")
-                    impulse *= 2.60;
-
-                // Alternating lateral impulse prevents automatic fire from
-                // drifting permanently in one direction.
-                double sideImpulse = ((level.time & 1) == 0) ? 1.0 : -1.0;
-
-                tlhAnimWeaponKickVel += impulse;
-                tlhAnimWeaponKickSide += sideImpulse * impulse * 0.16;
-            }
-        }
-        tlhAnimLastAmmoSignature = ammoSignature;
-
-        // Melee weapons do not consume ammo, so give their first swing a small
-        // procedural body kick on the attack edge.
-        if ((bt & BT_ATTACK) && !(oldbt & BT_ATTACK) && player.ReadyWeapon != null)
-        {
-            String meleeClass = player.ReadyWeapon.GetClassName();
-            if (meleeClass == "DashFist")
-            {
-                tlhAnimWeaponKickVel += 0.90;
-                tlhAnimWeaponKickSide -= 0.22;
-            }
-            else if (meleeClass == "HookChainsaw")
-            {
-                tlhAnimWeaponKickVel += 0.55;
-                tlhAnimWeaponKickSide += 0.18;
-            }
-        }
+        // Keep the ammo signature synchronized, but do not translate the
+        // weapon sprite when firing. Camera recoil remains in weapon states.
+        tlhAnimLastAmmoSignature = GetTLHAmmoSignature();
+        tlhAnimWeaponKick = 0.0;
+        tlhAnimWeaponKickVel = 0.0;
+        tlhAnimWeaponKickSide = 0.0;
 
         // ------------------------------------------------------------
         // Landing kick
@@ -7300,11 +7179,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // ------------------------------------------------------------
         // Spring integration
         // ------------------------------------------------------------
-        tlhAnimWeaponKick += tlhAnimWeaponKickVel;
-        tlhAnimWeaponKickVel -= tlhAnimWeaponKick * 0.20;
-        tlhAnimWeaponKickVel *= 0.70;
-        tlhAnimWeaponKick = clamp(tlhAnimWeaponKick, 0.0, 18.0);
-        tlhAnimWeaponKickSide *= 0.78;
+        // No firing-recoil spring is integrated into the HUD weapon sprite.
 
         tlhAnimLandingKick += tlhAnimLandingVel;
         tlhAnimLandingVel -= tlhAnimLandingKick * 0.24;
