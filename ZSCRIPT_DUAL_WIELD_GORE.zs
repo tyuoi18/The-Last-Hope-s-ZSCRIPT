@@ -1,19 +1,19 @@
 // ============================================================================
-// TLH v52.31 - stable native PSprite, one mirrored copy and complete transitions
-// PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
+// TLH v52.32 - stable native PSprite, one procedural mirror, complete transitions
+// ONE WEAPON ACTOR / ORIGINAL HUD SPRITE + ONE MIRRORED HUD COPY
 //
-// R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
-// using the user's actual +user3 binding, then routed through NetworkCommandProcess.
-// Weapons do not use User3 states or WRF_ALLOWUSER3. PSP_WEAPON remains the visible native weapon; its single mirror copies the live frame, while
-// the right clone runs FireDualRight independently when M2 is pressed.
-// Hellfire uses the Rocket Launcher sprite family at reduced HUD/drop scale.
+// +user3 toggles Dual Wield. The visible PSP_WEAPON stays the native weapon and
+// owns M1, ammo, reload, fire modes and all authored animations. A single
+// mirrored PSprite copies its live frames and runs the existing M2 shot states
+// on the same weapon actor. No second Weapon actor or replacement sprite exists.
+// The original slides LEFT; the mirror uses the exact negative X coordinate.
 // ============================================================================
 
 version "4.14"
 
 // Custom PSprite layer used for dual-wielded/recycled weapon sprites.
-const TLH_DUAL_MIRROR_LAYER = 2; // left-hand animated mirror
-const TLH_DUAL_SECOND_LAYER = 3; // independent M2 weapon PSprite; PSP_WEAPON (1) remains the M1 controller
+const TLH_DUAL_MIRROR_LAYER = 2; // single mirrored copy on the opposite hand
+const TLH_DUAL_SECOND_LAYER = 3; // reserved compatibility layer; not instantiated by Dual Wield
 const TLH_DUAL_LEFT_FLASH_LAYER = 4; // mirrored muzzle flash for the left hand
 const TLH_DUAL_RIGHT_FLASH_LAYER = 5; // muzzle flash for the right hand
 const TLH_DUAL_HAND_SPREAD = 56.0; // Visible spacing from the screen center for each hand.
@@ -1423,7 +1423,10 @@ class RecoilPistol : Pistol replaces Pistol
         PISG A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
 
             if (invoker.fullAuto)
                 return ResolveState("FireAuto");
@@ -1712,7 +1715,10 @@ class OfficerVulkanPistol : Weapon
         PISG A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
 
             if (invoker.weaponMode == 1)
                 return ResolveState("FireLauncher");
@@ -2384,7 +2390,10 @@ class FastRecoilSSG : SuperShotgun replaces SuperShotgun
         SHT2 A 0
         {
             if (TacticalPlayer(player.mo) && TacticalPlayer(player.mo).tlhDualWieldActive)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
 
             if (invoker.dragonBreath)
                 return ResolveState("FireDragon");
@@ -2884,7 +2893,10 @@ Default
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
             if (invoker.overheated)
                 return ResolveState("Overheated");
 
@@ -3875,7 +3887,10 @@ class RecoilRocketLauncher : RocketLauncher replaces RocketLauncher
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
             if (invoker.nukeMode) return ResolveState("FireNuke");
             return ResolveState(null);
         }
@@ -4148,7 +4163,10 @@ action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
             if (invoker.empMode)
                 return ResolveState("FireEMP");
 
@@ -4547,7 +4565,10 @@ class AMR99RailRifle : Weapon
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
             return ResolveState(null);
         }
         ZLSG A 4;
@@ -4755,7 +4776,10 @@ action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
             return ResolveState(null);
         }
         MISG A 3;
@@ -4952,7 +4976,10 @@ action void A_TLHDualWeaponOffset(double wx, double wy, int flags = 0)
             TacticalPlayer dualPlayer = TacticalPlayer(player.mo);
             if (dualPlayer && dualPlayer.tlhDualWieldActive &&
                 dualPlayer.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
             return ResolveState(null);
         }
         ZISG A 8;
@@ -5574,7 +5601,10 @@ class ServiceRevolver : Weapon
         {
             let tp = TacticalPlayer(player.mo);
             if (tp && tp.tlhDualWieldActive && tp.tlhDualWieldWeapon == invoker)
-                return ResolveState(null);
+                {
+                // Native PSP_WEAPON remains the real M1 weapon. Do not short-circuit
+                // its original fire-mode selector or the firing sequence below.
+            }
 
             invoker.triggerLatched = true;
             bool infinite = sv_infiniteammo ||
@@ -6170,9 +6200,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
     // CENTRAL DUAL-WIELD CONTROL
     // ========================================================================
 
-    // Dual Wield compatibility is a gameplay contract, not a list of
-    // hand-animation labels. A compatible weapon supplies two firing routes,
-    // a native input entry point and one inert state used as a PSprite holder.
+    // Dual Wield compatibility requires the original native Fire path, the existing
+    // M2 shot state, and a non-rendering PSprite carrier state.
     bool SupportsTLHProceduralDualWield(Weapon weapon)
     {
         return weapon &&
@@ -6192,6 +6221,13 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             // Restore exactly the X displacement that the weapon's native offset
             // wrapper last applied. No per-tic primary.x correction is performed.
             primary.x += tlhDualPrimaryAppliedSlideX;
+
+            double restoredSwayX = clamp(tlhAnimSwayX, -2.0, 2.0);
+            tlhAnimSwayPSP = primary;
+            tlhAnimSwayCaller = primary.Caller;
+            tlhAnimSwayBaseX = primary.x - restoredSwayX;
+            tlhAnimSwayAppliedX = restoredSwayX;
+            tlhAnimSwayBaseCaptured = true;
 
             if (tlhDualOriginalSpriteCaptured)
             {
@@ -6299,7 +6335,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return true;
     }
 
-    // Legacy state wrappers remain, but no longer move the engine-owned PSprite.
+    // Smooth X displacement is applied by the weapon's own offset wrappers.
     double GetTLHDualPrimarySlide()
     {
         // First half of the entrance moves the original weapon left.
@@ -6309,9 +6345,8 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         return TLH_DUAL_HAND_SPREAD * eased;
     }
 
-    // The left clone mirrors the live primary firing frame. The right clone can
-    // execute FireDualRight on its own PSprite layer when M2 is pressed.
-    // The original PSP_WEAPON remains visible and is the sole M1 gameplay controller.
+    // The single clone mirrors the original live frame and can run M2 shot states.
+    // The original PSP_WEAPON remains visible and owns all native M1 behavior.
     void CopyTLHDualClone(PSprite clone, State cloneState, PSprite primary,
         bool mirrored, double cloneX, double cloneY, double cloneAlpha,
         SpriteID sourceSprite, int sourceFrame, bool preserveActiveState)
@@ -6330,8 +6365,7 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
             clone.Tics = -1;
         }
 
-        // The right-hand PSprite is allowed to execute FireDualRight on its
-        // own overlay layer. Do not overwrite its live state/frame each tick.
+        // While the mirrored PSprite is firing for M2, preserve its native frame sequence.
         clone.Translation = primary.Translation;
         clone.scale = primary.scale;
         clone.baseScale = primary.baseScale;
@@ -7093,11 +7127,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         if (weaponPSP) ApplyTLHWeaponPalette(weaponPSP);
         if (flashPSP) ApplyTLHWeaponPalette(flashPSP);
 
-        // Duplicate the final visible primary frame on the mirrored layer.
+        // Copy the original's current native frame to the single mirrored HUD layer.
         UpdateTLHDualWieldPresentation(weaponPSP);
 
-        // Ordinary weapons get subtle horizontal-only sway. In Dual Wield the
-        // same X displacement is applied independently to both hand clones.
+        // Ordinary weapons use horizontal-only sway. The Dual wrappers fold the same
+        // sway into the original offset, and the mirrored copy follows its X.
         if (!tlhDualWieldActive && !tlhDualWieldExiting)
             ApplyTLHHorizontalWeaponSway(weaponPSP);
 
