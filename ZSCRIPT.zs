@@ -11114,6 +11114,13 @@ class TacticalZombieDrop : Actor
     Spawn:
         TNT1 A 0 NoDelay
         {
+            // MAP01 and MAP02 are intentionally free of enemy drops.
+            if (level.mapname ~== "MAP01" || level.mapname ~== "MAP02")
+            {
+                Destroy();
+                return;
+            }
+
             bool isFirstMap = (level.levelnum == 1 || level.mapname ~== "MAP01" || level.mapname ~== "E1M1");
             Actor drop;
 
@@ -11159,6 +11166,13 @@ class TacticalShotgunDrop : Actor
     Spawn:
         TNT1 A 0 NoDelay
         {
+            // MAP01 and MAP02 are intentionally free of enemy drops.
+            if (level.mapname ~== "MAP01" || level.mapname ~== "MAP02")
+            {
+                Destroy();
+                return;
+            }
+
             bool isFirstMap = (level.levelnum == 1 || level.mapname ~== "MAP01" || level.mapname ~== "E1M1");
             Actor drop;
 
@@ -11192,6 +11206,13 @@ class TacticalChaingunDrop : Actor
     Spawn:
         TNT1 A 0 NoDelay
         {
+            // MAP01 and MAP02 are intentionally free of enemy drops.
+            if (level.mapname ~== "MAP01" || level.mapname ~== "MAP02")
+            {
+                Destroy();
+                return;
+            }
+
             bool isFirstMap = (level.levelnum == 1 || level.mapname ~== "MAP01" || level.mapname ~== "E1M1");
             Actor drop;
 
