@@ -1,5 +1,5 @@
 // ============================================================================
-// TLH v52.22 - movement-only positional weapon sway and two-clone Dual Wield presentation
+// TLH v52.24 - stronger horizontal weapon sway with tighter positional bounds
 // PROCEDURAL PSprite MIRROR / PLAYER-OWNED DUAL WIELD / HELMET HUD
 //
 // R remains untouched. Dual Wield input is intercepted by TacticalHUDHandler.InputProcess
@@ -16,8 +16,9 @@ version "4.14"
 const TLH_DUAL_MIRROR_LAYER = 2; // left-hand animated mirror
 const TLH_DUAL_SECOND_LAYER = 3; // independent M2 weapon PSprite; PSP_WEAPON (1) remains the M1 controller
 const TLH_DUAL_HAND_SPREAD = 56.0; // Visible spacing from the screen center for each hand.
-const TLH_WEAPON_MOVE_LIMIT_X = 8.0; // Maximum locomotion-only HUD displacement on X.
-const TLH_WEAPON_MOVE_LIMIT_Y = 6.0; // Maximum locomotion-only HUD displacement on Y.
+const TLH_WEAPON_MOVE_LIMIT_X = 4.5; // Strict maximum locomotion-only HUD displacement on X.
+const TLH_WEAPON_MOVE_LIMIT_Y = 4.0; // Strict maximum locomotion-only HUD displacement on Y.
+const TLH_WEAPON_MOVE_RESPONSE_X = 2.15; // Stronger lateral sway multiplier.
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
@@ -119,6 +120,7 @@ const TLH_MAX_CELLS = 300;
 // v52.20: remove physical A_Recoil thrust while retaining camera pitch/quakes.
 // v52.23: disable weapon-sprite firing recoil for every weapon; apply bounded X/Y-only locomotion response.
 // v52.23: remap mismatched weapon shots to stock Doom sounds; keep REAC01-REAC05 corpse reactions.
+// v52.24: strengthen strafe/acceleration response and tighten HUD movement clamps to X +/-4.5, Y +/-4.
 // v52.20.1: restore missing semicolons on frame-only state lines after removing overlay actions.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
@@ -6862,15 +6864,17 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         // Smoothed velocity and acceleration response. Strafing shifts the
         // weapon horizontally; forward movement and footfalls add a small
         // vertical displacement. Looking, firing and being hit do not move it.
-        double movementX = tlhAnimSwayX * 1.55;
-        double movementY = tlhAnimSwayY * 1.25;
-        double inertiaX = tlhAnimInertiaX * 1.10;
-        double inertiaY = tlhAnimInertiaY * 1.00;
+        // Make lateral body movement clearly visible without introducing
+        // rotation or shot kick. X gets the strongest response; Y stays restrained.
+        double movementX = tlhAnimSwayX * TLH_WEAPON_MOVE_RESPONSE_X;
+        double movementY = tlhAnimSwayY * 1.10;
+        double inertiaX = tlhAnimInertiaX * 1.45;
+        double inertiaY = tlhAnimInertiaY * 0.85;
 
         double gait = sin(tlhAnimStepPhase);
         double gaitDouble = sin(tlhAnimStepPhase * 2.0);
-        double stepX = gait * 1.25 * movementBlend * groundedBlend;
-        double stepY = -abs(gaitDouble) * 1.30 * movementBlend * groundedBlend;
+        double stepX = gait * 1.65 * movementBlend * groundedBlend;
+        double stepY = -abs(gaitDouble) * 0.95 * movementBlend * groundedBlend;
 
         double totalX = (movementX + inertiaX + stepX) * response;
         double totalY = (movementY + inertiaY + stepY) * response;
@@ -7102,11 +7106,12 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double forwardVelocity = Vel.X * worldForwardX + Vel.Y * worldForwardY;
         double sideVelocity = Vel.X * worldRightX + Vel.Y * worldRightY;
 
-        double targetSwayX = -sideVelocity * 0.145;
-        double targetSwayY = abs(forwardVelocity) * 0.035;
+        // Stronger strafe response, softly capped before it reaches the PSprite.
+        double targetSwayX = clamp(-sideVelocity * 0.22, -3.2, 3.2);
+        double targetSwayY = clamp(abs(forwardVelocity) * 0.030, 0.0, 1.2);
 
-        tlhAnimSwayX += (targetSwayX - tlhAnimSwayX) * 0.20;
-        tlhAnimSwayY += (targetSwayY - tlhAnimSwayY) * 0.18;
+        tlhAnimSwayX += (targetSwayX - tlhAnimSwayX) * 0.25;
+        tlhAnimSwayY += (targetSwayY - tlhAnimSwayY) * 0.16;
 
         double previousSpeed = tlhAnimPrevSpeed;
         double currentSpeed = Vel.XY.Length();
@@ -7125,11 +7130,11 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double sideAcceleration = accelerationX * worldRightX +
                                   accelerationY * worldRightY;
 
-        double targetInertiaX = clamp(-sideAcceleration * 0.16, -2.4, 2.4);
-        double targetInertiaY = clamp(-forwardAcceleration * 0.075, -1.5, 1.5);
+        double targetInertiaX = clamp(-sideAcceleration * 0.21, -2.8, 2.8);
+        double targetInertiaY = clamp(-forwardAcceleration * 0.060, -1.1, 1.1);
 
-        tlhAnimInertiaX += (targetInertiaX - tlhAnimInertiaX) * 0.22;
-        tlhAnimInertiaY += (targetInertiaY - tlhAnimInertiaY) * 0.22;
+        tlhAnimInertiaX += (targetInertiaX - tlhAnimInertiaX) * 0.26;
+        tlhAnimInertiaY += (targetInertiaY - tlhAnimInertiaY) * 0.18;
 
         tlhAnimPrevVelX = Vel.X;
         tlhAnimPrevVelY = Vel.Y;
