@@ -16,6 +16,8 @@ version "4.14"
 const TLH_DUAL_MIRROR_LAYER = 2; // left-hand animated mirror
 const TLH_DUAL_SECOND_LAYER = 3; // independent M2 weapon PSprite; PSP_WEAPON (1) remains the M1 controller
 const TLH_DUAL_HAND_SPREAD = 56.0; // Visible spacing from the screen center for each hand.
+const TLH_WEAPON_MOVE_LIMIT_X = 8.0; // Maximum locomotion-only HUD displacement on X.
+const TLH_WEAPON_MOVE_LIMIT_Y = 6.0; // Maximum locomotion-only HUD displacement on Y.
 // ZScript trig uses degrees; this converts authored radian-based time phases.
 const TLH_RAD_TO_DEG = 57.29577951308232;
 
@@ -115,6 +117,8 @@ const TLH_MAX_CELLS = 300;
 // v52.21: restore expressive universal first-person weapon motion, including
 // movement inertia, gait, firing/landing/damage springs and wider motion bounds.
 // v52.20: remove physical A_Recoil thrust while retaining camera pitch/quakes.
+// v52.23: disable weapon-sprite firing recoil for every weapon; apply bounded X/Y-only locomotion response.
+// v52.23: remap mismatched weapon shots to stock Doom sounds; keep REAC01-REAC05 corpse reactions.
 // v52.20.1: restore missing semicolons on frame-only state lines after removing overlay actions.
 // v52.8: make HUD recoil scaling a four-tic shot pulse; stage Dual Wield with primary-right slide followed by offhand rise.
 // v52.6: keep the pickup Spawn sequence in an Actor-scoped state block; keep HUD/weapon actions in Weapon scope.
@@ -1485,7 +1489,7 @@ class RecoilPistol : Pistol replaces Pistol
         PISG B 5
         {
             A_FireProjectile("ChargeBeam");
-            A_StartSound("fatbso", CHAN_WEAPON);
+            A_StartSound("weapons/plasmaf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.0, SPF_INTERPOLATE);
             A_Quake(1, 5, 0, 100);
         }
@@ -1776,7 +1780,7 @@ class OfficerVulkanPistol : Weapon
         {
             A_TakeInventory("RocketAmmo", 1, TIF_NOTAKEINFINITE);
             A_FireProjectile("OfficerHeavyGrenade", useammo: false);
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 4.5, SPF_INTERPOLATE);
             A_Quake(3, 5, 0, 200);
             
@@ -4069,7 +4073,7 @@ class RecoilPlasmaRifle : PlasmaRifle replaces PlasmaRifle
             return ResolveState("PlasmaSpread");
         }
     PlasmaSpread:
-        PLSG A 4 A_StartSound("weapons/sshoto", CHAN_WEAPON);
+        PLSG A 4 A_StartSound("weapons/plasmaf", CHAN_WEAPON);
         PLSG B 4
         {
             bool infinite = sv_infiniteammo ||
@@ -4328,7 +4332,7 @@ class AMR99RailRifle : Weapon
             A_GunFlash();
             
             A_FireProjectile("GaussSlug");
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_StartSound("weapons/bfgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
             A_Quake(7, 14, 0, 350);
             
@@ -4347,7 +4351,7 @@ class AMR99RailRifle : Weapon
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("GaussSlug", useammo: false);
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_StartSound("weapons/bfgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
             A_Quake(7, 14, 0, 350);
             
@@ -4370,7 +4374,7 @@ class AMR99RailRifle : Weapon
                 return ResolveState("DualMirrorHold");
             A_TakeInventory("Cell", 10, TIF_NOTAKEINFINITE);
             A_FireProjectile("GaussSlug", useammo: false);
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_StartSound("weapons/bfgf", CHAN_WEAPON);
             A_SetPitch(pitch - 7.0, SPF_INTERPOLATE);
             A_Quake(7, 14, 0, 350);
             
@@ -4489,7 +4493,7 @@ class HellfireProjector : Weapon
             A_GunFlash();
             
             A_FireProjectile("NapalmGlob");
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_StartSound("weapons/rocklf", CHAN_WEAPON);
             A_SetPitch(pitch - 2.5, SPF_INTERPOLATE);
             A_Quake(3, 8, 0, 220);
         }
@@ -5416,7 +5420,7 @@ Default
         ASLT B 5
         {
             A_FireBullets(7.0, 5.5, 8, 4, "BulletPuff");
-            A_StartSound("weapons/shotgf", CHAN_WEAPON);
+            A_StartSound("weapons/chngun", CHAN_WEAPON);
             A_SetPitch(pitch - 2.3, SPF_INTERPOLATE);
             
         }
@@ -5432,7 +5436,7 @@ Default
                 rifleOwner.TakeInventory("Cell", 1, true, true);
             A_RailAttack(42, 0, false, 0x36BFFF, 0xD9F7FF,
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0, 0, 8192, 9, 1.0, 1.0);
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_StartSound("weapons/plasmaf", CHAN_WEAPON);
             A_SetPitch(pitch - 1.8, SPF_INTERPOLATE);
             
         }
@@ -5468,7 +5472,7 @@ Default
                 rifleOwner.TakeInventory("Cell", 2, true, true);
             A_RailAttack(78, 0, false, 0x238DFF, 0xE4FAFF,
                 RGF_FULLBRIGHT, 0, "BulletPuff", 0.35, 0.15, 8192, 12, 0.75, 1.0);
-            A_StartSound("weapons/railgf", CHAN_WEAPON);
+            A_StartSound("weapons/plasmaf", CHAN_WEAPON);
             A_SetPitch(pitch - 3.0, SPF_INTERPOLATE);
             
         }
@@ -6871,9 +6875,10 @@ class TacticalPlayer : DoomPlayer replaces DoomPlayer
         double totalX = (movementX + inertiaX + stepX) * response;
         double totalY = (movementY + inertiaY + stepY) * response;
 
-        // Conservative bounds keep every weapon and muzzle flash on-screen.
-        totalX = clamp(totalX, -8.0, 8.0);
-        totalY = clamp(totalY, -6.0, 6.0);
+        // Hard bounds apply to the movement offset itself, so the weapon cannot
+        // drift farther than this from its authored state position.
+        totalX = clamp(totalX, -TLH_WEAPON_MOVE_LIMIT_X, TLH_WEAPON_MOVE_LIMIT_X);
+        totalY = clamp(totalY, -TLH_WEAPON_MOVE_LIMIT_Y, TLH_WEAPON_MOVE_LIMIT_Y);
 
         psp.x += totalX;
         psp.y += totalY;
